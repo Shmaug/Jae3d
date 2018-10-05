@@ -10,8 +10,25 @@ int frameCounter;
 int renderFrameCounter;
 double elapsedSeconds;
 
+using namespace DirectX;
+
+XMFLOAT4 color;
+
 void Game::Initialize(Graphics *graphics) {
 	this->graphics = graphics;
+}
+
+void Game::KeyEvent(KeyEventArgs& e) {
+
+}
+void Game::MouseEvent(MouseButtonEventArgs& e) {
+
+}
+void Game::MouseMove(MouseMoveEventArgs& e) {
+
+}
+void Game::MouseWheelEvent(int delta) {
+
 }
 
 void Game::Update(double total, double delta) {
@@ -38,7 +55,7 @@ void Game::Update(double total, double delta) {
 		commandAllocator->Reset();
 		graphics->g_CommandList->Reset(commandAllocator.Get(), nullptr);
 
-		graphics->ClearBackBuffer(backBuffer, Color(cosf(total) * .5f + .5f, sinf(total) * .5f + .5f, 1.0));
+		graphics->ClearBackBuffer(backBuffer, color);
 		graphics->Present(backBuffer);
 	}
 }

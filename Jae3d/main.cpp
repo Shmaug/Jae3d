@@ -32,6 +32,41 @@ void ParseCommandLineArguments() {
 	::LocalFree(argv);
 }
 
+int DecodeMouseButton(UINT messageID) {
+	int mouseButton = 0;
+
+	switch (messageID) {
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_LBUTTONDBLCLK:
+			mouseButton = 0;
+			break;
+
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_RBUTTONDBLCLK:
+			mouseButton = 1;
+			break;
+
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_MBUTTONDBLCLK:
+			mouseButton = 2;
+			break;
+
+		case WM_XBUTTONDOWN:
+		case WM_XBUTTONUP:
+		case WM_XBUTTONDBLCLK:
+			mouseButton = 3;
+			break;
+	}
+
+	return mouseButton;
+}
+
+
+#define IsKeyDown(key) (GetAsyncKeyState(key) & 0x8000) != 0
+
 HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t* windowTitle, uint32_t width, uint32_t height) {
 	int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
 	int screenHeight = ::GetSystemMetrics(SM_CYSCREEN);
@@ -75,26 +110,48 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:
 		{
-			bool alt = (::GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
-
-			/*
-			switch (wParam) {
-			case 'V':
-				g_VSync = !g_VSync;
-				break;
-			case VK_ESCAPE:
-				::PostQuitMessage(0);
-				break;
-			case VK_RETURN:
-				if (alt) {
-			case VK_F11:
-				SetFullscreen(!g_Fullscreen);
-				}
-				break;
-			}
-			*/
+			KeyEventArgs keyEvent((KeyCode::Key)wParam, KeyEventArgs::Pressed);
+			game->KeyEvent(keyEvent);
 		}
-		break;
+			break;
+
+		case WM_SYSKEYUP:
+		case WM_KEYUP:
+		{
+			KeyEventArgs keyEvent((KeyCode::Key)wParam, KeyEventArgs::Released);
+			game->KeyEvent(keyEvent);
+		}
+			break;
+		case WM_MOUSEMOVE:
+		{
+			MouseMoveEventArgs mEvent(((int)(short)LOWORD(lParam)), ((int)(short)HIWORD(lParam)));
+			game->MouseMove(mEvent);
+		}
+			break;
+
+		case WM_LBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+		case WM_MBUTTONDOWN:
+		{
+			MouseButtonEventArgs mEvent(DecodeMouseButton(message), MouseButtonEventArgs::Pressed);
+			game->MouseEvent(mEvent);
+		}
+			break;
+
+		case WM_LBUTTONUP:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONUP:
+		{
+			MouseButtonEventArgs mouseButtonEventArgs(DecodeMouseButton(message), MouseButtonEventArgs::Released);
+			game->MouseEvent(mouseButtonEventArgs);
+		}
+			break;
+		case WM_MOUSEWHEEL:
+		{
+			game->MouseWheelEvent(((int)(short)HIWORD(wParam)) / (float)WHEEL_DELTA);
+		}
+			break;
+
 		// The default window procedure will play a system notification sound 
 		// when pressing the Alt+Enter keyboard combination if this message is 
 		// not handled.

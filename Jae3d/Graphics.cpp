@@ -329,14 +329,14 @@ bool Graphics::NextFrameReady() {
 	return g_Fence->GetCompletedValue() >= g_FrameFenceValues[g_CurrentBackBufferIndex];
 }
 
-void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, Color color) {
+void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, DirectX::XMFLOAT4 color) {
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	g_CommandList->ResourceBarrier(1, &barrier);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_CurrentBackBufferIndex, g_RTVDescriptorSize);
 
-	FLOAT clearColor[] = { color.r, color.g, color.b, color.a };
+	FLOAT clearColor[] = { color.x, color.y, color.z, color.w };
 	g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 }
 
