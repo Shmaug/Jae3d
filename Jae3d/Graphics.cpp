@@ -72,8 +72,7 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice(ComPtr<IDXGIAdapter4> adapter) {
 		//D3D12_MESSAGE_CATEGORY Categories[] = {};
 
 		// Suppress messages based on their severity level
-		D3D12_MESSAGE_SEVERITY Severities[] =
-		{
+		D3D12_MESSAGE_SEVERITY Severities[] = {
 			D3D12_MESSAGE_SEVERITY_INFO
 		};
 
@@ -106,7 +105,7 @@ ComPtr<ID3D12CommandQueue> Graphics::CreateCommandQueue(ComPtr<ID3D12Device2> de
 	desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 	desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	desc.NodeMask = 0;
-
+	
 	ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&d3d12CommandQueue)));
 
 	return d3d12CommandQueue;
@@ -323,7 +322,11 @@ void Graphics::Present(ComPtr<ID3D12Resource> backBuffer) {
 
 	g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
 
-	WaitForFenceValue(g_Fence, g_FrameFenceValues[g_CurrentBackBufferIndex], g_FenceEvent);
+	//WaitForFenceValue(g_Fence, g_FrameFenceValues[g_CurrentBackBufferIndex], g_FenceEvent);
+}
+
+bool Graphics::NextFrameReady() {
+	return g_Fence->GetCompletedValue() >= g_FrameFenceValues[g_CurrentBackBufferIndex];
 }
 
 void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, Color color) {
@@ -337,7 +340,17 @@ void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, Color color) {
 	g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 }
 
-void Graphics::Initialize() {
+void Graphics::Initialize(HWND hWnd) {
+#if defined(_DEBUG)
+	// Always enable the debug layer before doing anything DX12 related
+	// so all possible errors generated while creating DX12 objects
+	// are caught by the debug layer.
+	ComPtr<ID3D12Debug> debugInterface;
+	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
+	debugInterface->EnableDebugLayer();
+#endif
+
+	g_hWnd = hWnd;
 	g_TearingSupported = CheckTearingSupport();
 
 	ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(g_UseWarp);
@@ -346,8 +359,7 @@ void Graphics::Initialize() {
 
 	g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-	g_SwapChain = CreateSwapChain(g_hWnd, g_CommandQueue,
-		g_ClientWidth, g_ClientHeight, g_NumFrames);
+	g_SwapChain = CreateSwapChain(g_hWnd, g_CommandQueue, g_ClientWidth, g_ClientHeight, g_NumFrames);
 
 	g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
 

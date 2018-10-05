@@ -3,8 +3,10 @@
 #include "Graphics.h"
 
 class Game {
-public:
+private:
 	Graphics *graphics;
+public:
+	void Initialize(Graphics *graphics);
 	void Update(double totalTime, double deltaTime);
 };
 

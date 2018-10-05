@@ -18,17 +18,6 @@ Graphics *graphics;
 // Window callback function.
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-void EnableDebugLayer() {
-#if defined(_DEBUG)
-	// Always enable the debug layer before doing anything DX12 related
-	// so all possible errors generated while creating DX12 objects
-	// are caught by the debug layer.
-	ComPtr<ID3D12Debug> debugInterface;
-	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
-	debugInterface->EnableDebugLayer();
-#endif
-}
-
 void ParseCommandLineArguments() {
 	int argc;
 	wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
@@ -163,7 +152,6 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	// Window class name. Used for registering / creating the window.
 	const wchar_t* windowClassName = L"Jae3d";
 	ParseCommandLineArguments();
-	EnableDebugLayer();
 
 	RegisterWindowClass(hInstance, windowClassName);
 
@@ -175,9 +163,8 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	// Initialize the global window rect variable.
 	::GetWindowRect(hWnd, &graphics->g_WindowRect);
 
-	graphics->g_hWnd = hWnd;
-	graphics->Initialize();
-	game->graphics = graphics;
+	graphics->Initialize(hWnd);
+	game->Initialize(graphics);
 
 	::ShowWindow(hWnd, SW_SHOW);
 

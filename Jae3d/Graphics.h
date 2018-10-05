@@ -31,7 +31,7 @@ using namespace Microsoft::WRL;
 #endif
 
 // The number of swap chain back buffers.
-const uint8_t g_NumFrames = 2;
+const uint8_t g_NumFrames = 3;
 
 class Graphics {
 public:
@@ -48,7 +48,7 @@ public:
 	bool g_IsInitialized = false;
 	bool g_Fullscreen = false;
 	bool g_TearingSupported = false;
-	bool g_VSync = false;
+	bool g_VSync = true;
 
 	// DirectX 12 Objects
 	ComPtr<ID3D12Device2> g_Device;
@@ -67,6 +67,15 @@ public:
 	uint64_t g_FrameFenceValues[g_NumFrames] = {};
 	HANDLE g_FenceEvent;
 
+	void Graphics::Initialize(HWND hWnd);
+	void Graphics::SetFullscreen(bool fullscreen);
+	void Graphics::Resize(uint32_t width, uint32_t height);
+	void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, Color color);
+	void Graphics::Present(ComPtr<ID3D12Resource> backBuffer);
+	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
+	bool Graphics::NextFrameReady();
+
+private:
 	bool Graphics::CheckTearingSupport();
 
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
@@ -86,12 +95,5 @@ public:
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
 	uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t & fenceValue);
-
-	void Graphics::Initialize();
-	void Graphics::SetFullscreen(bool fullscreen);
-	void Graphics::Resize(uint32_t width, uint32_t height);
-	void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, Color color);
-	void Graphics::Present(ComPtr<ID3D12Resource> backBuffer);
-	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
 };
 

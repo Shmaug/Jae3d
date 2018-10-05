@@ -7,7 +7,12 @@
 #include "Mathf.h";
 
 int frameCounter;
+int renderFrameCounter;
 double elapsedSeconds;
+
+void Game::Initialize(Graphics *graphics) {
+	this->graphics = graphics;
+}
 
 void Game::Update(double total, double delta) {
 	// measure fps
@@ -15,20 +20,25 @@ void Game::Update(double total, double delta) {
 	elapsedSeconds += delta;
 	if (elapsedSeconds > 1.0) {
 		char buffer[500];
-		auto fps = frameCounter / elapsedSeconds;
-		sprintf_s(buffer, 500, "FPS: %f\n", fps);
+		sprintf_s(buffer, 500, "FPS: %.1f (%.1f)\n", frameCounter / elapsedSeconds, renderFrameCounter / elapsedSeconds);
 		OutputDebugString(buffer);
 
 		frameCounter = 0;
+		renderFrameCounter = 0;
 		elapsedSeconds = 0.0;
 	}
 
-	auto commandAllocator = graphics->g_CommandAllocators[graphics->g_CurrentBackBufferIndex];
-	auto backBuffer = graphics->g_BackBuffers[graphics->g_CurrentBackBufferIndex];
+	// Render
+	if (graphics->NextFrameReady()) { // Wait for GPU to finish rendering last frame
+		renderFrameCounter++;
 
-	commandAllocator->Reset();
-	graphics->g_CommandList->Reset(commandAllocator.Get(), nullptr);
+		auto commandAllocator = graphics->g_CommandAllocators[graphics->g_CurrentBackBufferIndex];
+		auto backBuffer = graphics->g_BackBuffers[graphics->g_CurrentBackBufferIndex];
 
-	graphics->ClearBackBuffer(backBuffer, Color(cosf(total) * .5f + .5f, sinf(total) * .5f + .5f, 1.0));
-	graphics->Present(backBuffer);
+		commandAllocator->Reset();
+		graphics->g_CommandList->Reset(commandAllocator.Get(), nullptr);
+
+		graphics->ClearBackBuffer(backBuffer, Color(cosf(total) * .5f + .5f, sinf(total) * .5f + .5f, 1.0));
+		graphics->Present(backBuffer);
+	}
 }
