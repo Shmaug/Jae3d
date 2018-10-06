@@ -7,7 +7,7 @@
 namespace Profiler {
 	class ProfilerSample {
 	public:
-		std::vector<ProfilerSample> children;
+		std::vector<ProfilerSample*> children;
 		ProfilerSample *parent;
 		LPCSTR name;
 		double startTime;
@@ -16,10 +16,12 @@ namespace Profiler {
 		ProfilerSample(LPCSTR name, double startTime) : name(name), startTime(startTime) {
 			parent = nullptr;
 		}
+
+		~ProfilerSample();
 	};
 
 	struct ProfilerFrame {
-		std::vector<ProfilerSample> samples;
+		std::vector<ProfilerSample*> samples;
 		long index;
 		double startTime;
 		double endTime;
@@ -30,6 +32,6 @@ namespace Profiler {
 	void FrameStart();
 	void FrameEnd();
 
-	void Print(char *buffer, int size);
+	void PrintLastFrame(char *buffer, int size);
 };
 

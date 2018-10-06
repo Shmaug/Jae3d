@@ -50,28 +50,13 @@ public:
 	bool g_TearingSupported = false;
 	bool g_VSync = true;
 
-	// DirectX 12 Objects
-	ComPtr<ID3D12Device2> g_Device;
-	ComPtr<ID3D12CommandQueue> g_CommandQueue;
-	ComPtr<IDXGISwapChain4> g_SwapChain;
-	ComPtr<ID3D12Resource> g_BackBuffers[g_NumFrames];
-	ComPtr<ID3D12GraphicsCommandList> g_CommandList;
-	ComPtr<ID3D12CommandAllocator> g_CommandAllocators[g_NumFrames];
-	ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
-	UINT g_RTVDescriptorSize;
-	UINT g_CurrentBackBufferIndex;
-
-	// Synchronization objects
-	ComPtr<ID3D12Fence> g_Fence;
-	uint64_t g_FenceValue = 0;
-	uint64_t g_FrameFenceValues[g_NumFrames] = {};
-	HANDLE g_FenceEvent;
-
 	void Graphics::Initialize(HWND hWnd);
+	void Graphics::Destroy();
 	void Graphics::SetFullscreen(bool fullscreen);
 	void Graphics::Resize(uint32_t width, uint32_t height);
-	void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, DirectX::XMFLOAT4 color);
-	void Graphics::Present(ComPtr<ID3D12Resource> backBuffer);
+	void Graphics::ResetCommands();
+	void Graphics::ClearBackBuffer(DirectX::XMFLOAT4 color);
+	void Graphics::Present();
 	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
 	bool Graphics::NextFrameReady();
 

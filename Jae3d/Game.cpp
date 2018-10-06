@@ -46,7 +46,7 @@ void Game::Update(double total, double delta) {
 		elapsedSeconds = 0.0;
 
 		char pbuf[1024];
-		Profiler::Print(pbuf, 1024);
+		Profiler::PrintLastFrame(pbuf, 1024);
 		OutputDebugString(pbuf);
 	}
 
@@ -54,18 +54,14 @@ void Game::Update(double total, double delta) {
 	if (graphics->NextFrameReady()) { // Wait for GPU to finish rendering last frame
 		renderFrameCounter++;
 
-		auto commandAllocator = graphics->g_CommandAllocators[graphics->g_CurrentBackBufferIndex];
-		auto backBuffer = graphics->g_BackBuffers[graphics->g_CurrentBackBufferIndex];
-
-		commandAllocator->Reset();
-		graphics->g_CommandList->Reset(commandAllocator.Get(), nullptr);
+		graphics->ResetCommands();
 
 		Profiler::BeginSample("Clear");
-		graphics->ClearBackBuffer(backBuffer, XMFLOAT4(0.f, 0.f, 0.f, 1.f));
+		graphics->ClearBackBuffer(XMFLOAT4(0.f, 0.f, 0.f, 1.f));
 		Profiler::EndSample();
 
 		Profiler::BeginSample("Present");
-		graphics->Present(backBuffer);
+		graphics->Present();
 		Profiler::EndSample();
 	}
 

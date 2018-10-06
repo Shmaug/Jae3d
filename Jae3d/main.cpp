@@ -245,8 +245,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	}
 
 	// Make sure the command queue has finished all commands before closing.
-	graphics->Flush(graphics->g_CommandQueue, graphics->g_Fence, graphics->g_FenceValue, graphics->g_FenceEvent);
-	::CloseHandle(graphics->g_FenceEvent);
+	graphics->Destroy();
 
 	delete(game);
 	delete(graphics);

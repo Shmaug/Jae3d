@@ -1,4 +1,22 @@
 #include "Graphics.h"
+#include "Profiler.h"
+
+// DirectX 12 Objects
+ComPtr<ID3D12Device2> g_Device;
+ComPtr<ID3D12CommandQueue> g_CommandQueue;
+ComPtr<IDXGISwapChain4> g_SwapChain;
+ComPtr<ID3D12Resource> g_BackBuffers[g_NumFrames];
+ComPtr<ID3D12GraphicsCommandList> g_CommandList;
+ComPtr<ID3D12CommandAllocator> g_CommandAllocators[g_NumFrames];
+ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+UINT g_RTVDescriptorSize;
+UINT g_CurrentBackBufferIndex;
+
+// Synchronization objects
+ComPtr<ID3D12Fence> g_Fence;
+uint64_t g_FenceValue = 0;
+uint64_t g_FrameFenceValues[g_NumFrames] = {};
+HANDLE g_FenceEvent;
 
 bool Graphics::CheckTearingSupport() {
 	BOOL allowTearing = FALSE;
@@ -303,7 +321,16 @@ void Graphics::SetFullscreen(bool fullscreen) {
 	}
 }
 
-void Graphics::Present(ComPtr<ID3D12Resource> backBuffer) {
+void Graphics::ResetCommands() {
+	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
+	commandAllocator->Reset();
+	g_CommandList->Reset(commandAllocator.Get(), nullptr);
+}
+
+void Graphics::Present() {
+	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
+	auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
+
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		backBuffer.Get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -318,7 +345,10 @@ void Graphics::Present(ComPtr<ID3D12Resource> backBuffer) {
 
 	UINT syncInterval = g_VSync ? 1 : 0;
 	UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+
+	Profiler::BeginSample("Present method");
 	ThrowIfFailed(g_SwapChain->Present(syncInterval, presentFlags));
+	Profiler::EndSample();
 
 	g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
 
@@ -329,7 +359,10 @@ bool Graphics::NextFrameReady() {
 	return g_Fence->GetCompletedValue() >= g_FrameFenceValues[g_CurrentBackBufferIndex];
 }
 
-void Graphics::ClearBackBuffer(ComPtr<ID3D12Resource> backBuffer, DirectX::XMFLOAT4 color) {
+void Graphics::ClearBackBuffer(DirectX::XMFLOAT4 color) {
+	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
+	auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
+
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	g_CommandList->ResourceBarrier(1, &barrier);
@@ -377,4 +410,8 @@ void Graphics::Initialize(HWND hWnd) {
 	g_FenceEvent = CreateEventHandle();
 
 	g_IsInitialized = true;
+}
+void Graphics::Destroy(){
+	Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
+	::CloseHandle(g_FenceEvent);
 }
