@@ -1,5 +1,9 @@
 #include "Graphics.h"
 #include "Profiler.h"
+#include <process.h>
+
+// The number of swap chain back buffers.
+const uint8_t g_NumFrames = 3;
 
 // DirectX 12 Objects
 ComPtr<ID3D12Device2> g_Device;
@@ -149,6 +153,7 @@ ComPtr<IDXGISwapChain4> Graphics::CreateSwapChain(HWND hWnd, ComPtr<ID3D12Comman
 	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+
 	// It is recommended to always allow tearing if tearing support is available.
 	swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
@@ -321,56 +326,54 @@ void Graphics::SetFullscreen(bool fullscreen) {
 	}
 }
 
-void Graphics::ResetCommands() {
-	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
-	commandAllocator->Reset();
-	g_CommandList->Reset(commandAllocator.Get(), nullptr);
+bool running = false;
+HANDLE renderThread;
+unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
+	Graphics *g = static_cast<Graphics*>(g_this);
+	while (running) {
+		auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
+		auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
+		commandAllocator->Reset();
+		g_CommandList->Reset(commandAllocator.Get(), nullptr);
+
+		// Draw scene
+
+		// transition back buffer to RenderTarget state
+		CD3DX12_RESOURCE_BARRIER clbarrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		g_CommandList->ResourceBarrier(1, &clbarrier);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_CurrentBackBufferIndex, g_RTVDescriptorSize);
+
+		FLOAT clearColor[] = { 0, 0, 0, 1 };
+		g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		// TODO: render scene
+
+		// Present
+
+		// Transition back buffer to Present state
+		CD3DX12_RESOURCE_BARRIER pbarrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		g_CommandList->ResourceBarrier(1, &pbarrier);
+
+		ThrowIfFailed(g_CommandList->Close());
+
+		ID3D12CommandList* const commandLists[] = { g_CommandList.Get() };
+		g_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+		g_FrameFenceValues[g_CurrentBackBufferIndex] = g->Signal(g_CommandQueue, g_Fence, g_FenceValue);
+
+		// Present and get the next BackBufferIndex
+		UINT flags = g->g_TearingSupported && !g->g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		ThrowIfFailed(g_SwapChain->Present(g->g_VSync ? 1 : 0, flags));
+		g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
+
+		g->WaitForFenceValue(g_Fence, g_FrameFenceValues[g_CurrentBackBufferIndex], g_FenceEvent);
+	}
+	return 0;
 }
 
-void Graphics::Present() {
-	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
-	auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
-
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		backBuffer.Get(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	g_CommandList->ResourceBarrier(1, &barrier);
-
-	ThrowIfFailed(g_CommandList->Close());
-
-	ID3D12CommandList* const commandLists[] = { g_CommandList.Get() };
-	g_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
-
-	g_FrameFenceValues[g_CurrentBackBufferIndex] = Signal(g_CommandQueue, g_Fence, g_FenceValue);
-
-	UINT syncInterval = g_VSync ? 1 : 0;
-	UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-
-	Profiler::BeginSample("Present method");
-	ThrowIfFailed(g_SwapChain->Present(syncInterval, presentFlags));
-	Profiler::EndSample();
-
-	g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
-
-	//WaitForFenceValue(g_Fence, g_FrameFenceValues[g_CurrentBackBufferIndex], g_FenceEvent);
-}
-
-bool Graphics::NextFrameReady() {
-	return g_Fence->GetCompletedValue() >= g_FrameFenceValues[g_CurrentBackBufferIndex];
-}
-
-void Graphics::ClearBackBuffer(DirectX::XMFLOAT4 color) {
-	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
-	auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
-
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-	g_CommandList->ResourceBarrier(1, &barrier);
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_CurrentBackBufferIndex, g_RTVDescriptorSize);
-
-	FLOAT clearColor[] = { color.x, color.y, color.z, color.w };
-	g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+void Graphics::StartRenderLoop() {
+	running = true;
+	renderThread = (HANDLE)_beginthreadex(0, 0, &Graphics::RenderLoop, this, 0, 0);
 }
 
 void Graphics::Initialize(HWND hWnd) {
@@ -412,6 +415,10 @@ void Graphics::Initialize(HWND hWnd) {
 	g_IsInitialized = true;
 }
 void Graphics::Destroy(){
+	running = false;
+	::WaitForSingleObject(renderThread, INFINITE);
+	::CloseHandle(renderThread);
+
 	Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
 	::CloseHandle(g_FenceEvent);
 }

@@ -50,20 +50,5 @@ void Game::Update(double total, double delta) {
 		OutputDebugString(pbuf);
 	}
 
-	// Render
-	if (graphics->NextFrameReady()) { // Wait for GPU to finish rendering last frame
-		renderFrameCounter++;
-
-		graphics->ResetCommands();
-
-		Profiler::BeginSample("Clear");
-		graphics->ClearBackBuffer(XMFLOAT4(0.f, 0.f, 0.f, 1.f));
-		Profiler::EndSample();
-
-		Profiler::BeginSample("Present");
-		graphics->Present();
-		Profiler::EndSample();
-	}
-
 	Profiler::FrameEnd();
 }

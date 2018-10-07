@@ -225,6 +225,8 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	::ShowWindow(hWnd, SW_SHOW);
 
+	graphics->StartRenderLoop();
+
 	// Main loop
 	MSG msg = {};
 	while (msg.message != WM_QUIT) {
@@ -244,7 +246,6 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		t0 = t1;
 	}
 
-	// Make sure the command queue has finished all commands before closing.
 	graphics->Destroy();
 
 	delete(game);

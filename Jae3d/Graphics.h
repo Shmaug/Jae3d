@@ -30,8 +30,6 @@ using namespace Microsoft::WRL;
 #undef max
 #endif
 
-// The number of swap chain back buffers.
-const uint8_t g_NumFrames = 3;
 
 class Graphics {
 public:
@@ -54,11 +52,8 @@ public:
 	void Graphics::Destroy();
 	void Graphics::SetFullscreen(bool fullscreen);
 	void Graphics::Resize(uint32_t width, uint32_t height);
-	void Graphics::ResetCommands();
-	void Graphics::ClearBackBuffer(DirectX::XMFLOAT4 color);
-	void Graphics::Present();
 	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
-	bool Graphics::NextFrameReady();
+	void Graphics::StartRenderLoop();
 
 private:
 	bool Graphics::CheckTearingSupport();
@@ -77,8 +72,10 @@ private:
 
 	void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration);
 
+	static unsigned int RenderLoop(void *data);
+
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
-	uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t & fenceValue);
+	uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t &fenceValue);
 };
 
