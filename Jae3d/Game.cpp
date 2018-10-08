@@ -8,7 +8,6 @@
 #include "Profiler.h";
 
 int frameCounter;
-int renderFrameCounter;
 double elapsedSeconds;
 
 using namespace DirectX;
@@ -38,12 +37,12 @@ void Game::Update(double total, double delta) {
 	elapsedSeconds += delta;
 	if (elapsedSeconds > 1.0) {
 		char buffer[128];
-		sprintf_s(buffer, 128, "FPS: %.1f (%.1f)\n", frameCounter / elapsedSeconds, renderFrameCounter / elapsedSeconds);
+		sprintf_s(buffer, 128, "FPS: %.1f (%.1f)\n", frameCounter / elapsedSeconds, graphics->fpsCounter / elapsedSeconds);
 		OutputDebugString(buffer);
 
 		frameCounter = 0;
-		renderFrameCounter = 0;
 		elapsedSeconds = 0.0;
+		graphics->fpsCounter = 0;
 
 		char pbuf[1024];
 		Profiler::PrintLastFrame(pbuf, 1024);

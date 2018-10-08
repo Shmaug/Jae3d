@@ -331,6 +331,8 @@ HANDLE renderThread;
 unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 	Graphics *g = static_cast<Graphics*>(g_this);
 	while (running) {
+		g->fpsCounter++;
+
 		auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
 		auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
 		commandAllocator->Reset();

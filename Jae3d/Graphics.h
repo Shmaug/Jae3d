@@ -47,6 +47,7 @@ public:
 	bool g_Fullscreen = false;
 	bool g_TearingSupported = false;
 	bool g_VSync = true;
+	int fpsCounter;
 
 	void Graphics::Initialize(HWND hWnd);
 	void Graphics::Destroy();
