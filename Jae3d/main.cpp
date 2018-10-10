@@ -5,6 +5,7 @@
 #include "Graphics.h"
 #include "Mathf.h"
 #include "Game.h"
+#include "Input.h"
 
 // In order to define a function called CreateWindow, the Windows macro needs to
 // be undefined.
@@ -15,6 +16,8 @@
 Game *game;
 Graphics *graphics;
 
+bool warp = false;
+
 // Window callback function.
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -24,7 +27,7 @@ void ParseCommandLineArguments() {
 
 	for (size_t i = 0; i < argc; ++i) {
 		if (::wcscmp(argv[i], L"-warp") == 0 || ::wcscmp(argv[i], L"--warp") == 0) {
-			graphics->g_UseWarp = true;
+			warp = true;
 		}
 	}
 
@@ -102,7 +105,7 @@ HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	if (!graphics->g_IsInitialized) return ::DefWindowProcW(hwnd, message, wParam, lParam);
+	if (!graphics->IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
 
 	switch (message) {
 		case WM_PAINT:
@@ -110,22 +113,19 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:
 		{
-			KeyEventArgs keyEvent((KeyCode::Key)wParam, KeyEventArgs::Pressed);
-			game->KeyEvent(keyEvent);
+			Input::OnKeyDownEvent((KeyCode::Key)wParam, true);
 		}
 			break;
 
 		case WM_SYSKEYUP:
 		case WM_KEYUP:
 		{
-			KeyEventArgs keyEvent((KeyCode::Key)wParam, KeyEventArgs::Released);
-			game->KeyEvent(keyEvent);
+			Input::OnKeyDownEvent((KeyCode::Key)wParam, false);
 		}
 			break;
 		case WM_MOUSEMOVE:
 		{
-			MouseMoveEventArgs mEvent(((int)(short)LOWORD(lParam)), ((int)(short)HIWORD(lParam)));
-			game->MouseMove(mEvent);
+			Input::OnMouseMoveEvent(((int)(short)LOWORD(lParam)), ((int)(short)HIWORD(lParam)));
 		}
 			break;
 
@@ -133,8 +133,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_RBUTTONDOWN:
 		case WM_MBUTTONDOWN:
 		{
-			MouseButtonEventArgs mEvent(DecodeMouseButton(message), MouseButtonEventArgs::Pressed);
-			game->MouseEvent(mEvent);
+			Input::OnMousePressEvent(DecodeMouseButton(message), true);
 		}
 			break;
 
@@ -142,13 +141,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_RBUTTONUP:
 		case WM_MBUTTONUP:
 		{
-			MouseButtonEventArgs mouseButtonEventArgs(DecodeMouseButton(message), MouseButtonEventArgs::Released);
-			game->MouseEvent(mouseButtonEventArgs);
+			Input::OnMousePressEvent(DecodeMouseButton(message), false);
 		}
 			break;
 		case WM_MOUSEWHEEL:
 		{
-			game->MouseWheelEvent(((int)(short)HIWORD(wParam)) / (float)WHEEL_DELTA);
+			Input::OnMouseWheelEvent(((int)(short)HIWORD(wParam)) / (float)WHEEL_DELTA);
 		}
 			break;
 
@@ -160,7 +158,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_SIZE:
 		{
 			RECT clientRect = {};
-			::GetClientRect(graphics->g_hWnd, &clientRect);
+			::GetClientRect(graphics->m_hWnd, &clientRect);
 
 			int width = clientRect.right - clientRect.left;
 			int height = clientRect.bottom - clientRect.top;
@@ -215,12 +213,12 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	graphics = new Graphics();
 	game = new Game();
 
-	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", graphics->g_ClientWidth, graphics->g_ClientHeight);
+	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", graphics->m_ClientWidth, graphics->m_ClientHeight);
 
 	// Initialize the global window rect variable.
-	::GetWindowRect(hWnd, &graphics->g_WindowRect);
+	::GetWindowRect(hWnd, &graphics->m_WindowRect);
 
-	graphics->Initialize(hWnd);
+	graphics->Initialize(hWnd, warp);
 	game->Initialize(graphics);
 
 	::ShowWindow(hWnd, SW_SHOW);

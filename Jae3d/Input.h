@@ -1,41 +1,21 @@
 #pragma once
+
 #include "KeyCode.h"
+#include <DirectXMath.h>
 
-class KeyEventArgs {
+class Input {
 public:
-	enum KeyState {
-		Released = 0,
-		Pressed = 1
-	};
+	static void Input::OnKeyDownEvent(KeyCode::Key key, bool state);
+	static void Input::OnMouseMoveEvent(int x, int y);
+	static void Input::OnMousePressEvent(int button, bool state);
+	static void Input::OnMouseWheelEvent(int delta);
 
-	KeyCode::Key    key;
-	KeyState        state;
+	static bool Input::KeyDown(KeyCode::Key key);
+	static bool Input::OnKeyDown(KeyCode::Key key);
+	static bool Input::ButtonDown(int button);
+	static bool Input::OnButtonDown(int button);
+	static int Input::MouseWheelDelta();
+	static DirectX::XMINT2 Input::MouseDelta();
 
-	KeyEventArgs(KeyCode::Key key, KeyState state)
-		: key(key)
-		, state(state) {}
-};
-
-class MouseMoveEventArgs {
-public:
-	int x;              // The X-position of the cursor relative to the upper-left corner of the client area.
-	int y;              // The Y-position of the cursor relative to the upper-left corner of the client area.
-
-	MouseMoveEventArgs(int x, int y)
-		: x(x)
-		, y(y) {}
-};
-
-class MouseButtonEventArgs {
-public:
-	enum ButtonState {
-		Released = 0,
-		Pressed = 1
-	};
-
-	int button;
-	ButtonState state;
-	MouseButtonEventArgs(int buttonID, ButtonState state)
-		: button(buttonID)
-		, state(state) {}
+	static void Input::FrameEnd();
 };

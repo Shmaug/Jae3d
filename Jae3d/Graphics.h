@@ -33,32 +33,43 @@ using namespace Microsoft::WRL;
 
 class Graphics {
 public:
-	HWND g_hWnd;
-	RECT g_WindowRect;
+	HWND m_hWnd;
+	RECT m_WindowRect;
 
-	uint32_t g_ClientWidth = 1280;
-	uint32_t g_ClientHeight = 720;
+	uint32_t m_ClientWidth = 1280;
+	uint32_t m_ClientHeight = 720;
 
-	// Use WARP adapter
-	bool g_UseWarp = false;
+	bool Graphics::WarpEnabled() const { return m_UseWarp; };
+	bool Graphics::IsInitialized() const { return m_Initialized; };
+	bool Graphics::IsFullscreen() const { return m_Fullscreen; };
+	bool Graphics::TearingSupported() const { return m_TearingSupported; };
+	bool Graphics::VSync() const { return m_VSync; };
 
-	// Set to true once the DX12 objects have been initialized.
-	bool g_IsInitialized = false;
-	bool g_Fullscreen = false;
-	bool g_TearingSupported = false;
-	bool g_VSync = true;
-	int fpsCounter;
-
-	void Graphics::Initialize(HWND hWnd);
-	void Graphics::Destroy();
+	void Graphics::SetVSync(bool vsync) { m_VSync = vsync; }
+	int Graphics::GetAndResetFPS() {
+		int x = m_fpsCounter;
+		m_fpsCounter = 0;
+		return x;
+	}
 	void Graphics::SetFullscreen(bool fullscreen);
+
+	void Graphics::Initialize(HWND hWnd, bool warp);
+	void Graphics::Destroy();
 	void Graphics::Resize(uint32_t width, uint32_t height);
 	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
 	void Graphics::StartRenderLoop();
 
 private:
-	bool Graphics::CheckTearingSupport();
+	// Use WARP adapter
+	bool m_UseWarp = false;
+	// Set to true once the DX12 objects have been initialized.
+	bool m_Initialized = false;
+	bool m_Fullscreen = false;
+	bool m_TearingSupported = false;
+	bool m_VSync = true;
+	int m_fpsCounter;
 
+	bool Graphics::CheckTearingSupport();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);

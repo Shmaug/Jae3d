@@ -5,6 +5,9 @@
 // The number of swap chain back buffers.
 const uint8_t g_NumFrames = 3;
 
+UINT g_RTVDescriptorSize;
+UINT g_CurrentBackBufferIndex;
+
 // DirectX 12 Objects
 ComPtr<ID3D12Device2> g_Device;
 ComPtr<ID3D12CommandQueue> g_CommandQueue;
@@ -13,14 +16,14 @@ ComPtr<ID3D12Resource> g_BackBuffers[g_NumFrames];
 ComPtr<ID3D12GraphicsCommandList> g_CommandList;
 ComPtr<ID3D12CommandAllocator> g_CommandAllocators[g_NumFrames];
 ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
-UINT g_RTVDescriptorSize;
-UINT g_CurrentBackBufferIndex;
 
 // Synchronization objects
 ComPtr<ID3D12Fence> g_Fence;
 uint64_t g_FenceValue = 0;
 uint64_t g_FrameFenceValues[g_NumFrames] = {};
 HANDLE g_FenceEvent;
+
+uint32_t rWidth, rHeight;
 
 bool Graphics::CheckTearingSupport() {
 	BOOL allowTearing = FALSE;
@@ -252,77 +255,54 @@ void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence
 }
 
 void Graphics::Resize(uint32_t width, uint32_t height) {
-	if (g_ClientWidth != width || g_ClientHeight != height) {
-		// Don't allow 0 size swap chain back buffers.
-		g_ClientWidth = std::max(1u, width);
-		g_ClientHeight = std::max(1u, height);
-
-		// Flush the GPU queue to make sure the swap chain's back buffers
-		// are not being referenced by an in-flight command list.
-		Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
-
-		for (int i = 0; i < g_NumFrames; ++i) {
-			// Any references to the back buffers must be released
-			// before the swap chain can be resized.
-			g_BackBuffers[i].Reset();
-			g_FrameFenceValues[i] = g_FrameFenceValues[g_CurrentBackBufferIndex];
-		}
-
-		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-		ThrowIfFailed(g_SwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(g_SwapChain->ResizeBuffers(g_NumFrames, g_ClientWidth, g_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-
-		g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
-
-		UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
-	}
+	rWidth = width;
+	rHeight = height;
 }
 
 void Graphics::SetFullscreen(bool fullscreen) {
-	if (g_Fullscreen != fullscreen) {
-		g_Fullscreen = fullscreen;
+	if (m_Fullscreen == fullscreen) return;
+	m_Fullscreen = fullscreen;
 
-		if (g_Fullscreen) // Switching to fullscreen.
-		{
-			// Store the current window dimensions so they can be restored 
-			// when switching out of fullscreen state.
-			::GetWindowRect(g_hWnd, &g_WindowRect);
+	if (m_Fullscreen) // Switching to fullscreen.
+	{
+		// Store the current window dimensions so they can be restored 
+		// when switching out of fullscreen state.
+		::GetWindowRect(m_hWnd, &m_WindowRect);
 
-			// Set the window style to a borderless window so the client area fills
-			// the entire screen.
-			UINT windowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+		// Set the window style to a borderless window so the client area fills
+		// the entire screen.
+		UINT windowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
 
-			::SetWindowLongW(g_hWnd, GWL_STYLE, windowStyle);
+		::SetWindowLongW(m_hWnd, GWL_STYLE, windowStyle);
 
-			// Query the name of the nearest display device for the window.
-			// This is required to set the fullscreen dimensions of the window
-			// when using a multi-monitor setup.
-			HMONITOR hMonitor = ::MonitorFromWindow(g_hWnd, MONITOR_DEFAULTTONEAREST);
-			MONITORINFOEX monitorInfo = {};
-			monitorInfo.cbSize = sizeof(MONITORINFOEX);
-			::GetMonitorInfo(hMonitor, &monitorInfo);
+		// Query the name of the nearest display device for the window.
+		// This is required to set the fullscreen dimensions of the window
+		// when using a multi-monitor setup.
+		HMONITOR hMonitor = ::MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST);
+		MONITORINFOEX monitorInfo = {};
+		monitorInfo.cbSize = sizeof(MONITORINFOEX);
+		::GetMonitorInfo(hMonitor, &monitorInfo);
 
-			::SetWindowPos(g_hWnd, HWND_TOPMOST,
-				monitorInfo.rcMonitor.left,
-				monitorInfo.rcMonitor.top,
-				monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
-				monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
-				SWP_FRAMECHANGED | SWP_NOACTIVATE);
+		::SetWindowPos(m_hWnd, HWND_TOPMOST,
+			monitorInfo.rcMonitor.left,
+			monitorInfo.rcMonitor.top,
+			monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
+			monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
+			SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
-			::ShowWindow(g_hWnd, SW_MAXIMIZE);
-		} else {
-			// Restore all the window decorators.
-			::SetWindowLong(g_hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+		::ShowWindow(m_hWnd, SW_MAXIMIZE);
+	} else {
+		// Restore all the window decorators.
+		::SetWindowLong(m_hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-			::SetWindowPos(g_hWnd, HWND_NOTOPMOST,
-				g_WindowRect.left,
-				g_WindowRect.top,
-				g_WindowRect.right - g_WindowRect.left,
-				g_WindowRect.bottom - g_WindowRect.top,
-				SWP_FRAMECHANGED | SWP_NOACTIVATE);
+		::SetWindowPos(m_hWnd, HWND_NOTOPMOST,
+			m_WindowRect.left,
+			m_WindowRect.top,
+			m_WindowRect.right - m_WindowRect.left,
+			m_WindowRect.bottom - m_WindowRect.top,
+			SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
-			::ShowWindow(g_hWnd, SW_NORMAL);
-		}
+		::ShowWindow(m_hWnd, SW_NORMAL);
 	}
 }
 
@@ -331,8 +311,35 @@ HANDLE renderThread;
 unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 	Graphics *g = static_cast<Graphics*>(g_this);
 	while (running) {
-		g->fpsCounter++;
+		g->m_fpsCounter++;
 
+		// Check whether or not we need to resize the swap chain buffers
+		if (g->m_ClientWidth != rWidth || g->m_ClientHeight != rHeight) {
+			// Don't allow 0 size swap chain back buffers.
+			g->m_ClientWidth = std::max(1u, rWidth);
+			g->m_ClientHeight = std::max(1u, rHeight);
+
+			// Flush the GPU queue to make sure the swap chain's back buffers
+			// are not being referenced by an in-flight command list.
+			g->Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
+
+			for (int i = 0; i < g_NumFrames; ++i) {
+				// Any references to the back buffers must be released
+				// before the swap chain can be resized.
+				g_BackBuffers[i].Reset();
+				g_FrameFenceValues[i] = g_FrameFenceValues[g_CurrentBackBufferIndex];
+			}
+
+			DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+			ThrowIfFailed(g_SwapChain->GetDesc(&swapChainDesc));
+			ThrowIfFailed(g_SwapChain->ResizeBuffers(g_NumFrames, g->m_ClientWidth, g->m_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+			g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
+
+			g->UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
+		}
+
+		// Get current back buffer data
 		auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
 		auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
 		commandAllocator->Reset();
@@ -346,8 +353,8 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_CurrentBackBufferIndex, g_RTVDescriptorSize);
 
-		FLOAT clearColor[] = { 0, 0, 0, 1 };
-		g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		DirectX::XMFLOAT4 clearColor = { 0.f, 0.f, 0.f, 1.f };
+		g_CommandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 		// TODO: render scene
 
 		// Present
@@ -364,8 +371,8 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 		g_FrameFenceValues[g_CurrentBackBufferIndex] = g->Signal(g_CommandQueue, g_Fence, g_FenceValue);
 
 		// Present and get the next BackBufferIndex
-		UINT flags = g->g_TearingSupported && !g->g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-		ThrowIfFailed(g_SwapChain->Present(g->g_VSync ? 1 : 0, flags));
+		UINT flags = g->m_TearingSupported && !g->m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		ThrowIfFailed(g_SwapChain->Present(g->m_VSync ? 1 : 0, flags));
 		g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
 
 		g->WaitForFenceValue(g_Fence, g_FrameFenceValues[g_CurrentBackBufferIndex], g_FenceEvent);
@@ -378,7 +385,7 @@ void Graphics::StartRenderLoop() {
 	renderThread = (HANDLE)_beginthreadex(0, 0, &Graphics::RenderLoop, this, 0, 0);
 }
 
-void Graphics::Initialize(HWND hWnd) {
+void Graphics::Initialize(HWND hWnd, bool warp) {
 #if defined(_DEBUG)
 	// Always enable the debug layer before doing anything DX12 related
 	// so all possible errors generated while creating DX12 objects
@@ -388,16 +395,16 @@ void Graphics::Initialize(HWND hWnd) {
 	debugInterface->EnableDebugLayer();
 #endif
 
-	g_hWnd = hWnd;
-	g_TearingSupported = CheckTearingSupport();
-
-	ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(g_UseWarp);
+	m_hWnd = hWnd;
+	m_TearingSupported = CheckTearingSupport();
+	m_UseWarp = warp;
+	ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(m_UseWarp);
 
 	g_Device = CreateDevice(dxgiAdapter4);
 
 	g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-	g_SwapChain = CreateSwapChain(g_hWnd, g_CommandQueue, g_ClientWidth, g_ClientHeight, g_NumFrames);
+	g_SwapChain = CreateSwapChain(m_hWnd, g_CommandQueue, m_ClientWidth, m_ClientHeight, g_NumFrames);
 
 	g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
 
@@ -414,7 +421,7 @@ void Graphics::Initialize(HWND hWnd) {
 	g_Fence = CreateFence(g_Device);
 	g_FenceEvent = CreateEventHandle();
 
-	g_IsInitialized = true;
+	m_Initialized = true;
 }
 void Graphics::Destroy(){
 	running = false;
