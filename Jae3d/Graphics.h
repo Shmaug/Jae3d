@@ -33,6 +33,8 @@ using namespace Microsoft::WRL;
 
 class Graphics {
 public:
+	float m_fps;
+
 	HWND m_hWnd;
 	RECT m_WindowRect;
 
@@ -57,9 +59,10 @@ public:
 	void Graphics::Destroy();
 	void Graphics::Resize(uint32_t width, uint32_t height);
 	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
-	void Graphics::StartRenderLoop();
+	void Graphics::StartRenderLoop(HANDLE mutex);
 
 private:
+	HANDLE m_mutex;
 	// Use WARP adapter
 	bool m_UseWarp = false;
 	// Set to true once the DX12 objects have been initialized.
@@ -84,6 +87,7 @@ private:
 
 	void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration);
 
+	void Graphics::Render(ComPtr<ID3D12Resource> backBuffer);
 	static unsigned int RenderLoop(void *data);
 
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);

@@ -2,6 +2,8 @@
 #include "Profiler.h"
 #include <process.h>
 
+using namespace Microsoft::WRL;
+
 // The number of swap chain back buffers.
 const uint8_t g_NumFrames = 3;
 
@@ -22,8 +24,6 @@ ComPtr<ID3D12Fence> g_Fence;
 uint64_t g_FenceValue = 0;
 uint64_t g_FrameFenceValues[g_NumFrames] = {};
 HANDLE g_FenceEvent;
-
-uint32_t rWidth, rHeight;
 
 bool Graphics::CheckTearingSupport() {
 	BOOL allowTearing = FALSE;
@@ -255,8 +255,31 @@ void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence
 }
 
 void Graphics::Resize(uint32_t width, uint32_t height) {
-	rWidth = width;
-	rHeight = height;
+	// Check whether or not we need to resize the swap chain buffers
+	if (m_ClientWidth != width || m_ClientHeight != height) {
+		// Don't allow 0 size swap chain back buffers.
+		m_ClientWidth = std::max(1u, width);
+		m_ClientHeight = std::max(1u, height);
+
+		// Flush the GPU queue to make sure the swap chain's back buffers
+		// are not being referenced by an in-flight command list.
+		Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
+
+		for (int i = 0; i < g_NumFrames; ++i) {
+			// Any references to the back buffers must be released
+			// before the swap chain can be resized.
+			g_BackBuffers[i].Reset();
+			g_FrameFenceValues[i] = g_FrameFenceValues[g_CurrentBackBufferIndex];
+		}
+
+		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+		ThrowIfFailed(g_SwapChain->GetDesc(&swapChainDesc));
+		ThrowIfFailed(g_SwapChain->ResizeBuffers(g_NumFrames, m_ClientWidth, m_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+		g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
+
+		UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
+	}
 }
 
 void Graphics::SetFullscreen(bool fullscreen) {
@@ -306,38 +329,26 @@ void Graphics::SetFullscreen(bool fullscreen) {
 	}
 }
 
+void Graphics::Render(ComPtr<ID3D12Resource> backBuffer) {
+	// transition back buffer to RenderTarget state
+	CD3DX12_RESOURCE_BARRIER clbarrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandList->ResourceBarrier(1, &clbarrier);
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_CurrentBackBufferIndex, g_RTVDescriptorSize);
+
+	DirectX::XMFLOAT4 clearColor = { 0.f, 0.f, 0.f, 1.f };
+	g_CommandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
+	// TODO: render scene
+
+}
+
 bool running = false;
 HANDLE renderThread;
 unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 	Graphics *g = static_cast<Graphics*>(g_this);
 	while (running) {
+		WaitForSingleObject(g->m_mutex, INFINITE);
 		g->m_fpsCounter++;
-
-		// Check whether or not we need to resize the swap chain buffers
-		if (g->m_ClientWidth != rWidth || g->m_ClientHeight != rHeight) {
-			// Don't allow 0 size swap chain back buffers.
-			g->m_ClientWidth = std::max(1u, rWidth);
-			g->m_ClientHeight = std::max(1u, rHeight);
-
-			// Flush the GPU queue to make sure the swap chain's back buffers
-			// are not being referenced by an in-flight command list.
-			g->Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
-
-			for (int i = 0; i < g_NumFrames; ++i) {
-				// Any references to the back buffers must be released
-				// before the swap chain can be resized.
-				g_BackBuffers[i].Reset();
-				g_FrameFenceValues[i] = g_FrameFenceValues[g_CurrentBackBufferIndex];
-			}
-
-			DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-			ThrowIfFailed(g_SwapChain->GetDesc(&swapChainDesc));
-			ThrowIfFailed(g_SwapChain->ResizeBuffers(g_NumFrames, g->m_ClientWidth, g->m_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-
-			g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
-
-			g->UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
-		}
 
 		// Get current back buffer data
 		auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
@@ -346,16 +357,7 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 		g_CommandList->Reset(commandAllocator.Get(), nullptr);
 
 		// Draw scene
-
-		// transition back buffer to RenderTarget state
-		CD3DX12_RESOURCE_BARRIER clbarrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		g_CommandList->ResourceBarrier(1, &clbarrier);
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_CurrentBackBufferIndex, g_RTVDescriptorSize);
-
-		DirectX::XMFLOAT4 clearColor = { 0.f, 0.f, 0.f, 1.f };
-		g_CommandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
-		// TODO: render scene
+		g->Render(backBuffer);
 
 		// Present
 
@@ -370,6 +372,9 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 
 		g_FrameFenceValues[g_CurrentBackBufferIndex] = g->Signal(g_CommandQueue, g_Fence, g_FenceValue);
 
+		// Release mutex before rendering to prevent rendering from halting main thread
+		ReleaseMutex(g->m_mutex);
+
 		// Present and get the next BackBufferIndex
 		UINT flags = g->m_TearingSupported && !g->m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
 		ThrowIfFailed(g_SwapChain->Present(g->m_VSync ? 1 : 0, flags));
@@ -380,8 +385,9 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 	return 0;
 }
 
-void Graphics::StartRenderLoop() {
+void Graphics::StartRenderLoop(HANDLE mutex) {
 	running = true;
+	m_mutex = mutex;
 	renderThread = (HANDLE)_beginthreadex(0, 0, &Graphics::RenderLoop, this, 0, 0);
 }
 

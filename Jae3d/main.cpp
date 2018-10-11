@@ -6,6 +6,7 @@
 #include "Mathf.h"
 #include "Game.h"
 #include "Input.h"
+#include "Profiler.h"
 
 // In order to define a function called CreateWindow, the Windows macro needs to
 // be undefined.
@@ -13,10 +14,11 @@
 #undef CreateWindow
 #endif
 
-Game *game;
-Graphics *graphics;
+Game *g_game;
+Graphics *g_graphics;
+HANDLE g_mutex;
 
-bool warp = false;
+bool g_warp = false;
 
 // Window callback function.
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -27,7 +29,7 @@ void ParseCommandLineArguments() {
 
 	for (size_t i = 0; i < argc; ++i) {
 		if (::wcscmp(argv[i], L"-warp") == 0 || ::wcscmp(argv[i], L"--warp") == 0) {
-			warp = true;
+			g_warp = true;
 		}
 	}
 
@@ -67,7 +69,6 @@ int DecodeMouseButton(UINT messageID) {
 	return mouseButton;
 }
 
-
 #define IsKeyDown(key) (GetAsyncKeyState(key) & 0x8000) != 0
 
 HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t* windowTitle, uint32_t width, uint32_t height) {
@@ -105,7 +106,7 @@ HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	if (!graphics->IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
+	if (!g_graphics->IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
 
 	switch (message) {
 		case WM_PAINT:
@@ -158,12 +159,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_SIZE:
 		{
 			RECT clientRect = {};
-			::GetClientRect(graphics->m_hWnd, &clientRect);
+			::GetClientRect(g_graphics->m_hWnd, &clientRect);
 
 			int width = clientRect.right - clientRect.left;
 			int height = clientRect.bottom - clientRect.top;
 
-			graphics->Resize(width, height);
+			g_graphics->Resize(width, height);
 		}
 		break;
 		case WM_DESTROY:
@@ -210,24 +211,30 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	RegisterWindowClass(hInstance, windowClassName);
 
-	graphics = new Graphics();
-	game = new Game();
+	g_graphics = new Graphics();
+	g_game = new Game();
+	g_mutex = CreateMutex(NULL, FALSE, NULL);
 
-	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", graphics->m_ClientWidth, graphics->m_ClientHeight);
+	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", g_graphics->m_ClientWidth, g_graphics->m_ClientHeight);
 
 	// Initialize the global window rect variable.
-	::GetWindowRect(hWnd, &graphics->m_WindowRect);
+	::GetWindowRect(hWnd, &g_graphics->m_WindowRect);
 
-	graphics->Initialize(hWnd, warp);
-	game->Initialize(graphics);
+	g_graphics->Initialize(hWnd, g_warp);
+	g_game->Initialize(g_graphics);
 
 	::ShowWindow(hWnd, SW_SHOW);
 
-	graphics->StartRenderLoop();
+	g_graphics->StartRenderLoop(g_mutex);
 
 	// Main loop
 	MSG msg = {};
 	while (msg.message != WM_QUIT) {
+		// Begin the frame; wait for the render thread to release the mutex
+		Profiler::FrameStart();
+		Profiler::BeginSample("Wait for render thread");
+		if (WaitForSingleObject(g_mutex, INFINITE) & WAIT_ABANDONED) break;
+
 		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
@@ -236,18 +243,37 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		static std::chrono::high_resolution_clock clock;
 		static auto start = clock.now();
 		static auto t0 = clock.now();
+		static int frameCounter;
+		static double elapsedSeconds;
 
 		auto t1 = clock.now();
-
-		game->Update((t1 - start).count() * 1e-9, (t1 - t0).count() * 1e-9);
-
+		double delta = (t1 - t0).count() * 1e-9;
 		t0 = t1;
+
+		Profiler::EndSample();
+		Profiler::BeginSample("Update");
+		g_game->Update((t1 - start).count() * 1e-9, delta);
+		Profiler::EndSample();
+		Input::FrameEnd();
+		ReleaseMutex(g_mutex);
+		Profiler::FrameEnd();
+
+		// measure fps
+		frameCounter++;
+		elapsedSeconds += delta;
+		if (elapsedSeconds > 1.0) {
+			g_game->m_fps = frameCounter / elapsedSeconds;
+			g_graphics->m_fps = g_graphics->GetAndResetFPS() / elapsedSeconds;
+			
+			frameCounter = 0;
+			elapsedSeconds = 0.0;
+		}
 	}
 
-	graphics->Destroy();
+	g_graphics->Destroy();
 
-	delete(game);
-	delete(graphics);
+	delete(g_game);
+	delete(g_graphics);
 
 	return 0;
 }

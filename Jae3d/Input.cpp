@@ -39,7 +39,7 @@ DirectX::XMINT2 Input::MouseDelta() {
 	return { mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y };
 }
 void Input::FrameEnd() {
-	memcpy(state, lastState, sizeof(lastState));
+	memcpy(lastState, state, sizeof(state));
 	lastMousePos = mousePos;
 	wheelDelta = 0;
 }

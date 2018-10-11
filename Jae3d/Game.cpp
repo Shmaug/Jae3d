@@ -7,9 +7,6 @@
 #include "Profiler.h";
 #include "Input.h"
 
-int frameCounter;
-double elapsedSeconds;
-
 using namespace DirectX;
 
 void Game::Initialize(Graphics *graphics) {
@@ -17,38 +14,19 @@ void Game::Initialize(Graphics *graphics) {
 }
 
 void Game::Update(double total, double delta) {
-	Profiler::FrameStart();
+	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
+		graphics->SetFullscreen(!graphics->IsFullscreen());
 
-	// measure fps
-	frameCounter++;
-	elapsedSeconds += delta;
-	if (elapsedSeconds > 1.0) {
+	static double timer = 0;
+	timer += delta;
+	if (timer >= 1.0) {
+		timer = 0.0;
 		char buffer[128];
-		sprintf_s(buffer, 128, "FPS: %.1f (%.1f)\n", frameCounter / elapsedSeconds, graphics->GetAndResetFPS() / elapsedSeconds);
+		sprintf_s(buffer, 128, "FPS: %.1f (%.1f)\n", m_fps, graphics->m_fps);
 		OutputDebugString(buffer);
-
-		frameCounter = 0;
-		elapsedSeconds = 0.0;
 
 		char pbuf[1024];
 		Profiler::PrintLastFrame(pbuf, 1024);
 		OutputDebugString(pbuf);
 	}
-
-	char ibuf[1024];
-	int c = 0;
-	for (int i = 0; i < 255; i++) {
-		if (Input::KeyDown((KeyCode::Key)i)) {
-			c += sprintf_s(ibuf + c, 1024 - c, "%s button down", KeyCode::key_str[i]);
-		}
-	}
-	for (int i = 0; i < 5; i++) {
-		if (Input::ButtonDown(i)) {
-			c += sprintf_s(ibuf + c, 1024 - c, "%d button down", i);
-		}
-	}
-	OutputDebugString(ibuf);
-
-	Input::FrameEnd();
-	Profiler::FrameEnd();
 }
