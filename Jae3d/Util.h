@@ -13,4 +13,5 @@ inline void ThrowIfFailed(HRESULT hr) {
 	}
 }
 
-void FormatNumber(char *buf, int size, int number);
+int PrintFormattedf(char *buf, int size, const char* format, float number);
+int PrintFormattedl(char *buf, int size, unsigned long number);

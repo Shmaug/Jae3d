@@ -57,8 +57,8 @@ void PrintSample(char *buffer, int size, int &c, ProfilerSample *s, int tabLevel
 }
 
 void Profiler::PrintLastFrame(char *buffer, int size) {
-	char fnum[128];
-	FormatNumber(fnum, sizeof(fnum), curFrame - 1);
+	char fnum[48];
+	PrintFormattedl(fnum, sizeof(fnum), curFrame - 1);
 
 	ProfilerFrame *pf = &frames[(curFrame - 1) % frameCount];
 	int c = 0;

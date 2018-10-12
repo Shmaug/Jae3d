@@ -7,6 +7,7 @@
 
 #include "Profiler.h";
 #include "Input.h"
+#include "Util.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
@@ -22,9 +23,12 @@ void Game::Update(double total, double delta) {
 	static double timer = 0;
 	timer += delta;
 	if (timer >= 1.0) {
+		char fps[16];
+		PrintFormattedf(fps, sizeof(fps), "%.1f", m_fps);
+
 		timer = 0.0;
 		char buffer[128];
-		sprintf_s(buffer, 128, "FPS: %.1f (%.1f)\n", m_fps, graphics->m_fps);
+		sprintf_s(buffer, 128, "FPS: %s (%.1f)\n", fps, graphics->m_fps);
 		OutputDebugString(buffer);
 
 		char pbuf[1024];
