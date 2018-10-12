@@ -1,4 +1,5 @@
 #include "Profiler.h"
+#include "Util.h"
 #include <chrono>
 
 using namespace Profiler;
@@ -56,9 +57,12 @@ void PrintSample(char *buffer, int size, int &c, ProfilerSample *s, int tabLevel
 }
 
 void Profiler::PrintLastFrame(char *buffer, int size) {
+	char fnum[128];
+	FormatNumber(fnum, sizeof(fnum), curFrame - 1);
+
 	ProfilerFrame *pf = &frames[(curFrame - 1) % frameCount];
 	int c = 0;
-	c += sprintf_s(buffer, size, "Frame %d: %.02fms\n", curFrame - 1, (pf->endTime - pf->startTime) * 1000);
+	c += sprintf_s(buffer, size, "Frame %s: %.02fms\n", fnum, (pf->endTime - pf->startTime) * 1000);
 
 	for (auto s : pf->samples)
 		PrintSample(buffer, size, c, s, 1);

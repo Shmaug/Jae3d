@@ -2,12 +2,12 @@
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
-using namespace Microsoft::WRL;
 
 // STL Headers
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <memory>
 
 // DirectX 12 specific headers.
 #include <d3d12.h>
@@ -17,8 +17,9 @@ using namespace Microsoft::WRL;
 // D3D12 extension library.
 #include "d3dx12.h"
 
-#include "Util.h"
-#include "Mathf.h"
+#include "CommandQueue.h"
+
+class Game;
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -30,7 +31,6 @@ using namespace Microsoft::WRL;
 #undef max
 #endif
 
-
 class Graphics {
 public:
 	float m_fps;
@@ -41,25 +41,27 @@ public:
 	uint32_t m_ClientWidth = 1280;
 	uint32_t m_ClientHeight = 720;
 
-	bool Graphics::WarpEnabled() const { return m_UseWarp; };
-	bool Graphics::IsInitialized() const { return m_Initialized; };
-	bool Graphics::IsFullscreen() const { return m_Fullscreen; };
-	bool Graphics::TearingSupported() const { return m_TearingSupported; };
-	bool Graphics::VSync() const { return m_VSync; };
+	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+	bool WarpEnabled() const { return m_UseWarp; };
+	bool IsInitialized() const { return m_Initialized; };
+	bool IsFullscreen() const { return m_Fullscreen; };
+	bool TearingSupported() const { return m_TearingSupported; };
+	bool VSync() const { return m_VSync; };
 
-	void Graphics::SetVSync(bool vsync) { m_VSync = vsync; }
-	int Graphics::GetAndResetFPS() {
+	void SetVSync(bool vsync) { m_VSync = vsync; }
+	int GetAndResetFPS() {
 		int x = m_fpsCounter;
 		m_fpsCounter = 0;
 		return x;
 	}
-	void Graphics::SetFullscreen(bool fullscreen);
+	void SetFullscreen(bool fullscreen);
 
-	void Graphics::Initialize(HWND hWnd, bool warp);
-	void Graphics::Destroy();
-	void Graphics::Resize(uint32_t width, uint32_t height);
-	void Graphics::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue, HANDLE fenceEvent);
-	void Graphics::StartRenderLoop(HANDLE mutex);
+	void Initialize(HWND hWnd, bool warp, Game* game);
+	void Destroy();
+	void Resize(uint32_t width, uint32_t height);
+	void StartRenderLoop(HANDLE mutex);
+	void TransitionResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Microsoft::WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
 
 private:
 	HANDLE m_mutex;
@@ -71,27 +73,23 @@ private:
 	bool m_TearingSupported = false;
 	bool m_VSync = true;
 	int m_fpsCounter;
+	Game* m_game;
 
-	bool Graphics::CheckTearingSupport();
-	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
+	bool CheckTearingSupport();
+	Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 
-	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
-	ComPtr<ID3D12CommandQueue> CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
-	ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount);
-	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
-	ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
-	ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<ID3D12Device2> device, ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type);
-	ComPtr<ID3D12Fence> CreateFence(ComPtr<ID3D12Device2> device);
+	Microsoft::WRL::ComPtr<ID3D12Device2> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
+	Microsoft::WRL::ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, uint32_t width, uint32_t height);
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(Microsoft::WRL::ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+	
+	std::shared_ptr<CommandQueue> m_DirectCommandQueue;
+	std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
+	std::shared_ptr<CommandQueue> m_CopyCommandQueue;
 
-	HANDLE CreateEventHandle();
-
-	void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration);
-
-	void Graphics::Render(ComPtr<ID3D12Resource> backBuffer);
 	static unsigned int RenderLoop(void *data);
 
-	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
+	void UpdateRenderTargetViews(Microsoft::WRL::ComPtr<ID3D12Device2> device, Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
-	uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t &fenceValue);
+	uint64_t Signal(Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue, Microsoft::WRL::ComPtr<ID3D12Fence> fence, uint64_t &fenceValue);
 };
 

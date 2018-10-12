@@ -12,3 +12,5 @@ inline void ThrowIfFailed(HRESULT hr) {
 		throw std::exception();
 	}
 }
+
+void FormatNumber(char *buf, int size, int number);

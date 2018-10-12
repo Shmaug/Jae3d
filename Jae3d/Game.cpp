@@ -3,11 +3,13 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <stdio.h>
+#include <locale.h>
 
 #include "Profiler.h";
 #include "Input.h"
 
 using namespace DirectX;
+using namespace Microsoft::WRL;
 
 void Game::Initialize(Graphics *graphics) {
 	this->graphics = graphics;
@@ -29,4 +31,11 @@ void Game::Update(double total, double delta) {
 		Profiler::PrintLastFrame(pbuf, 1024);
 		OutputDebugString(pbuf);
 	}
+}
+
+void Game::Render(ComPtr<ID3D12GraphicsCommandList> commandList) {
+	auto rtv = graphics->GetCurrentRenderTargetView();
+
+	DirectX::XMFLOAT4 clearColor = { 0.4f, 0.6f, 0.9f, 1.f };
+	commandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 }

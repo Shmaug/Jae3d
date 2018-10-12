@@ -138,6 +138,7 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Profiler.cpp" />
+    <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommandQueue.h" />
@@ -147,7 +148,6 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Profiler.h" />
-    <ClInclude Include="resource.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

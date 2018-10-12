@@ -209,6 +209,12 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	const wchar_t* windowClassName = L"Jae3d";
 	ParseCommandLineArguments();
 
+	// Check for DirectX Math library support.
+	if (!DirectX::XMVerifyCPUSupport()) {
+		MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
+		return false;
+	}
+
 	RegisterWindowClass(hInstance, windowClassName);
 
 	g_graphics = new Graphics();
@@ -220,43 +226,46 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	// Initialize the global window rect variable.
 	::GetWindowRect(hWnd, &g_graphics->m_WindowRect);
 
-	g_graphics->Initialize(hWnd, g_warp);
 	g_game->Initialize(g_graphics);
+	g_graphics->Initialize(hWnd, g_warp, g_game);
 
 	::ShowWindow(hWnd, SW_SHOW);
 
 	g_graphics->StartRenderLoop(g_mutex);
+
+	static std::chrono::high_resolution_clock clock;
+	static auto start = clock.now();
+	static auto t0 = clock.now();
+	static int frameCounter;
+	static double elapsedSeconds;
 
 	// Main loop
 	MSG msg = {};
 	while (msg.message != WM_QUIT) {
 		// Begin the frame; wait for the render thread to release the mutex
 		Profiler::FrameStart();
+
+		// Wait for the mutex, ensures render thread isn't doing anything while the main thread updates (and vice versa)
 		Profiler::BeginSample("Wait for render thread");
 		if (WaitForSingleObject(g_mutex, INFINITE) & WAIT_ABANDONED) break;
+		Profiler::EndSample();
 
+		Profiler::BeginSample("Windows events");
 		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
 		}
+		Profiler::EndSample();
 
-		static std::chrono::high_resolution_clock clock;
-		static auto start = clock.now();
-		static auto t0 = clock.now();
-		static int frameCounter;
-		static double elapsedSeconds;
-
+		Profiler::BeginSample("Update");
 		auto t1 = clock.now();
 		double delta = (t1 - t0).count() * 1e-9;
 		t0 = t1;
-
-		Profiler::EndSample();
-		Profiler::BeginSample("Update");
 		g_game->Update((t1 - start).count() * 1e-9, delta);
 		Profiler::EndSample();
+
 		Input::FrameEnd();
 		ReleaseMutex(g_mutex);
-		Profiler::FrameEnd();
 
 		// measure fps
 		frameCounter++;
@@ -268,6 +277,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 			frameCounter = 0;
 			elapsedSeconds = 0.0;
 		}
+		Profiler::FrameEnd();
 	}
 
 	g_graphics->Destroy();
