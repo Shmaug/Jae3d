@@ -313,7 +313,6 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 		g->TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		g->m_game->Render(commandList);
 
-
 		// Present
 		// Transition back buffer to Present state
 		g->TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -376,4 +375,7 @@ void Graphics::Destroy(){
 	running = false;
 	::WaitForSingleObject(renderThread, INFINITE);
 	::CloseHandle(renderThread);
+	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY)->Flush();
+	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->Flush();
+	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->Flush();
 }

@@ -137,6 +137,7 @@
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
@@ -147,6 +148,7 @@
     <ClInclude Include="KeyCode.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Mesh.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>

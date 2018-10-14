@@ -10,7 +10,7 @@ private:
 	Graphics *graphics;
 public:
 	float m_fps;
-	void Initialize(Graphics *graphics);
-	void Update(double totalTime, double deltaTime);
-	void Render(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+	virtual void Initialize(Graphics *graphics);
+	virtual void Update(double totalTime, double deltaTime);
+	virtual void Render(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 };
