@@ -8,7 +8,7 @@ public:
 	static void OnKeyDownEvent(KeyCode::Key key, bool state);
 	static void OnMouseMoveEvent(int x, int y);
 	static void OnMousePressEvent(int button, bool state);
-	static void OnMouseWheelEvent(int delta);
+	static void OnMouseWheelEvent(float delta);
 
 	static bool KeyDown(KeyCode::Key key);
 	static bool OnKeyDown(KeyCode::Key key);

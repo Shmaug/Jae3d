@@ -2,24 +2,26 @@
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
+#define _WRL Microsoft::WRL
 
 // STL Headers
 #include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <memory>
+#include <functional>
 
-// DirectX 12 specific headers.
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
-// D3D12 extension library.
 #include "d3dx12.h"
 
-#include "CommandQueue.h"
-
+class CommandQueue;
 class Game;
+class Mesh;
+class Shader;
+class Camera;
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -31,65 +33,95 @@ class Game;
 #undef max
 #endif
 
+using OnRenderDelegate = std::function<void(_WRL::ComPtr<ID3D12GraphicsCommandList2>)>;
+
 class Graphics {
 public:
-	float m_fps;
+	static const int BufferCount = 3;
 
-	HWND m_hWnd;
-	RECT m_WindowRect;
+	static double m_fps;
 
-	uint32_t m_ClientWidth = 1280;
-	uint32_t m_ClientHeight = 720;
+	static HWND m_hWnd;
+	static RECT m_WindowRect;
 
-	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
-	bool WarpEnabled() const { return m_UseWarp; };
-	bool IsInitialized() const { return m_Initialized; };
-	bool IsFullscreen() const { return m_Fullscreen; };
-	bool TearingSupported() const { return m_TearingSupported; };
-	bool VSync() const { return m_VSync; };
+	static uint32_t m_ClientWidth;
+	static uint32_t m_ClientHeight;
 
-	void SetVSync(bool vsync) { m_VSync = vsync; }
-	int GetAndResetFPS() {
-		int x = m_fpsCounter;
-		m_fpsCounter = 0;
-		return x;
-	}
-	void SetFullscreen(bool fullscreen);
+	static D3D12_VIEWPORT m_Viewport;
+	static D3D12_RECT m_ScissorRect;
 
-	void Initialize(HWND hWnd, bool warp, Game* game);
-	void Destroy();
-	void Resize(uint32_t width, uint32_t height);
-	void StartRenderLoop(HANDLE mutex);
-	void TransitionResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Microsoft::WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
+	static OnRenderDelegate OnRender;
+
+	static std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
+	static bool WarpEnabled();
+	static bool IsInitialized();
+	static bool IsFullscreen();
+	static bool TearingSupported();
+	static bool VSync();
+	static _WRL::ComPtr<ID3D12Device2> GetDevice();
+
+	static void SetVSync(bool vsync) { m_VSync = vsync; }
+	static int GetAndResetFPS();
+	static void SetFullscreen(bool fullscreen);
+
+	static void Initialize(HWND hWnd, bool warp);
+	static void Destroy();
+	static void Resize(uint32_t width, uint32_t height);
+	static void StartRenderLoop(HANDLE mutex);
+	static void TransitionResource(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, _WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
+	
+	static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
+	static D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
+
+	static void Graphics::SetCamera(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Camera* camera);
+	static void Graphics::SetShader(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Shader* shader);
+	static void Graphics::DrawMesh(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, DirectX::XMMATRIX modelMatrix);
+	static DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags);
 
 private:
-	HANDLE m_mutex;
+	static HANDLE m_mutex;
 	// Use WARP adapter
-	bool m_UseWarp = false;
+	static bool m_UseWarp;
 	// Set to true once the DX12 objects have been initialized.
-	bool m_Initialized = false;
-	bool m_Fullscreen = false;
-	bool m_TearingSupported = false;
-	bool m_VSync = true;
-	int m_fpsCounter;
-	Game* m_game;
+	static bool m_Initialized;
+	static bool m_Fullscreen;
+	static bool m_TearingSupported;
+	static bool m_VSync;
+	static int m_fpsCounter;
 
-	bool CheckTearingSupport();
-	Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
+	static UINT m_RTVDescriptorSize;
+	static UINT m_DSVDescriptorSize;
+	static UINT m_CurrentBackBufferIndex;
 
-	Microsoft::WRL::ComPtr<ID3D12Device2> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
-	Microsoft::WRL::ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, uint32_t width, uint32_t height);
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(Microsoft::WRL::ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+	static std::shared_ptr<CommandQueue> m_DirectCommandQueue;
+	static std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
+	static std::shared_ptr<CommandQueue> m_CopyCommandQueue;
+
+	// DirectX 12 Objects
+	static _WRL::ComPtr<ID3D12Device2> m_Device;
+	static _WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
+	static _WRL::ComPtr<ID3D12Resource> m_RenderBuffers[BufferCount];
+	static _WRL::ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
+	static _WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
+	static _WRL::ComPtr<ID3D12DescriptorHeap> m_DSVDescriptorHeap;
+
+	static _WRL::ComPtr<ID3D12DescriptorHeap> m_CBufferDescriptorHeap;
+	static _WRL::ComPtr<ID3D12Resource> m_CBufferUploadHeap;
+	static D3D12_GPU_VIRTUAL_ADDRESS m_CBuffer;
+
+	static uint64_t m_FenceValues[Graphics::BufferCount];
+
+
+	static bool CheckTearingSupport();
+	static _WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
+
+	static _WRL::ComPtr<ID3D12Device2> CreateDevice(_WRL::ComPtr<IDXGIAdapter4> adapter);
+	static _WRL::ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, uint32_t width, uint32_t height);
+	static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(_WRL::ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
 	
-	std::shared_ptr<CommandQueue> m_DirectCommandQueue;
-	std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
-	std::shared_ptr<CommandQueue> m_CopyCommandQueue;
+	static void CreateRTVs(_WRL::ComPtr<ID3D12Device2> device, _WRL::ComPtr<IDXGISwapChain4> swapChain, _WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap);
+
+	static void ResizeDepthBuffer();
 
 	static unsigned int RenderLoop(void *data);
-
-	void UpdateRenderTargetViews(Microsoft::WRL::ComPtr<ID3D12Device2> device, Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap);
-
-	uint64_t Signal(Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue, Microsoft::WRL::ComPtr<ID3D12Fence> fence, uint64_t &fenceValue);
 };
-

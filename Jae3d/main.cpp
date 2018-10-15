@@ -3,10 +3,11 @@
 #include "Util.h"
 
 #include "Graphics.h"
-#include "Mathf.h"
-#include "Game.h"
 #include "Input.h"
 #include "Profiler.h"
+#include "Game.h"
+#include "Shader.h"
+#include "CommandQueue.h"
 
 // In order to define a function called CreateWindow, the Windows macro needs to
 // be undefined.
@@ -15,7 +16,6 @@
 #endif
 
 Game *g_game;
-Graphics *g_graphics;
 HANDLE g_mutex;
 
 bool g_warp = false;
@@ -106,7 +106,7 @@ HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	if (!g_graphics->IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
+	if (!Graphics::IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
 
 	switch (message) {
 		case WM_PAINT:
@@ -159,12 +159,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		case WM_SIZE:
 		{
 			RECT clientRect = {};
-			::GetClientRect(g_graphics->m_hWnd, &clientRect);
+			::GetClientRect(Graphics::m_hWnd, &clientRect);
 
 			int width = clientRect.right - clientRect.left;
 			int height = clientRect.bottom - clientRect.top;
 
-			g_graphics->Resize(width, height);
+			Graphics::Resize(width, height);
+			g_game->OnResize();
 		}
 		break;
 		case WM_DESTROY:
@@ -217,21 +218,22 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	RegisterWindowClass(hInstance, windowClassName);
 
-	g_graphics = new Graphics();
 	g_game = new Game();
 	g_mutex = CreateMutex(NULL, FALSE, NULL);
 
-	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", g_graphics->m_ClientWidth, g_graphics->m_ClientHeight);
+	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", Graphics::m_ClientWidth, Graphics::m_ClientHeight);
 
 	// Initialize the global window rect variable.
-	::GetWindowRect(hWnd, &g_graphics->m_WindowRect);
+	::GetWindowRect(hWnd, &Graphics::m_WindowRect);
 
-	g_game->Initialize(g_graphics);
-	g_graphics->Initialize(hWnd, g_warp, g_game);
+	Graphics::Initialize(hWnd, g_warp);
+	g_game->Initialize(Graphics::GetCommandQueue()->GetCommandList());
+	Graphics::OnRender = std::bind(&Game::Render, g_game, std::placeholders::_1);
+	ShaderLibrary::LoadShaders();
 
 	::ShowWindow(hWnd, SW_SHOW);
 
-	g_graphics->StartRenderLoop(g_mutex);
+	Graphics::StartRenderLoop(g_mutex);
 
 	static std::chrono::high_resolution_clock clock;
 	static auto start = clock.now();
@@ -272,7 +274,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		elapsedSeconds += delta;
 		if (elapsedSeconds > 1.0) {
 			g_game->m_fps = frameCounter / elapsedSeconds;
-			g_graphics->m_fps = g_graphics->GetAndResetFPS() / elapsedSeconds;
+			Graphics::m_fps = Graphics::GetAndResetFPS() / elapsedSeconds;
 			
 			frameCounter = 0;
 			elapsedSeconds = 0.0;
@@ -280,10 +282,9 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		Profiler::FrameEnd();
 	}
 
-	g_graphics->Destroy();
+	Graphics::Destroy();
 
 	delete(g_game);
-	delete(g_graphics);
 
 	return 0;
 }

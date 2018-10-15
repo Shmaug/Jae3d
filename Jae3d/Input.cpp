@@ -16,7 +16,7 @@ void Input::OnMousePressEvent(int button, bool down) {
 void Input::OnMouseMoveEvent(int x, int y) {
 	mousePos = { x, y };
 }
-void Input::OnMouseWheelEvent(int delta) {
+void Input::OnMouseWheelEvent(float delta) {
 	wheelDelta += delta;
 }
 

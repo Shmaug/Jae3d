@@ -2,15 +2,15 @@
 
 #include <d3d12.h>
 #include <wrl.h>
-
-#include "Graphics.h"
+#define _WRL Microsoft::WRL
 
 class Game {
-private:
-	Graphics *graphics;
 public:
-	float m_fps;
-	virtual void Initialize(Graphics *graphics);
-	virtual void Update(double totalTime, double deltaTime);
-	virtual void Render(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+	~Game();
+
+	double m_fps;
+	void Initialize(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	void Update(double totalTime, double deltaTime);
+	void Render(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	void OnResize();
 };

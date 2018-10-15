@@ -4,9 +4,11 @@
 #include <wrl.h>
 #include <queue>
 
+#define _WRL Microsoft::WRL
+
 class CommandQueue {
 public:
-	CommandQueue(Microsoft::WRL::ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
+	CommandQueue(_WRL::ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
 	~CommandQueue();
 
 	uint64_t Signal();
@@ -14,28 +16,28 @@ public:
 	bool IsFenceComplete(uint64_t value);
 	void Flush();
 
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> GetCommandList();
+	_WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const;
+	_WRL::ComPtr<ID3D12GraphicsCommandList2> GetCommandList();
 
-	uint64_t Execute(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	uint64_t Execute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> CreateCommandList(Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator);
+	_WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
+	_WRL::ComPtr<ID3D12GraphicsCommandList2> CreateCommandList(_WRL::ComPtr<ID3D12CommandAllocator> allocator);
 	
 	struct CommandAllocatorEntry {
 		uint64_t fenceValue;
-		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
+		_WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 	};
 
 	D3D12_COMMAND_LIST_TYPE m_CommandListType;
-	Microsoft::WRL::ComPtr<ID3D12Device2> m_d3d12Device;
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_d3d12CommandQueue;
-	Microsoft::WRL::ComPtr<ID3D12Fence> m_d3d12Fence;
+	_WRL::ComPtr<ID3D12Device2> m_d3d12Device;
+	_WRL::ComPtr<ID3D12CommandQueue> m_d3d12CommandQueue;
+	_WRL::ComPtr<ID3D12Fence> m_d3d12Fence;
 	HANDLE m_FenceEvent;
 	uint64_t m_FenceValue;
 
 	std::queue<CommandAllocatorEntry> m_CommandAllocatorQueue;
-	std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2>> m_CommandListQueue;
+	std::queue<_WRL::ComPtr<ID3D12GraphicsCommandList2>> m_CommandListQueue;
 };
 
