@@ -8,13 +8,6 @@
 #include <d3d12.h>
 #include <vector>
 
-// An enum for root signature parameters.
-enum RootParameters {
-	CameraData,				// ConstantBuffer<CameraData> Camera : register(b0);
-	//ObjectData,				// ConstantBuffer<ObjectData> Object : register(b0, space1);
-	NumRootParameters
-};
-
 class RootSignature {
 public:
 	RootSignature();

@@ -50,13 +50,20 @@ void ShaderLibrary::LoadShaders() {
 	Shader *s = new Shader();
 	s->name = name;
 
-	ReadIfExists(s2ws("Assets/Shaders/" + name + "_vs.cso").c_str(), &s->vertexBlob);
-	ReadIfExists(s2ws("Assets/Shaders/" + name + "_ps.cso").c_str(), &s->pixelBlob);
+	ReadIfExists(s2ws("Assets\\Shaders\\" + name + "_vs.cso").c_str(), &s->vertexBlob);
+	ReadIfExists(s2ws("Assets\\Shaders\\" + name + "_ps.cso").c_str(), &s->pixelBlob);
 
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+
+	CD3DX12_DESCRIPTOR_RANGE1 range[2];
+	range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 1);
+	range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 1);
+	
+	CD3DX12_ROOT_PARAMETER1 rootParams[1];
+	rootParams[0].InitAsDescriptorTable(_countof(range), range, D3D12_SHADER_VISIBILITY_ALL);
 
 	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -64,10 +71,6 @@ void ShaderLibrary::LoadShaders() {
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-
-	CD3DX12_ROOT_PARAMETER1 rootParams[RootParameters::NumRootParameters];
-	rootParams[RootParameters::CameraData].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	//rootParams[RootParameters::ObjectData].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
 	rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 0, nullptr, rootSignatureFlags);
@@ -219,8 +222,7 @@ void RootSignature::SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootS
 	// Serialize the root signature.
 	Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&versionRootSignatureDesc,
-		rootSignatureVersion, &rootSignatureBlob, &errorBlob));
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&versionRootSignatureDesc, rootSignatureVersion, &rootSignatureBlob, &errorBlob));
 
 	// Create the root signature.
 	ThrowIfFailed(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),

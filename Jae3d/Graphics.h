@@ -105,12 +105,13 @@ private:
 	static _WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
 	static _WRL::ComPtr<ID3D12DescriptorHeap> m_DSVDescriptorHeap;
 
-	static _WRL::ComPtr<ID3D12DescriptorHeap> m_CBufferDescriptorHeap;
-	static _WRL::ComPtr<ID3D12Resource> m_CBufferUploadHeap;
-	static D3D12_GPU_VIRTUAL_ADDRESS m_CBuffer;
-
 	static uint64_t m_FenceValues[Graphics::BufferCount];
 
+	static _WRL::ComPtr<ID3D12DescriptorHeap> m_CBVHeap;
+	static _WRL::ComPtr<ID3D12Resource> m_CameraBuffer;
+	static UINT8* m_MappedCameraBuffer;
+	static _WRL::ComPtr<ID3D12Resource> m_ObjectBuffer;
+	static UINT8* m_MappedObjectBuffer;
 
 	static bool CheckTearingSupport();
 	static _WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);

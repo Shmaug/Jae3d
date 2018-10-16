@@ -14,15 +14,16 @@ using namespace DirectX;
 bool running = false;
 HANDLE renderThread;
 
-struct CBuffer {
+struct CameraBuffer {
 	XMMATRIX ViewProjection;
 	XMMATRIX View;
 	XMMATRIX Projection;
 	XMVECTOR CameraPosition;
-
+} g_CameraBuffer;
+struct ObjectBuffer {
 	XMMATRIX ObjectToWorld;
 	XMMATRIX WorldToObject;
-} CBuffer;
+} g_ObjectBuffer;
 
 #pragma region static variable initialization
 double Graphics::m_fps = 0;
@@ -64,9 +65,12 @@ ComPtr<ID3D12DescriptorHeap> Graphics::m_DSVDescriptorHeap;
 
 uint64_t Graphics::m_FenceValues[Graphics::BufferCount];
 
-ComPtr<ID3D12DescriptorHeap> Graphics::m_CBufferDescriptorHeap;
-ComPtr<ID3D12Resource> Graphics::m_CBufferUploadHeap;
-D3D12_GPU_VIRTUAL_ADDRESS Graphics::m_CBuffer;
+
+ComPtr<ID3D12DescriptorHeap> Graphics::m_CBVHeap;
+ComPtr<ID3D12Resource> Graphics::m_CameraBuffer;
+UINT8* Graphics::m_MappedCameraBuffer;
+ComPtr<ID3D12Resource> Graphics::m_ObjectBuffer;
+UINT8* Graphics::m_MappedObjectBuffer;
 #pragma endregion
 
 #pragma region resource creation
@@ -428,29 +432,55 @@ void Graphics::Initialize(HWND hWnd, bool warp) {
 
 	ResizeDepthBuffer();
 
-	// Camera CB
-	D3D12_DESCRIPTOR_HEAP_DESC hd = {};
-	hd.NumDescriptors = 1;
-	hd.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	hd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	ThrowIfFailed(m_Device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&m_CBufferDescriptorHeap)));
+	// Create a descriptor heap for the constant buffers.
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+		heapDesc.NumDescriptors = 2;
+		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		// This flag indicates that this descriptor heap can be bound to the pipeline and that descriptors contained in it can be referenced by a root table.
+		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_CBVHeap)));
+
+		m_CBVHeap->SetName(L"Constant Buffer View Descriptor Heap");
+	}
+
+	// Create the constant buffer.
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer((sizeof(CameraBuffer) / 256L + 1L) * 256),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_CameraBuffer)));
 
 	ThrowIfFailed(m_Device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), // this heap will be used to upload the constant buffer data
-		D3D12_HEAP_FLAG_NONE, // no flags
-		&CD3DX12_RESOURCE_DESC::Buffer(1024 * 64), // size of the resource heap. Must be a multiple of 64KB for single-textures and constant buffers
-		D3D12_RESOURCE_STATE_GENERIC_READ, // will be data that is read from so we keep it in the generic read state
-		nullptr, // we do not have use an optimized clear value for constant buffers
-		IID_PPV_ARGS(&m_CBufferUploadHeap))
-	);
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer((sizeof(ObjectBuffer) / 256L + 1L) * 256L),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_ObjectBuffer)));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-	cbvDesc.BufferLocation = m_CBufferUploadHeap->GetGPUVirtualAddress();
-	cbvDesc.SizeInBytes = (sizeof(Camera::CameraCB) + 255) & ~255;    // CB size is required to be 256-byte aligned.
-	m_Device->CreateConstantBufferView(&cbvDesc, m_CBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	// Describe and create a constant buffer view.
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc[2];// = {};
+	cbvDesc[0].BufferLocation = m_CameraBuffer->GetGPUVirtualAddress();
+	cbvDesc[0].SizeInBytes = (sizeof(CameraBuffer) / 256L + 1L) * 256L;
+	cbvDesc[1].BufferLocation = m_ObjectBuffer->GetGPUVirtualAddress();
+	cbvDesc[1].SizeInBytes = (sizeof(ObjectBuffer) / 256L + 1L) * 256L;
 
-	CD3DX12_RANGE readRange(0, 0);    // We do not intend to read from this resource on the CPU. (End is less than or equal to begin)
-	ThrowIfFailed(m_CBufferUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&CBuffer)));
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle0(m_CBVHeap->GetCPUDescriptorHandleForHeapStart(), 0, 0);
+	m_Device->CreateConstantBufferView(&cbvDesc[0], cbvHandle0);
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle1(m_CBVHeap->GetCPUDescriptorHandleForHeapStart(), 1, m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	m_Device->CreateConstantBufferView(&cbvDesc[1], cbvHandle1);
+
+	// Initialize and map the constant buffers. We don't unmap this until the
+	// app closes. Keeping things mapped for the lifetime of the resource is okay.
+	ThrowIfFailed(m_CameraBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedCameraBuffer)));
+	memcpy(m_MappedCameraBuffer, &g_CameraBuffer, sizeof(CameraBuffer));
+
+	ThrowIfFailed(m_ObjectBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedObjectBuffer)));
+	memcpy(m_MappedObjectBuffer, &g_ObjectBuffer, sizeof(ObjectBuffer));
 
 	m_Initialized = true;
 }
@@ -528,16 +558,24 @@ void Graphics::SetCamera(ComPtr<ID3D12GraphicsCommandList2> commandList, Camera 
 	commandList->RSSetViewports(1, &m_Viewport);
 	commandList->RSSetScissorRects(1, &m_ScissorRect);
 
-	CBuffer.View = camera->View();
-	CBuffer.Projection = camera->Projection();
-	CBuffer.ViewProjection = CBuffer.View * CBuffer.ViewProjection;
-	CBuffer.CameraPosition = camera->m_Position;
+	g_CameraBuffer.View = camera->View();
+	g_CameraBuffer.Projection = camera->Projection();
+	g_CameraBuffer.ViewProjection = g_CameraBuffer.View * g_CameraBuffer.ViewProjection;
+	g_CameraBuffer.CameraPosition = camera->m_Position;
+	memcpy(m_MappedCameraBuffer, &g_CameraBuffer, sizeof(CameraBuffer));
 }
 void Graphics::DrawMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, XMMATRIX modelMatrix) {
 	XMVECTOR det = XMMatrixDeterminant(modelMatrix);
-	CBuffer.WorldToObject = modelMatrix;
-	CBuffer.ObjectToWorld = XMMatrixInverse(&det, modelMatrix);
-	commandList->SetGraphicsRootConstantBufferView(RootParameters::CameraData, m_CBuffer);
+	g_ObjectBuffer.WorldToObject = modelMatrix;
+	g_ObjectBuffer.ObjectToWorld = XMMatrixInverse(&det, modelMatrix);
+	memcpy(m_MappedObjectBuffer, &g_ObjectBuffer, sizeof(ObjectBuffer));
+
+	// set constant buffer descriptor heap
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CBVHeap.Get() };
+	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+	// set the root descriptor table 0 to the constant buffer descriptor heap
+	commandList->SetGraphicsRootDescriptorTable(0, m_CBVHeap->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->IASetVertexBuffers(0, 1, &mesh->m_VertexBufferView);
