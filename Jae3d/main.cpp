@@ -9,6 +9,10 @@
 #include "Shader.h"
 #include "CommandQueue.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <Windowsx.h>
+
 // In order to define a function called CreateWindow, the Windows macro needs to
 // be undefined.
 #if defined(CreateWindow)
@@ -33,38 +37,6 @@ void ParseCommandLineArguments() {
 
 	// Free memory allocated by CommandLineToArgvW
 	::LocalFree(argv);
-}
-
-int DecodeMouseButton(UINT messageID) {
-	int mouseButton = 0;
-
-	switch (messageID) {
-		case WM_LBUTTONDOWN:
-		case WM_LBUTTONUP:
-		case WM_LBUTTONDBLCLK:
-			mouseButton = 0;
-			break;
-
-		case WM_RBUTTONDOWN:
-		case WM_RBUTTONUP:
-		case WM_RBUTTONDBLCLK:
-			mouseButton = 1;
-			break;
-
-		case WM_MBUTTONDOWN:
-		case WM_MBUTTONUP:
-		case WM_MBUTTONDBLCLK:
-			mouseButton = 2;
-			break;
-
-		case WM_XBUTTONDOWN:
-		case WM_XBUTTONUP:
-		case WM_XBUTTONDBLCLK:
-			mouseButton = 3;
-			break;
-	}
-
-	return mouseButton;
 }
 
 #define IsKeyDown(key) (GetAsyncKeyState(key) & 0x8000) != 0
@@ -107,46 +79,68 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	if (!Graphics::IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
 
 	switch (message) {
+		case WM_INPUT:
+		{
+			UINT dwSize = 40;
+			static BYTE lpb[40];
+
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
+
+			RAWINPUT* raw = (RAWINPUT*)lpb;
+
+			if (raw->header.dwType == RIM_TYPEMOUSE) {
+				Input::OnMouseMoveEvent((int)raw->data.mouse.lLastX, (int)raw->data.mouse.lLastY);
+
+				if (Input::m_MouseClipped) {
+					RECT rect;
+					if (GetWindowRect(Graphics::m_hWnd, &rect))
+						SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
+				}
+			}
+			break;
+		}
+
 		case WM_PAINT:
 			break;
+
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:
-		{
 			Input::OnKeyDownEvent((KeyCode::Key)wParam, true);
-		}
 			break;
 
 		case WM_SYSKEYUP:
 		case WM_KEYUP:
-		{
 			Input::OnKeyDownEvent((KeyCode::Key)wParam, false);
-		}
-			break;
-		case WM_MOUSEMOVE:
-		{
-			Input::OnMouseMoveEvent(((int)(short)LOWORD(lParam)), ((int)(short)HIWORD(lParam)));
-		}
 			break;
 
 		case WM_LBUTTONDOWN:
+			Input::OnMousePressEvent(0, true);
+			break;
 		case WM_RBUTTONDOWN:
+			Input::OnMousePressEvent(1, true);
+			break;
 		case WM_MBUTTONDOWN:
-		{
-			Input::OnMousePressEvent(DecodeMouseButton(message), true);
-		}
+			Input::OnMousePressEvent(2, true);
+			break;
+		case WM_XBUTTONDOWN:
+			Input::OnMousePressEvent(GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4, true);
 			break;
 
 		case WM_LBUTTONUP:
-		case WM_RBUTTONUP:
-		case WM_MBUTTONUP:
-		{
-			Input::OnMousePressEvent(DecodeMouseButton(message), false);
-		}
+			Input::OnMousePressEvent(0, false);
 			break;
+		case WM_RBUTTONUP:
+			Input::OnMousePressEvent(1, false);
+			break;
+		case WM_MBUTTONUP:
+			Input::OnMousePressEvent(2, false);
+			break;
+		case WM_XBUTTONUP:
+			Input::OnMousePressEvent(GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4, false);
+			break;
+
 		case WM_MOUSEWHEEL:
-		{
-			Input::OnMouseWheelEvent(((int)(short)HIWORD(wParam)) / (float)WHEEL_DELTA);
-		}
+			Input::OnMouseWheelEvent(GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
 			break;
 
 		// The default window procedure will play a system notification sound 
@@ -167,10 +161,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		}
 		break;
 		case WM_DESTROY:
-			::PostQuitMessage(0);
+			PostQuitMessage(0);
 			break;
 		default:
-			return ::DefWindowProcW(hwnd, message, wParam, lParam);
+			return DefWindowProcW(hwnd, message, wParam, lParam);
 	}
 
 	return 0;
@@ -221,8 +215,18 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", Graphics::m_ClientWidth, Graphics::m_ClientHeight);
 
-	// Initialize the global window rect variable.
 	::GetWindowRect(hWnd, &Graphics::m_WindowRect);
+
+	// register raw input devices
+	RAWINPUTDEVICE rID[1];
+	// Mouse
+	rID[0].usUsagePage = 1;
+	rID[0].usUsage = 2;
+	rID[0].dwFlags = 0;
+	rID[0].hwndTarget = Graphics::m_hWnd;
+	if (!RegisterRawInputDevices(rID, 1, sizeof(RAWINPUTDEVICE))) {
+		throw std::exception();
+	}
 
 	Graphics::Initialize(hWnd);
 	g_game->Initialize(Graphics::GetCommandQueue()->GetCommandList());
@@ -251,9 +255,9 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		Profiler::EndSample();
 
 		Profiler::BeginSample("Windows events");
-		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			::TranslateMessage(&msg);
-			::DispatchMessage(&msg);
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 		Profiler::EndSample();
 

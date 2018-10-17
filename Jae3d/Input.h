@@ -5,6 +5,8 @@
 
 class Input {
 public:
+	static bool m_MouseClipped;
+
 	static void OnKeyDownEvent(KeyCode::Key key, bool state);
 	static void OnMouseMoveEvent(int x, int y);
 	static void OnMousePressEvent(int button, bool state);

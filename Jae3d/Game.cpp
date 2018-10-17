@@ -2,6 +2,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <Windowsx.h>
 #include <stdio.h>
 #include <locale.h>
 
@@ -23,13 +24,15 @@ Mesh* mesh;
 float yaw;
 float pitch;
 
+bool cursorVisible = true;
+
 void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	camera = new Camera();
 	camera->m_Position = { 0, .2f, 2, 0 };
 	camera->m_Rotation = XMQuaternionIdentity();
 	
 	mesh = new Mesh();
-	mesh->LoadObj("Assets/Models/dragon1.obj");
+	mesh->LoadObj("Assets/Models/icosphere.obj");
 	mesh->Create();
 }
 Game::~Game() {
@@ -45,13 +48,27 @@ void Game::Update(double total, double delta) {
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		Graphics::SetFullscreen(!Graphics::IsFullscreen());
 
-	if (Input::ButtonDown(0)) {
-		yaw += Input::MouseDelta().x * (float)delta * XM_PI * 10.0f;
-		pitch -= Input::MouseDelta().y * (float)delta * XM_PI * 10.0f;
-		pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
+	XMINT2 md = Input::MouseDelta();
+	yaw += md.x * (float)delta * XM_PI * 10.0f;
+	pitch -= md.y * (float)delta * XM_PI * 10.0f;
+	pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
 		
-		camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
+	camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
+
+	if (Input::OnKeyDown(KeyCode::AltKey))
+		Input::m_MouseClipped = !Input::m_MouseClipped;
+	if (Input::m_MouseClipped) {
+		if (cursorVisible) {
+			while (ShowCursor(false)) {}
+			cursorVisible = false;
+		}
+	} else {
+		if (!cursorVisible) {
+			while (ShowCursor(true) <= 0) {}
+			cursorVisible = true;
+		}
 	}
+	
 	XMVECTOR fwd = { 0, 0, -1, 0 };
 	XMVECTOR right = { -1, 0, 0, 0 };
 	fwd = XMVector3Rotate(fwd, camera->m_Rotation);

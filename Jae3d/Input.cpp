@@ -1,10 +1,11 @@
 #include <utility>
 #include "Input.h"
 
+bool Input::m_MouseClipped;
+
 bool state[260]; // 0-254 are keys, 255-259 are mouse buttons
 bool lastState[260];
-DirectX::XMINT2 mousePos;
-DirectX::XMINT2 lastMousePos;
+DirectX::XMINT2 delta;
 int wheelDelta;
 
 void Input::OnKeyDownEvent(KeyCode::Key key, bool down) {
@@ -13,8 +14,9 @@ void Input::OnKeyDownEvent(KeyCode::Key key, bool down) {
 void Input::OnMousePressEvent(int button, bool down) {
 	state[259 - button] = down;
 }
-void Input::OnMouseMoveEvent(int x, int y) {
-	mousePos = { x, y };
+void Input::OnMouseMoveEvent(int dx, int dy) {
+	delta.x += dx;
+	delta.y += dy;
 }
 void Input::OnMouseWheelEvent(float delta) {
 	wheelDelta += delta;
@@ -36,10 +38,12 @@ int Input::MouseWheelDelta() {
 	return wheelDelta;
 }
 DirectX::XMINT2 Input::MouseDelta() {
-	return { mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y };
+	return { delta.x, delta.y };
 }
+
 void Input::FrameEnd() {
 	memcpy(lastState, state, sizeof(state));
-	lastMousePos = mousePos;
 	wheelDelta = 0;
+	delta.x = 0;
+	delta.y = 0;
 }
