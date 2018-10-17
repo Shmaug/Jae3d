@@ -20,17 +20,21 @@ using namespace std;
 Camera* camera;
 Mesh* mesh;
 
+float yaw;
+float pitch;
+
 void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	camera = new Camera();
-	camera->m_Position = { 0, 0, 3, 0 };
+	camera->m_Position = { 0, .2f, 2, 0 };
+	camera->m_Rotation = XMQuaternionIdentity();
 	
 	mesh = new Mesh();
-	mesh->LoadObj(L"Assets/Models/dragon.obj");
-	mesh->Create(commandList);
+	mesh->LoadObj("Assets/Models/dragon1.obj");
+	mesh->Create();
 }
 Game::~Game() {
-	delete(mesh);
-	delete(camera);
+	delete mesh;
+	delete camera;
 }
 
 void Game::OnResize() {
@@ -40,6 +44,11 @@ void Game::OnResize() {
 void Game::Update(double total, double delta) {
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		Graphics::SetFullscreen(!Graphics::IsFullscreen());
+
+	if (Input::ButtonDown(0)) {
+		yaw -= Input::MouseDelta().x * delta * XM_PI * 10.0;
+		pitch += Input::MouseDelta().y * delta * XM_PI * 10.0;
+	}
 
 	static double timer = 0;
 	timer += delta;
@@ -69,5 +78,5 @@ void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 
 	Graphics::SetCamera(commandList, camera);
 	Graphics::SetShader(commandList, ShaderLibrary::GetShader("default"));
-	Graphics::DrawMesh(commandList, mesh, XMMatrixIdentity());
+	Graphics::DrawMesh(commandList, mesh, XMMatrixRotationRollPitchYaw(pitch, yaw, 0));
 }

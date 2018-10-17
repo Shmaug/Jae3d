@@ -9,11 +9,11 @@ struct ObjectBuffer {
 	float4x4 WorldToObject;
 };
 
-ConstantBuffer<CameraBuffer> Camera : register(b0);
-ConstantBuffer<ObjectBuffer> Object : register(b1);
+ConstantBuffer<ObjectBuffer> Object : register(b0);
+ConstantBuffer<CameraBuffer> Camera : register(b1);
 
 struct v2f {
 	float4 pos : SV_Position;
-	float3 worldPos : TEXCOORD0;
-	float3 worldNormal : TEXCOORD1;
+	float4 pack0 : TEXCOORD0;
+	float4 pack1 : TEXCOORD1;
 };

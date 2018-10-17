@@ -18,8 +18,6 @@
 Game *g_game;
 HANDLE g_mutex;
 
-bool g_warp = false;
-
 // Window callback function.
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -28,9 +26,9 @@ void ParseCommandLineArguments() {
 	wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
 
 	for (size_t i = 0; i < argc; ++i) {
-		if (::wcscmp(argv[i], L"-warp") == 0 || ::wcscmp(argv[i], L"--warp") == 0) {
-			g_warp = true;
-		}
+		//if (::wcscmp(argv[i], L"-warp") == 0 || ::wcscmp(argv[i], L"--warp") == 0) {
+
+		//}
 	}
 
 	// Free memory allocated by CommandLineToArgvW
@@ -226,7 +224,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	// Initialize the global window rect variable.
 	::GetWindowRect(hWnd, &Graphics::m_WindowRect);
 
-	Graphics::Initialize(hWnd, g_warp);
+	Graphics::Initialize(hWnd);
 	g_game->Initialize(Graphics::GetCommandQueue()->GetCommandList());
 	Graphics::OnRender = std::bind(&Game::Render, g_game, std::placeholders::_1);
 	ShaderLibrary::LoadShaders();

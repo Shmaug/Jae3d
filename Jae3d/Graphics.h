@@ -64,7 +64,7 @@ public:
 	static int GetAndResetFPS();
 	static void SetFullscreen(bool fullscreen);
 
-	static void Initialize(HWND hWnd, bool warp);
+	static void Initialize(HWND hWnd);
 	static void Destroy();
 	static void Resize(uint32_t width, uint32_t height);
 	static void StartRenderLoop(HANDLE mutex);
@@ -107,16 +107,16 @@ private:
 
 	static uint64_t m_FenceValues[Graphics::BufferCount];
 
-	static _WRL::ComPtr<ID3D12DescriptorHeap> m_CBVHeap;
+	static _WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
 	static _WRL::ComPtr<ID3D12Resource> m_CameraBuffer;
-	static UINT8* m_MappedCameraBuffer;
 	static _WRL::ComPtr<ID3D12Resource> m_ObjectBuffer;
+	static UINT8* m_MappedCameraBuffer;
 	static UINT8* m_MappedObjectBuffer;
 
 	static bool CheckTearingSupport();
 	static _WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 
-	static _WRL::ComPtr<ID3D12Device2> CreateDevice(_WRL::ComPtr<IDXGIAdapter4> adapter);
+	static _WRL::ComPtr<ID3D12Device2> CreateDevice();
 	static _WRL::ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, uint32_t width, uint32_t height);
 	static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(_WRL::ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
 	
