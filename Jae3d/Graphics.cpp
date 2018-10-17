@@ -40,7 +40,6 @@ D3D12_RECT Graphics::m_ScissorRect;
 OnRenderDelegate Graphics::OnRender = 0;
 
 HANDLE Graphics::m_mutex = 0;
-bool Graphics::m_UseWarp = false;
 bool Graphics::m_Initialized = false;
 bool Graphics::m_Fullscreen = false;
 bool Graphics::m_TearingSupported = false;
@@ -272,9 +271,6 @@ D3D12_CPU_DESCRIPTOR_HANDLE Graphics::GetDepthStencilView() {
 	return m_DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 }
 
-bool Graphics::WarpEnabled() {
-	return m_UseWarp;
-};
 bool Graphics::IsInitialized() {
 	return m_Initialized;
 };

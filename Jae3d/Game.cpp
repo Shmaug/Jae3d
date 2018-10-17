@@ -46,9 +46,24 @@ void Game::Update(double total, double delta) {
 		Graphics::SetFullscreen(!Graphics::IsFullscreen());
 
 	if (Input::ButtonDown(0)) {
-		yaw -= Input::MouseDelta().x * delta * XM_PI * 10.0;
-		pitch += Input::MouseDelta().y * delta * XM_PI * 10.0;
+		yaw += Input::MouseDelta().x * (float)delta * XM_PI * 10.0f;
+		pitch -= Input::MouseDelta().y * (float)delta * XM_PI * 10.0f;
+		pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
+		
+		camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
 	}
+	XMVECTOR fwd = { 0, 0, -1, 0 };
+	XMVECTOR right = { -1, 0, 0, 0 };
+	fwd = XMVector3Rotate(fwd, camera->m_Rotation);
+	right = XMVector3Rotate(right, camera->m_Rotation);
+	if (Input::KeyDown(KeyCode::W))
+		camera->m_Position += fwd * (float)delta;
+	if (Input::KeyDown(KeyCode::S))
+		camera->m_Position -= fwd * (float)delta;
+	if (Input::KeyDown(KeyCode::D))
+		camera->m_Position += right * (float)delta;
+	if (Input::KeyDown(KeyCode::A))
+		camera->m_Position -= right * (float)delta;
 
 	static double timer = 0;
 	timer += delta;
@@ -78,5 +93,5 @@ void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 
 	Graphics::SetCamera(commandList, camera);
 	Graphics::SetShader(commandList, ShaderLibrary::GetShader("default"));
-	Graphics::DrawMesh(commandList, mesh, XMMatrixRotationRollPitchYaw(pitch, yaw, 0));
+	Graphics::DrawMesh(commandList, mesh, XMMatrixIdentity());
 }

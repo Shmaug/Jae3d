@@ -64,7 +64,7 @@ void Mesh::LoadObj(LPCSTR path) {
 	std::vector<XMFLOAT3> tnormals;
 	std::vector<XMFLOAT2> tuvs;
 
-	std::map<int, uint16_t> indexMap;
+	std::map<int, uint32_t> indexMap;
 
 	int ff = 0;
 
@@ -118,24 +118,24 @@ void Mesh::LoadObj(LPCSTR path) {
 			unsigned int h2 = (iv2 + in2)*(iv2 + in2 + 1) / 2 + in2;
 
 			if (indexMap.count(h0) == 0) {
-				indexMap[h0] = (uint16_t)vertices.size();
-				indices.push_back((uint16_t)vertices.size());
+				indexMap[h0] = (uint32_t)vertices.size();
+				indices.push_back((uint32_t)vertices.size());
 				Vertex v(tvertices[iv0], tnormals[in0], XMFLOAT2(0, 0));
 				vertices.push_back(v);
 			} else
 				indices.push_back(indexMap.at(h0));
 
 			if (indexMap.count(h1) == 0) {
-				indexMap[h1] = (uint16_t)vertices.size();
-				indices.push_back((uint16_t)vertices.size());
+				indexMap[h1] = (uint32_t)vertices.size();
+				indices.push_back((uint32_t)vertices.size());
 				Vertex v(tvertices[iv1], tnormals[in1], XMFLOAT2(0, 0));
 				vertices.push_back(v);
 			} else
 				indices.push_back(indexMap.at(h1));
 
 			if (indexMap.count(h2) == 0) {
-				indexMap[h0] = (uint16_t)vertices.size();
-				indices.push_back((uint16_t)vertices.size());
+				indexMap[h0] = (uint32_t)vertices.size();
+				indices.push_back((uint32_t)vertices.size());
 				Vertex v(tvertices[iv2], tnormals[in2], XMFLOAT2(0, 0));
 				vertices.push_back(v);
 			} else
@@ -145,7 +145,7 @@ void Mesh::LoadObj(LPCSTR path) {
 
 	fclose(file);
 
-	m_IndexCount = indices.size();
+	m_IndexCount = (UINT)indices.size();
 
 	tvertices.clear();
 	tnormals.clear();
@@ -202,7 +202,7 @@ void Mesh::LoadCube(float s) {
 		16, 18, 17, 17, 18, 19,
 		20, 22, 21, 21, 22, 23,
 	};
-	m_IndexCount = indices.size();
+	m_IndexCount = (UINT)indices.size();
 }
 
 void Mesh::Create() {
@@ -211,25 +211,19 @@ void Mesh::Create() {
 
 	ComPtr<ID3D12Resource> ivb;
 	UploadData(commandList, &m_VertexBuffer, &ivb, vertices.size(), sizeof(Vertex), vertices.data());
+	ComPtr<ID3D12Resource> iib;
+	UploadData(commandList, &m_IndexBuffer, &iib, indices.size(), sizeof(uint32_t), indices.data());
 
 	m_VertexBufferView.BufferLocation = m_VertexBuffer->GetGPUVirtualAddress();
 	m_VertexBufferView.SizeInBytes = (UINT)vertices.size() * sizeof(Vertex);
 	m_VertexBufferView.StrideInBytes = sizeof(Vertex);
-
-	CD3DX12_RESOURCE_BARRIER vertexBufferResourceBarrier =
-		CD3DX12_RESOURCE_BARRIER::Transition(m_VertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	commandList->ResourceBarrier(1, &vertexBufferResourceBarrier);
-
-	ComPtr<ID3D12Resource> iib;
-	UploadData(commandList, &m_IndexBuffer, &iib, indices.size(), sizeof(uint16_t), indices.data());
-
+	
 	m_IndexBufferView.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress();
-	m_IndexBufferView.SizeInBytes = (UINT)indices.size() * sizeof(uint16_t);
-	m_IndexBufferView.Format = DXGI_FORMAT_R16_UINT;
+	m_IndexBufferView.SizeInBytes = (UINT)indices.size() * sizeof(uint32_t);
+	m_IndexBufferView.Format = DXGI_FORMAT_R32_UINT;
 
-	CD3DX12_RESOURCE_BARRIER indexBufferResourceBarrier =
-		CD3DX12_RESOURCE_BARRIER::Transition(m_IndexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-	commandList->ResourceBarrier(1, &indexBufferResourceBarrier);
+	Graphics::TransitionResource(commandList, m_VertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	Graphics::TransitionResource(commandList, m_IndexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 	ivb->SetName(L"Vertex Buffer Upload");
 	m_VertexBuffer->SetName(L"Vertex Buffer");

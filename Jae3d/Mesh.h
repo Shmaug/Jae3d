@@ -32,7 +32,7 @@ public:
 		DirectX::XMMATRIX WorldToObject;
 	};
 
-	size_t m_IndexCount;
+	UINT m_IndexCount;
 	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
 
@@ -43,7 +43,7 @@ public:
 
 private:
 	std::vector<Vertex> vertices;
-	std::vector<uint16_t> indices;
+	std::vector<uint32_t> indices;
 
 	void Mesh::UploadData(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 		ID3D12Resource** dst,

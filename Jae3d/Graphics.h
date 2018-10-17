@@ -53,7 +53,6 @@ public:
 	static OnRenderDelegate OnRender;
 
 	static std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
-	static bool WarpEnabled();
 	static bool IsInitialized();
 	static bool IsFullscreen();
 	static bool TearingSupported();
@@ -80,8 +79,6 @@ public:
 
 private:
 	static HANDLE m_mutex;
-	// Use WARP adapter
-	static bool m_UseWarp;
 	// Set to true once the DX12 objects have been initialized.
 	static bool m_Initialized;
 	static bool m_Fullscreen;
