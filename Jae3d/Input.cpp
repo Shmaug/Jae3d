@@ -1,7 +1,7 @@
 #include <utility>
 #include "Input.h"
 
-bool Input::m_MouseClipped;
+bool Input::m_LockMouse;
 
 bool state[260]; // 0-254 are keys, 255-259 are mouse buttons
 bool lastState[260];

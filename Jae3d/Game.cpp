@@ -49,22 +49,21 @@ void Game::Update(double total, double delta) {
 		Graphics::SetFullscreen(!Graphics::IsFullscreen());
 
 	XMINT2 md = Input::MouseDelta();
-	yaw += md.x * (float)delta * XM_PI * 10.0f;
-	pitch -= md.y * (float)delta * XM_PI * 10.0f;
+	yaw += md.x * .005f;
+	pitch -= md.y * .005f;
 	pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
-		
 	camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
 
 	if (Input::OnKeyDown(KeyCode::AltKey))
-		Input::m_MouseClipped = !Input::m_MouseClipped;
-	if (Input::m_MouseClipped) {
+		Input::m_LockMouse = !Input::m_LockMouse;
+	if (Input::m_LockMouse) {
 		if (cursorVisible) {
-			while (ShowCursor(false)) {}
+			ShowCursor(false);
 			cursorVisible = false;
 		}
 	} else {
 		if (!cursorVisible) {
-			while (ShowCursor(true) <= 0) {}
+			ShowCursor(true);
 			cursorVisible = true;
 		}
 	}

@@ -81,23 +81,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	switch (message) {
 		case WM_INPUT:
 		{
-			UINT dwSize = 40;
-			static BYTE lpb[40];
-
-			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
-
+			UINT dwSize;
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+			LPBYTE lpb = new BYTE[dwSize];
+			if (lpb == 0) break;
+			if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
+				OutputDebugString("Incorrect GetRawInputData size\n");
 			RAWINPUT* raw = (RAWINPUT*)lpb;
 
 			if (raw->header.dwType == RIM_TYPEMOUSE) {
-				Input::OnMouseMoveEvent((int)raw->data.mouse.lLastX, (int)raw->data.mouse.lLastY);
+				int x = raw->data.mouse.lLastX;
+				int y = raw->data.mouse.lLastY;
+				Input::OnMouseMoveEvent(x, y);
 
-				if (Input::m_MouseClipped) {
-					RECT rect;
-					if (GetWindowRect(Graphics::m_hWnd, &rect))
-						SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
+				if (Input::m_LockMouse) {
+					RECT rect = Graphics::m_WindowRect;
+					SetCursorPos((rect.right + rect.left) / 2, (rect.bottom + rect.top) / 2);
 				}
 			}
-			break;
+			
+			delete[] lpb;
 		}
 
 		case WM_PAINT:
@@ -215,25 +218,24 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", Graphics::m_ClientWidth, Graphics::m_ClientHeight);
 
-	::GetWindowRect(hWnd, &Graphics::m_WindowRect);
+	GetWindowRect(hWnd, &Graphics::m_WindowRect);
 
 	// register raw input devices
 	RAWINPUTDEVICE rID[1];
 	// Mouse
-	rID[0].usUsagePage = 1;
-	rID[0].usUsage = 2;
+	rID[0].usUsagePage = 0x01;
+	rID[0].usUsage = 0x02;
 	rID[0].dwFlags = 0;
-	rID[0].hwndTarget = Graphics::m_hWnd;
-	if (!RegisterRawInputDevices(rID, 1, sizeof(RAWINPUTDEVICE))) {
-		throw std::exception();
-	}
+	rID[0].hwndTarget = NULL;// Graphics::m_hWnd;
+	if (RegisterRawInputDevices(rID, 1, sizeof(RAWINPUTDEVICE)) == FALSE)
+		OutputDebugString("Failed to register raw input device(s)\n");
 
 	Graphics::Initialize(hWnd);
 	g_game->Initialize(Graphics::GetCommandQueue()->GetCommandList());
 	Graphics::OnRender = std::bind(&Game::Render, g_game, std::placeholders::_1);
 	ShaderLibrary::LoadShaders();
 
-	::ShowWindow(hWnd, SW_SHOW);
+	ShowWindow(hWnd, SW_SHOW);
 
 	Graphics::StartRenderLoop(g_mutex);
 
