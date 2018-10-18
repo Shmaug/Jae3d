@@ -85,7 +85,7 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice() {
 #endif
 	ThrowIfFailed(hr);
 
-	/*
+	
 	// Enable debug messages in debug mode.
 #if defined(_DEBUG)
 	ComPtr<ID3D12InfoQueue> pInfoQueue;
@@ -120,7 +120,7 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice() {
 		ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
 	}
 #endif
-	*/
+	
 	return d3d12Device2;
 }
 ComPtr<IDXGISwapChain4> Graphics::CreateSwapChain(HWND hWnd, uint32_t width, uint32_t height) {
@@ -351,6 +351,9 @@ void Graphics::ResizeDepthBuffer() {
 	D3D12_CLEAR_VALUE optimizedClearValue = {};
 	optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
 	optimizedClearValue.DepthStencil = { 1.0f, 0 };
+
+	//DXGI_SAMPLE_DESC sampDesc = GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
+
 
 	ThrowIfFailed(m_Device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),

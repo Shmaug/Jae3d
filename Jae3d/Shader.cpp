@@ -99,7 +99,7 @@ void ShaderLibrary::LoadShaders() {
 	state.NumRenderTargets = 1;
 	state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	state.SampleDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
+	//state.SampleDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
 
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&s->m_PipelineState)));
 
