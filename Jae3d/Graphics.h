@@ -72,6 +72,7 @@ public:
 	static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
 	static D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
 	static _WRL::ComPtr<ID3D12Resource> Graphics::GetBackBuffer();
+	static UINT GetMSAASampleCount();
 
 
 	static void Graphics::SetCamera(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Camera* camera);
@@ -88,6 +89,7 @@ private:
 	static bool m_VSync;
 	static int m_fpsCounter;
 
+	static UINT m_msaaSampleCount;
 	static UINT m_RTVDescriptorSize;
 	static UINT m_DSVDescriptorSize;
 	static UINT m_CurrentBackBufferIndex;
@@ -103,6 +105,8 @@ private:
 	static _WRL::ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
 	static _WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
 	static _WRL::ComPtr<ID3D12DescriptorHeap> m_DSVDescriptorHeap;
+	static _WRL::ComPtr<ID3D12Resource> m_msaaRenderTarget;
+	static _WRL::ComPtr<ID3D12DescriptorHeap> m_msaaRTVDescriptorHeap;
 
 	static uint64_t m_FenceValues[Graphics::BufferCount];
 
@@ -117,9 +121,9 @@ private:
 
 	static _WRL::ComPtr<ID3D12Device2> CreateDevice();
 	static _WRL::ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, uint32_t width, uint32_t height);
-	static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(_WRL::ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+	static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
 	
-	static void CreateRTVs(_WRL::ComPtr<ID3D12Device2> device, _WRL::ComPtr<IDXGISwapChain4> swapChain, _WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap);
+	static void CreateRenderTargets(_WRL::ComPtr<IDXGISwapChain4> swapChain, _WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
 	static void ResizeDepthBuffer();
 

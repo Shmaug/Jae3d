@@ -86,10 +86,10 @@ void ShaderLibrary::LoadShaders() {
 	ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, sigBlob.GetAddressOf(), errBlob.GetAddressOf()));
 	s->m_RootSignature->SetRootSignatureDesc(rootSigDesc.Desc_1_1, featureData.HighestVersion);
 
-	//DXGI_SAMPLE_DESC sampDesc = {};
-	//sampDesc.Count = 1;
-	//sampDesc.Quality = 0;
-	DXGI_SAMPLE_DESC sampDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
+	DXGI_SAMPLE_DESC sampDesc = {};
+	sampDesc.Count = Graphics::GetMSAASampleCount();
+	sampDesc.Quality = 0;
+	//DXGI_SAMPLE_DESC sampDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
 	state.InputLayout = { Vertex::InputElements, Vertex::InputElementCount };
