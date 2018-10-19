@@ -86,6 +86,11 @@ void ShaderLibrary::LoadShaders() {
 	ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, sigBlob.GetAddressOf(), errBlob.GetAddressOf()));
 	s->m_RootSignature->SetRootSignatureDesc(rootSigDesc.Desc_1_1, featureData.HighestVersion);
 
+	//DXGI_SAMPLE_DESC sampDesc = {};
+	//sampDesc.Count = 1;
+	//sampDesc.Quality = 0;
+	DXGI_SAMPLE_DESC sampDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
 	state.InputLayout = { Vertex::InputElements, Vertex::InputElementCount };
 	state.pRootSignature = s->m_RootSignature->GetRootSignature().Get();
@@ -99,7 +104,7 @@ void ShaderLibrary::LoadShaders() {
 	state.NumRenderTargets = 1;
 	state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	//state.SampleDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
+	state.SampleDesc = sampDesc;
 
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&s->m_PipelineState)));
 

@@ -71,6 +71,8 @@ public:
 	
 	static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
 	static D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
+	static _WRL::ComPtr<ID3D12Resource> Graphics::GetBackBuffer();
+
 
 	static void Graphics::SetCamera(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Camera* camera);
 	static void Graphics::SetShader(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Shader* shader);

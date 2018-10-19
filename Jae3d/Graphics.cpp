@@ -19,10 +19,20 @@ struct CameraBuffer {
 	XMFLOAT4X4 View;
 	XMFLOAT4X4 Projection;
 	XMFLOAT3 CameraPosition;
+
+	static UINT64 AlignedSize() {
+		int s = sizeof(XMFLOAT4X4) * 3 + sizeof(XMFLOAT3);
+		return (UINT64)((sizeof(CameraBuffer) + 257) / 256) * 256;
+	}
 } g_CameraBufferData;
 struct ObjectBuffer {
 	XMFLOAT4X4 ObjectToWorld;
 	XMFLOAT4X4 WorldToObject;
+
+	static UINT64 AlignedSize() {
+		int s = sizeof(XMFLOAT4X4) * 3 + sizeof(XMFLOAT3);
+		return (UINT64)((sizeof(ObjectBuffer) + 257) / 256) * 256;
+	}
 } g_ObjectBufferData;
 
 #pragma region static variable initialization
@@ -138,7 +148,7 @@ ComPtr<IDXGISwapChain4> Graphics::CreateSwapChain(HWND hWnd, uint32_t width, uin
 	swapChainDesc.Height = height;
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.Stereo = FALSE;
-	swapChainDesc.SampleDesc = { 1, 0 };
+	swapChainDesc.SampleDesc = { 1,0 };
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.BufferCount = BufferCount;
 	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -147,7 +157,7 @@ ComPtr<IDXGISwapChain4> Graphics::CreateSwapChain(HWND hWnd, uint32_t width, uin
 
 	// It is recommended to always allow tearing if tearing support is available.
 	swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-
+	
 	ComPtr<IDXGISwapChain1> swapChain1;
 	ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
 		Graphics::GetCommandQueue()->GetCommandQueue().Get(),
@@ -269,6 +279,9 @@ D3D12_CPU_DESCRIPTOR_HANDLE Graphics::GetCurrentRenderTargetView() {
 }
 D3D12_CPU_DESCRIPTOR_HANDLE Graphics::GetDepthStencilView() {
 	return m_DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+}
+ComPtr<ID3D12Resource> Graphics::GetBackBuffer() {
+	return m_RenderBuffers[m_CurrentBackBufferIndex];
 }
 
 bool Graphics::IsInitialized() {
@@ -457,7 +470,7 @@ void Graphics::Initialize(HWND hWnd) {
 	ThrowIfFailed(m_Device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer((sizeof(ObjectBuffer) + 255) & 255),
+		&CD3DX12_RESOURCE_DESC::Buffer(ObjectBuffer::AlignedSize()),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&m_ObjectBuffer)));
@@ -467,23 +480,34 @@ void Graphics::Initialize(HWND hWnd) {
 	ThrowIfFailed(m_Device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer((sizeof(CameraBuffer) + 255) & 255),
+		&CD3DX12_RESOURCE_DESC::Buffer(CameraBuffer::AlignedSize()),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&m_CameraBuffer)));
 	m_CameraBuffer->SetName(L"CB Camera");
 
-	// Describe and create a constant buffer view.
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc[2];// = {};
-	cbvDesc[0].BufferLocation = m_ObjectBuffer->GetGPUVirtualAddress();
-	cbvDesc[0].SizeInBytes = (sizeof(ObjectBuffer) / 256L + 1L) * 256L;
-	cbvDesc[1].BufferLocation = m_CameraBuffer->GetGPUVirtualAddress();
-	cbvDesc[1].SizeInBytes = (sizeof(CameraBuffer) / 256L + 1L) * 256L;
+	OutputDebugString("Creating Cbv desc\n");
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle0(m_CbvHeap->GetCPUDescriptorHandleForHeapStart());
+	char str[128];
+	sprintf_s(str, "%d, %d\n", (int)ObjectBuffer::AlignedSize(), (int)CameraBuffer::AlignedSize());
+	OutputDebugString(str);
+
+	// Describe and create a constant buffer view.
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc[2];
+	cbvDesc[0].BufferLocation = m_ObjectBuffer->GetGPUVirtualAddress();
+	cbvDesc[0].SizeInBytes = (UINT)ObjectBuffer::AlignedSize();
+	cbvDesc[1].BufferLocation = m_CameraBuffer->GetGPUVirtualAddress();
+	cbvDesc[1].SizeInBytes = (UINT)CameraBuffer::AlignedSize();
+
+	OutputDebugString("Creating Cbvs\n");
+	D3D12_CPU_DESCRIPTOR_HANDLE desch = m_CbvHeap->GetCPUDescriptorHandleForHeapStart();
+	UINT descs = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle0(desch, 0, descs);
 	m_Device->CreateConstantBufferView(&cbvDesc[0], cbvHandle0);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle1(m_CbvHeap->GetCPUDescriptorHandleForHeapStart(), 1, m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	OutputDebugString("Created Cbv 0\n");
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle1(desch, 1, descs);
 	m_Device->CreateConstantBufferView(&cbvDesc[1], cbvHandle1);
+	OutputDebugString("Created Cbv 1\n");
 
 	// Map the constant buffers.
 	CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
@@ -508,8 +532,7 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 		// Get current back buffer data
 		auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 		auto commandList = commandQueue->GetCommandList();
-
-		auto backBuffer = m_RenderBuffers[m_CurrentBackBufferIndex];
+		auto backBuffer = GetBackBuffer();
 
 		// Draw scene
 		TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -552,7 +575,7 @@ DXGI_SAMPLE_DESC Graphics::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT 
 		sampleDesc.Count = qualityLevels.SampleCount;
 		sampleDesc.Quality = qualityLevels.NumQualityLevels - 1;
 
-		//qualityLevels.SampleCount *= 2;
+		qualityLevels.SampleCount *= 2;
 	}
 
 	return sampleDesc;

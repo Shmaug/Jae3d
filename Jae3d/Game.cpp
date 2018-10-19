@@ -48,15 +48,16 @@ void Game::Update(double total, double delta) {
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		Graphics::SetFullscreen(!Graphics::IsFullscreen());
 
-	XMINT2 md = Input::MouseDelta();
-	yaw += md.x * .005f;
-	pitch -= md.y * .005f;
-	pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
-	camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
-
 	if (Input::OnKeyDown(KeyCode::AltKey))
 		Input::m_LockMouse = !Input::m_LockMouse;
+
 	if (Input::m_LockMouse) {
+		XMINT2 md = Input::MouseDelta();
+		yaw += md.x * .005f;
+		pitch -= md.y * .005f;
+		pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
+		camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
+
 		if (cursorVisible) {
 			ShowCursor(false);
 			cursorVisible = false;
@@ -101,11 +102,30 @@ void Game::Update(double total, double delta) {
 void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	auto rtv = Graphics::GetCurrentRenderTargetView();
 	auto dsv = Graphics::GetDepthStencilView();
+	auto backBuffer = Graphics::GetBackBuffer();
 
 	DirectX::XMFLOAT4 clearColor = { 0.4f, 0.6f, 0.9f, 1.f };
 	commandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
-
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	{
+		D3D12_RESOURCE_BARRIER barriers[2] =
+		{
+			CD3DX12_RESOURCE_BARRIER::Transition(
+				m_msaaRenderTarget.Get(), // TODO
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+			CD3DX12_RESOURCE_BARRIER::Transition(
+				backBuffer.Get(),
+				D3D12_RESOURCE_STATE_PRESENT,
+				D3D12_RESOURCE_STATE_RESOLVE_DEST)
+		};
+
+		commandList->ResourceBarrier(2, barriers);
+	}
+
+	commandList->ResolveSubresource(backBuffer, 0, m_msaaRenderTarget.Get(), 0, c_backBufferFormat);
+
 
 	Graphics::SetCamera(commandList, camera);
 	Graphics::SetShader(commandList, ShaderLibrary::GetShader("default"));
