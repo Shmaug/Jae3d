@@ -87,7 +87,7 @@ void ShaderLibrary::LoadShaders() {
 	s->m_RootSignature->SetRootSignatureDesc(rootSigDesc.Desc_1_1, featureData.HighestVersion);
 
 	DXGI_SAMPLE_DESC sampDesc = {};
-	sampDesc.Count = Graphics::GetMSAASampleCount();
+	sampDesc.Count = Graphics::GetSupportedMSAASampleCount();
 	sampDesc.Quality = 0;
 	//DXGI_SAMPLE_DESC sampDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
 
