@@ -10,11 +10,17 @@ Window::Window(HWND hWnd, UINT bufferCount) : m_hWnd(hWnd), m_BufferCount(buffer
 	m_RenderBuffers = new ComPtr<ID3D12Resource>[m_BufferCount];
 	m_FenceValues = new uint64_t[m_BufferCount];
 	
+	ZeroMemory(m_RenderBuffers, sizeof(ComPtr<ID3D12Resource>) * m_BufferCount);
+	ZeroMemory(m_FenceValues, sizeof(uint64_t) * m_BufferCount);
+	
 	m_TearingSupported = Graphics::CheckTearingSupport();
 
 	GetWindowRect(m_hWnd, &m_WindowRect);
-	m_ClientWidth = m_WindowRect.right - m_WindowRect.left;
-	m_ClientHeight = m_WindowRect.top - m_WindowRect.bottom;
+
+	RECT crect;
+	GetClientRect(m_hWnd, &crect);
+	m_ClientWidth = (uint32_t)(crect.right - crect.left);
+	m_ClientHeight = (uint32_t)(crect.bottom - crect.top);
 
 	auto device = Graphics::GetDevice();
 	CreateSwapChain();
@@ -112,7 +118,7 @@ void Window::CreateRenderTargets() {
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	for (int i = 0; i < m_BufferCount; ++i) {
+	for (UINT i = 0; i < m_BufferCount; ++i) {
 		ComPtr<ID3D12Resource> backBuffer;
 		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
@@ -202,7 +208,12 @@ void Window::SetFullscreen(bool fullscreen) {
 	}
 }
 
-void Window::Resize(uint32_t width, uint32_t height) {
+void Window::Resize() {
+	RECT crect;
+	GetClientRect(m_hWnd, &crect);
+	uint32_t width = (uint32_t)(crect.right - crect.left);
+	uint32_t height = (uint32_t)(crect.bottom - crect.top);
+
 	// Check whether or not we need to resize the swap chain buffers
 	if (m_ClientWidth != width || m_ClientHeight != height) {
 		auto device = Graphics::GetDevice();
@@ -215,7 +226,7 @@ void Window::Resize(uint32_t width, uint32_t height) {
 		// are not being referenced by an in-flight command list.
 		Graphics::GetCommandQueue()->Flush();
 		
-		for (int i = 0; i < m_BufferCount; ++i) {
+		for (UINT i = 0; i < m_BufferCount; ++i) {
 			// Any references to the back buffers must be released
 			// before the swap chain can be resized.
 			m_RenderBuffers[i].Reset();
@@ -281,17 +292,15 @@ ComPtr<ID3D12Resource> Window::GetBackBuffer() {
 }
 
 void Window::PrepareRenderTargets(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	auto backBuffer = GetBackBuffer();
-	Graphics::TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Graphics::TransitionResource(commandList, m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 void Window::PreparePresent(ComPtr<ID3D12GraphicsCommandList2> commandList, std::shared_ptr<CommandQueue> commandQueue) {
 	auto backBuffer = GetBackBuffer();
+
 	// Resolve msaa buffers
 	Graphics::TransitionResource(commandList, m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
 	Graphics::TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RESOLVE_DEST);
 	commandList->ResolveSubresource(backBuffer.Get(), 0, m_msaaRenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-
 	Graphics::TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT);
 
 	// Execute the command list

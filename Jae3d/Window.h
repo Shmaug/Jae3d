@@ -3,20 +3,25 @@
 #include <wrl.h>
 #define _WRL Microsoft::WRL
 
+#include <memory>
+#include <cstdint>
+
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include "d3dx12.h"
+
+class CommandQueue;
 
 class Window {
 public:
 	Window(HWND hWnd, UINT bufferCount);
 	~Window();
 
-	bool IsFullscreen() { return m_Fullscreen; }
-	bool VSyncOn() { return m_VSync; }
-	void SetVSync(bool vsync) { m_VSync = vsync; }
+	bool IsFullscreen() { return m_Fullscreen; };
+	bool VSyncOn() { return m_VSync; };
+	void SetVSync(bool vsync) { m_VSync = vsync; };
 	void SetFullscreen(bool fullscreen);
-	void Resize(uint32_t width, uint32_t height);
+	void Resize();
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
@@ -28,6 +33,9 @@ public:
 
 	int GetWidth() { return m_ClientWidth; }
 	int GetHeight() { return m_ClientHeight; }
+	RECT GetRect() { return m_WindowRect; }
+	HWND GetHandle() { return m_hWnd; }
+	UINT GetMSAASamples() { return m_msaaSampleCount; }
 
 private:
 	HWND m_hWnd;
@@ -62,4 +70,3 @@ private:
 	void ResizeDepthBuffer();
 	void CreateSwapChain();
 };
-

@@ -6,7 +6,7 @@ bool Input::m_LockMouse;
 bool state[260]; // 0-254 are keys, 255-259 are mouse buttons
 bool lastState[260];
 DirectX::XMINT2 delta;
-int wheelDelta;
+float wheelDelta;
 
 void Input::OnKeyDownEvent(KeyCode::Key key, bool down) {
 	state[key] = down;
@@ -34,7 +34,7 @@ bool Input::ButtonDown(int button) {
 bool Input::OnButtonDown(int button) {
 	return state[259 - button] && !lastState[259 - button];
 }
-int Input::MouseWheelDelta() {
+float Input::MouseWheelDelta() {
 	return wheelDelta;
 }
 DirectX::XMINT2 Input::MouseDelta() {

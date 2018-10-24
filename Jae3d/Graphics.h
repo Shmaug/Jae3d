@@ -44,8 +44,10 @@ public:
 	static OnRenderDelegate OnRender;
 	
 	static std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
-	static bool IsInitialized();
-	static _WRL::ComPtr<ID3D12Device2> GetDevice();
+	static bool IsInitialized() { return m_Initialized; }
+	static _WRL::ComPtr<ID3D12Device2> GetDevice() { return m_Device; }
+	static std::shared_ptr<Window> GetWindow() { return m_Window; }
+	static UINT GetMSAASamples();
 
 	static int GetAndResetFPS();
 
@@ -64,7 +66,7 @@ public:
 	static void Graphics::DrawMesh(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, DirectX::XMMATRIX modelMatrix);
 
 private:
-	static HANDLE m_mutex;
+	static HANDLE m_Mutex;
 	// Set to true once the DX12 objects have been initialized.
 	static bool m_Initialized;
 	static int m_fpsCounter;

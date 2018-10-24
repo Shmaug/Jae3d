@@ -13,6 +13,7 @@
 #include "Mesh.h"
 #include "Camera.h"
 #include "Shader.h"
+#include "Window.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
@@ -32,8 +33,11 @@ void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	camera->m_Rotation = XMQuaternionIdentity();
 	
 	mesh = new Mesh();
-	mesh->LoadObj("Assets/Models/icosphere.obj");
+	mesh->LoadObj("Assets/Models/rifle.obj");
 	mesh->Create();
+
+	auto window = Graphics::GetWindow();
+	camera->m_Aspect = (float)window->GetWidth() / (float)window->GetHeight();
 }
 Game::~Game() {
 	delete mesh;
@@ -41,12 +45,14 @@ Game::~Game() {
 }
 
 void Game::OnResize() {
-	camera->m_Aspect = (float)Graphics::m_ClientWidth / (float)Graphics::m_ClientHeight;
+	auto window = Graphics::GetWindow();
+	camera->m_Aspect = (float)window->GetWidth() / (float)window->GetHeight();
 }
 
 void Game::Update(double total, double delta) {
+	auto window = Graphics::GetWindow();
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
-		Graphics::SetFullscreen(!Graphics::IsFullscreen());
+		window->SetFullscreen(!window->IsFullscreen());
 
 	if (Input::OnKeyDown(KeyCode::AltKey))
 		Input::m_LockMouse = !Input::m_LockMouse;
@@ -100,8 +106,9 @@ void Game::Update(double total, double delta) {
 }
 
 void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	auto rtv = Graphics::GetCurrentRenderTargetView();
-	auto dsv = Graphics::GetDepthStencilView();
+	auto window = Graphics::GetWindow();
+	auto rtv = window->GetCurrentRenderTargetView();
+	auto dsv = window->GetDepthStencilView();
 
 	DirectX::XMFLOAT4 clearColor = { 0.4f, 0.6f, 0.9f, 1.f };
 	commandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);

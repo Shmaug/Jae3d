@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 
-#include "RootSignature.h"
+class RootSignature;
 
 class Shader {
 public:

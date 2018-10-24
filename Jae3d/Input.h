@@ -16,7 +16,7 @@ public:
 	static bool OnKeyDown(KeyCode::Key key);
 	static bool ButtonDown(int button);
 	static bool OnButtonDown(int button);
-	static int MouseWheelDelta();
+	static float MouseWheelDelta();
 	static DirectX::XMINT2 MouseDelta();
 
 	static void FrameEnd();

@@ -3,6 +3,7 @@
 
 #include "Profiler.h"
 #include "Util.h"
+#include "RootSignature.h"
 #include "CommandQueue.h"
 #include "Mesh.h"
 #include "Shader.h"
@@ -44,9 +45,10 @@ D3D12_RECT Graphics::m_ScissorRect;
 
 OnRenderDelegate Graphics::OnRender;
 
-HANDLE Graphics::m_mutex;
+HANDLE Graphics::m_Mutex;
 bool Graphics::m_Initialized = false;
 
+std::shared_ptr<Window> Graphics::m_Window;
 std::shared_ptr<CommandQueue> Graphics::m_DirectCommandQueue;
 std::shared_ptr<CommandQueue> Graphics::m_ComputeCommandQueue;
 std::shared_ptr<CommandQueue> Graphics::m_CopyCommandQueue;
@@ -196,16 +198,13 @@ bool Graphics::CheckTearingSupport() {
 	return allowTearing == TRUE;
 }
 
-bool Graphics::IsInitialized() {
-	return m_Initialized;
-};
-ComPtr<ID3D12Device2> Graphics::GetDevice() {
-	return m_Device;
-}
 int Graphics::GetAndResetFPS() {
 	int x = m_fpsCounter;
 	m_fpsCounter = 0;
 	return x;
+}
+UINT Graphics::GetMSAASamples() {
+	return m_Window->GetMSAASamples();
 }
 #pragma endregion
 
@@ -296,13 +295,13 @@ void Graphics::Initialize(HWND hWnd) {
 }
 void Graphics::StartRenderLoop(HANDLE mutex) {
 	running = true;
-	m_mutex = mutex;
+	m_Mutex = mutex;
 	renderThread = (HANDLE)_beginthreadex(0, 0, &Graphics::RenderLoop, nullptr, 0, 0);
 }
 
 unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 	while (running) {
-		WaitForSingleObject(m_mutex, INFINITE);
+		WaitForSingleObject(m_Mutex, INFINITE);
 		m_fpsCounter++;
 
 		// Get current back buffer data
@@ -321,8 +320,9 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 
 		// Present
 		m_Window->PreparePresent(commandList, commandQueue);
+
 		// Release mutex before rendering to prevent vsync from halting main thread
-		ReleaseMutex(m_mutex);
+		ReleaseMutex(m_Mutex);
 
 		m_Window->Present(commandQueue);
 	}

@@ -64,7 +64,20 @@ void Mesh::LoadObj(LPCSTR path) {
 	std::vector<XMFLOAT3> tnormals;
 	std::vector<XMFLOAT2> tuvs;
 
-	std::map<int, uint32_t> indexMap;
+	std::map<unsigned int, uint32_t> indexMap;
+
+	/*
+	auto AddVertex = [indexMap, tvertices, tnormals, this](unsigned int iv, unsigned int in) {
+		unsigned int h = (iv + in)*(iv + in + 1) / 2 + in;
+		if (indexMap.count(h) == 0) {
+			uint32_t index = (uint32_t)vertices.size();
+			indexMap.emplace(h, index);
+			indices.push_back(index);
+			Vertex v(tvertices[iv], tnormals[in], XMFLOAT2(0, 0));
+			vertices.push_back(v);
+		} else
+			indices.push_back(indexMap.at(h));
+	};*/
 
 	int ff = 0;
 
@@ -118,26 +131,29 @@ void Mesh::LoadObj(LPCSTR path) {
 			unsigned int h2 = (iv2 + in2)*(iv2 + in2 + 1) / 2 + in2;
 
 			if (indexMap.count(h0) == 0) {
-				indexMap[h0] = (uint32_t)vertices.size();
-				indices.push_back((uint32_t)vertices.size());
-				Vertex v(tvertices[iv0], tnormals[in0], XMFLOAT2(0, 0));
-				vertices.push_back(v);
+				uint32_t index = (uint32_t)vertices.size();
+				indexMap.emplace(h0, index);
+				indices.push_back(index);
+				Vertex v0(tvertices[iv0], tnormals[in0], XMFLOAT2(0, 0));
+				vertices.push_back(v0);
 			} else
 				indices.push_back(indexMap.at(h0));
 
 			if (indexMap.count(h1) == 0) {
-				indexMap[h1] = (uint32_t)vertices.size();
-				indices.push_back((uint32_t)vertices.size());
-				Vertex v(tvertices[iv1], tnormals[in1], XMFLOAT2(0, 0));
-				vertices.push_back(v);
+				uint32_t index = (uint32_t)vertices.size();
+				indexMap.emplace(h1, index);
+				indices.push_back(index);
+				Vertex v1(tvertices[iv1], tnormals[in1], XMFLOAT2(0, 0));
+				vertices.push_back(v1);
 			} else
 				indices.push_back(indexMap.at(h1));
 
 			if (indexMap.count(h2) == 0) {
-				indexMap[h0] = (uint32_t)vertices.size();
-				indices.push_back((uint32_t)vertices.size());
-				Vertex v(tvertices[iv2], tnormals[in2], XMFLOAT2(0, 0));
-				vertices.push_back(v);
+				uint32_t index = (uint32_t)vertices.size();
+				indexMap.emplace(h2, index);
+				indices.push_back(index);
+				Vertex v2(tvertices[iv2], tnormals[in2], XMFLOAT2(0, 0));
+				vertices.push_back(v2);
 			} else
 				indices.push_back(indexMap.at(h2));
 		}

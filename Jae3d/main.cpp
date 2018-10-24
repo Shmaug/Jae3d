@@ -8,6 +8,7 @@
 #include "Game.h"
 #include "Shader.h"
 #include "CommandQueue.h"
+#include "Window.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -95,7 +96,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 				Input::OnMouseMoveEvent(x, y);
 
 				if (Input::m_LockMouse) {
-					RECT rect = Graphics::m_WindowRect;
+					RECT rect = Graphics::GetWindow()->GetRect();
 					SetCursorPos((rect.right + rect.left) / 2, (rect.bottom + rect.top) / 2);
 				}
 			}
@@ -153,13 +154,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			break;
 		case WM_SIZE:
 		{
+			auto window = Graphics::GetWindow();
 			RECT clientRect = {};
-			::GetClientRect(Graphics::m_hWnd, &clientRect);
+			::GetClientRect(window->GetHandle(), &clientRect);
 
 			int width = clientRect.right - clientRect.left;
 			int height = clientRect.bottom - clientRect.top;
 
-			Graphics::Resize(width, height);
+			window->Resize();
 			g_game->OnResize();
 		}
 		break;
@@ -216,9 +218,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	g_game = new Game();
 	g_mutex = CreateMutex(NULL, FALSE, NULL);
 
-	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", Graphics::m_ClientWidth, Graphics::m_ClientHeight);
-
-	GetWindowRect(hWnd, &Graphics::m_WindowRect);
+	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", 1280, 720);
 
 	// register raw input devices
 	RAWINPUTDEVICE rID[1];

@@ -1,10 +1,11 @@
 #pragma once
+
+#include <wrl.h>
+#define _WRL Microsoft::WRL
+
 #include <d3d12.h>
 #include <cstdint>
-#include <wrl.h>
 #include <queue>
-
-#define _WRL Microsoft::WRL
 
 class CommandQueue {
 public:
