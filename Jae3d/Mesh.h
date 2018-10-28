@@ -6,7 +6,8 @@
 
 #include <d3d12.h>
 #include "d3dx12.h"
-#include <DirectXMath.h>
+
+#include "Object.h"
 
 struct Vertex {
 	static const int InputElementCount = 3;
@@ -25,18 +26,15 @@ struct Vertex {
 	}
 };
 
-class Mesh {
+class Mesh : public Object {
 public:
-	struct ObjectCB {
-		DirectX::XMMATRIX ObjectToWorld;
-		DirectX::XMMATRIX WorldToObject;
-	};
-
 	UINT m_IndexCount;
 	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
 
+	Mesh(std::string name);
 	~Mesh();
+
 	void Mesh::LoadObj(LPCSTR file);
 	void Mesh::LoadCube(float size);
 	void Mesh::Create();

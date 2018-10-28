@@ -309,6 +309,10 @@ unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
 		auto commandList = commandQueue->GetCommandList();
 		auto backBuffer = m_Window->GetBackBuffer();
 
+		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)m_Window->GetWidth(), (float)m_Window->GetHeight());
+		commandList->RSSetViewports(1, &vp);
+		commandList->RSSetScissorRects(1, &m_ScissorRect);
+
 		// Draw scene
 		m_Window->PrepareRenderTargets(commandList);
 
@@ -359,14 +363,11 @@ void Graphics::SetShader(ComPtr<ID3D12GraphicsCommandList2> commandList, Shader 
 	commandList->SetPipelineState(shader->m_PipelineState.Get());
 }
 void Graphics::SetCamera(ComPtr<ID3D12GraphicsCommandList2> commandList, Camera *camera) {
-	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)m_Window->GetWidth(), (float)m_Window->GetHeight());
-	commandList->RSSetViewports(1, &vp);
-	commandList->RSSetScissorRects(1, &m_ScissorRect);
-
 	XMStoreFloat4x4(&g_CameraBufferData.View, camera->View());
 	XMStoreFloat4x4(&g_CameraBufferData.Projection, camera->Projection());
-	XMStoreFloat4x4(&g_CameraBufferData.ViewProjection, camera->View() * camera->Projection());
-	XMStoreFloat3(&g_CameraBufferData.CameraPosition, camera->m_Position);
+	XMStoreFloat4x4(&g_CameraBufferData.ViewProjection, camera->ViewProjection());
+	XMStoreFloat3(&g_CameraBufferData.CameraPosition, camera->Position());
+	memcpy(m_MappedCameraBuffer, &g_CameraBufferData, sizeof(CameraBuffer));
 }
 void Graphics::DrawMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, XMMATRIX modelMatrix) {
 	XMVECTOR det = XMMatrixDeterminant(modelMatrix);
@@ -375,6 +376,25 @@ void Graphics::DrawMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* me
 
 	memcpy(m_MappedObjectBuffer, &g_ObjectBufferData, sizeof(ObjectBuffer));
 	memcpy(m_MappedCameraBuffer, &g_CameraBufferData, sizeof(CameraBuffer));
+
+	// set constant buffer descriptor heap
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvHeap.Get() };
+	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+	// set the root descriptor table 0 to the constant buffer descriptor heap
+	commandList->SetGraphicsRootDescriptorTable(0, m_CbvHeap->GetGPUDescriptorHandleForHeapStart());
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetVertexBuffers(0, 1, &mesh->m_VertexBufferView);
+	commandList->IASetIndexBuffer(&mesh->m_IndexBufferView);
+
+	commandList->DrawIndexedInstanced(mesh->m_IndexCount, 1, 0, 0, 0);
+}
+void Graphics::DrawMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh) {
+	XMStoreFloat4x4(&g_ObjectBufferData.ObjectToWorld, mesh->ObjectToWorld());
+	XMStoreFloat4x4(&g_ObjectBufferData.WorldToObject, mesh->WorldToObject());
+
+	memcpy(m_MappedObjectBuffer, &g_ObjectBufferData, sizeof(ObjectBuffer));
 
 	// set constant buffer descriptor heap
 	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvHeap.Get() };

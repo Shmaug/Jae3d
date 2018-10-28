@@ -16,6 +16,7 @@ const D3D12_INPUT_ELEMENT_DESC Vertex::InputElements[] = {
 	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 };
 
+Mesh::Mesh(std::string name) : Object(name) {}
 Mesh::~Mesh() {}
 
 void Mesh::UploadData(ComPtr<ID3D12GraphicsCommandList2> commandList,
@@ -64,20 +65,7 @@ void Mesh::LoadObj(LPCSTR path) {
 	std::vector<XMFLOAT3> tnormals;
 	std::vector<XMFLOAT2> tuvs;
 
-	std::map<unsigned int, uint32_t> indexMap;
-
-	/*
-	auto AddVertex = [indexMap, tvertices, tnormals, this](unsigned int iv, unsigned int in) {
-		unsigned int h = (iv + in)*(iv + in + 1) / 2 + in;
-		if (indexMap.count(h) == 0) {
-			uint32_t index = (uint32_t)vertices.size();
-			indexMap.emplace(h, index);
-			indices.push_back(index);
-			Vertex v(tvertices[iv], tnormals[in], XMFLOAT2(0, 0));
-			vertices.push_back(v);
-		} else
-			indices.push_back(indexMap.at(h));
-	};*/
+	std::map<unsigned long, uint32_t> indexMap;
 
 	int ff = 0;
 
@@ -126,36 +114,36 @@ void Mesh::LoadObj(LPCSTR path) {
 			in1--;
 			in2--;
 
-			unsigned int h0 = (iv0 + in0)*(iv0 + in0 + 1) / 2 + in0;
-			unsigned int h1 = (iv1 + in1)*(iv1 + in1 + 1) / 2 + in1;
-			unsigned int h2 = (iv2 + in2)*(iv2 + in2 + 1) / 2 + in2;
+			unsigned long h0 = ((unsigned long)iv0 + (unsigned long)in0)*((unsigned long)iv0 + (unsigned long)in0 + 1) / 2 + (unsigned long)in0;
+			unsigned long h1 = ((unsigned long)iv1 + (unsigned long)in1)*((unsigned long)iv1 + (unsigned long)in1 + 1) / 2 + (unsigned long)in1;
+			unsigned long h2 = ((unsigned long)iv2 + (unsigned long)in2)*((unsigned long)iv2 + (unsigned long)in2 + 1) / 2 + (unsigned long)in2;
 
-			if (indexMap.count(h0) == 0) {
-				uint32_t index = (uint32_t)vertices.size();
-				indexMap.emplace(h0, index);
-				indices.push_back(index);
+			//if (indexMap.count(h0) == 0) {
+				uint32_t index0 = (uint32_t)vertices.size();
+				indexMap.emplace(h0, index0);
+				indices.push_back(index0);
 				Vertex v0(tvertices[iv0], tnormals[in0], XMFLOAT2(0, 0));
 				vertices.push_back(v0);
-			} else
-				indices.push_back(indexMap.at(h0));
+			//} else
+			//	indices.push_back(indexMap.at(h0));
 
-			if (indexMap.count(h1) == 0) {
-				uint32_t index = (uint32_t)vertices.size();
-				indexMap.emplace(h1, index);
-				indices.push_back(index);
+			//if (indexMap.count(h1) == 0) {
+				uint32_t index1 = (uint32_t)vertices.size();
+				indexMap.emplace(h1, index1);
+				indices.push_back(index1);
 				Vertex v1(tvertices[iv1], tnormals[in1], XMFLOAT2(0, 0));
 				vertices.push_back(v1);
-			} else
-				indices.push_back(indexMap.at(h1));
+			//} else
+			//	indices.push_back(indexMap.at(h1));
 
-			if (indexMap.count(h2) == 0) {
-				uint32_t index = (uint32_t)vertices.size();
-				indexMap.emplace(h2, index);
-				indices.push_back(index);
+			//if (indexMap.count(h2) == 0) {
+				uint32_t index2 = (uint32_t)vertices.size();
+				indexMap.emplace(h2, index2);
+				indices.push_back(index2);
 				Vertex v2(tvertices[iv2], tnormals[in2], XMFLOAT2(0, 0));
 				vertices.push_back(v2);
-			} else
-				indices.push_back(indexMap.at(h2));
+			//} else
+			//	indices.push_back(indexMap.at(h2));
 		}
 	}
 

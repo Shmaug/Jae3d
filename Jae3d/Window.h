@@ -17,11 +17,12 @@ public:
 	Window(HWND hWnd, UINT bufferCount);
 	~Window();
 
-	bool IsFullscreen() { return m_Fullscreen; };
-	bool VSyncOn() { return m_VSync; };
+	bool IsFullscreen() const { return m_Fullscreen; };
+	bool VSyncOn() const { return m_VSync; };
 	void SetVSync(bool vsync) { m_VSync = vsync; };
 	void SetFullscreen(bool fullscreen);
 	void Resize();
+	void Close();
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
@@ -31,11 +32,11 @@ public:
 	void PreparePresent(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, std::shared_ptr<CommandQueue> commandQueue);
 	void Present(std::shared_ptr<CommandQueue> commandQueue);
 
-	int GetWidth() { return m_ClientWidth; }
-	int GetHeight() { return m_ClientHeight; }
-	RECT GetRect() { return m_WindowRect; }
-	HWND GetHandle() { return m_hWnd; }
-	UINT GetMSAASamples() { return m_msaaSampleCount; }
+	int GetWidth() const { return m_ClientWidth; }
+	int GetHeight() const { return m_ClientHeight; }
+	RECT GetRect() const { return m_WindowRect; }
+	HWND GetHandle() const { return m_hWnd; }
+	UINT GetMSAASamples() const { return m_msaaSampleCount; }
 
 private:
 	HWND m_hWnd;

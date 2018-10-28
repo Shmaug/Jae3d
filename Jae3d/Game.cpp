@@ -28,16 +28,15 @@ float pitch;
 bool cursorVisible = true;
 
 void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	camera = new Camera();
-	camera->m_Position = { 0, .2f, 2, 0 };
-	camera->m_Rotation = XMQuaternionIdentity();
+	camera = new Camera("Camera");
+	camera->Position({ 0, .4f, 1, 0 });
 	
-	mesh = new Mesh();
-	mesh->LoadObj("Assets/Models/rifle.obj");
+	mesh = new Mesh("Mesh");
+	mesh->LoadObj("Assets/Models/sphere.obj");
 	mesh->Create();
 
 	auto window = Graphics::GetWindow();
-	camera->m_Aspect = (float)window->GetWidth() / (float)window->GetHeight();
+	camera->Aspect((float)window->GetWidth() / (float)window->GetHeight());
 }
 Game::~Game() {
 	delete mesh;
@@ -46,14 +45,17 @@ Game::~Game() {
 
 void Game::OnResize() {
 	auto window = Graphics::GetWindow();
-	camera->m_Aspect = (float)window->GetWidth() / (float)window->GetHeight();
+	camera->Aspect((float)window->GetWidth() / (float)window->GetHeight());
 }
 
 void Game::Update(double total, double delta) {
 	auto window = Graphics::GetWindow();
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		window->SetFullscreen(!window->IsFullscreen());
+	if (Input::OnKeyDown(KeyCode::F4) && Input::KeyDown(KeyCode::AltKey))
+		window->Close();
 
+#pragma region camera controls
 	if (Input::OnKeyDown(KeyCode::AltKey))
 		Input::m_LockMouse = !Input::m_LockMouse;
 
@@ -62,7 +64,7 @@ void Game::Update(double total, double delta) {
 		yaw += md.x * .005f;
 		pitch -= md.y * .005f;
 		pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
-		camera->m_Rotation = XMQuaternionRotationRollPitchYaw(pitch, yaw, 0);
+		camera->Rotation(XMQuaternionRotationRollPitchYaw(pitch, yaw, 0));
 
 		if (cursorVisible) {
 			ShowCursor(false);
@@ -77,17 +79,21 @@ void Game::Update(double total, double delta) {
 	
 	XMVECTOR fwd = { 0, 0, -1, 0 };
 	XMVECTOR right = { -1, 0, 0, 0 };
-	fwd = XMVector3Rotate(fwd, camera->m_Rotation);
-	right = XMVector3Rotate(right, camera->m_Rotation);
+	fwd = XMVector3Rotate(fwd, camera->Rotation());
+	right = XMVector3Rotate(right, camera->Rotation());
+	XMVECTOR p = camera->Position();
 	if (Input::KeyDown(KeyCode::W))
-		camera->m_Position += fwd * (float)delta;
+		p += fwd * (float)delta;
 	if (Input::KeyDown(KeyCode::S))
-		camera->m_Position -= fwd * (float)delta;
+		p -= fwd * (float)delta;
 	if (Input::KeyDown(KeyCode::D))
-		camera->m_Position += right * (float)delta;
+		p += right * (float)delta;
 	if (Input::KeyDown(KeyCode::A))
-		camera->m_Position -= right * (float)delta;
+		p -= right * (float)delta;
+	camera->Position(p);
+#pragma endregion
 
+	// fps stats
 	static double timer = 0;
 	timer += delta;
 	if (timer >= 1.0) {
@@ -114,7 +120,7 @@ void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	commandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	Graphics::SetCamera(commandList, camera);
 	Graphics::SetShader(commandList, ShaderLibrary::GetShader("default"));
-	Graphics::DrawMesh(commandList, mesh, XMMatrixIdentity());
+	Graphics::SetCamera(commandList, camera);
+	Graphics::DrawMesh(commandList, mesh);
 }

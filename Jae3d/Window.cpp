@@ -278,6 +278,9 @@ void Window::Resize() {
 		ResizeDepthBuffer();
 	}
 }
+void Window::Close() {
+
+}
 
 D3D12_CPU_DESCRIPTOR_HANDLE Window::GetCurrentRenderTargetView() {
 	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBufferIndex, m_RTVDescriptorSize);

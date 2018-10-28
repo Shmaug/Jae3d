@@ -64,6 +64,7 @@ public:
 	static void Graphics::SetCamera(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Camera* camera);
 	static void Graphics::SetShader(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Shader* shader);
 	static void Graphics::DrawMesh(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, DirectX::XMMATRIX modelMatrix);
+	static void Graphics::DrawMesh(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh);
 
 private:
 	static HANDLE m_Mutex;

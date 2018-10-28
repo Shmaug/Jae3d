@@ -5,26 +5,16 @@
 
 using namespace DirectX;
 
-Camera::Camera() {
-	m_Rotation = XMQuaternionIdentity();
-}
-Camera::CameraCB* Camera::GetData() {
-	m_Data.View = View();
-	m_Data.Projection = Projection();
-	m_Data.ViewProjection = m_Data.View * m_Data.Projection;
-	m_Data.CameraPosition = m_Position;
-	return &m_Data;
-}
-XMMATRIX Camera::View() const {
+Camera::Camera(std::string name) : Object(name) {}
+
+void Camera::UpdateTransform(){
+	Object::UpdateTransform();
+
 	XMVECTOR fwd = { 0, 0, -1, 0 };
 	XMVECTOR up = { 0, 1, 0, 0 };
-	fwd = XMVector3Rotate(fwd, m_Rotation);
-	up = XMVector3Rotate(up, m_Rotation);
-	return XMMatrixLookAtLH(m_Position, m_Position + fwd, up);
-}
-XMMATRIX Camera::Projection() const {
-	return XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FieldOfView), m_Aspect, m_Near, m_Far);
-}
-XMMATRIX Camera::ViewProjection() const {
-	return View() * Projection();
+	fwd = XMVector3Rotate(fwd, Rotation());
+	up = XMVector3Rotate(up, Rotation());
+	m_View = XMMatrixLookAtLH(Position(), Position() + fwd, up);
+	m_Projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FieldOfView), m_Aspect, m_Near, m_Far);
+	m_ViewProjection = m_View * m_Projection;
 }
