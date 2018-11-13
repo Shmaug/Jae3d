@@ -3,12 +3,16 @@
 #include "Object.h"
 #include "d3dx12.h"
 
+#include <wrl.h>
+#define _WRL Microsoft::WRL
+
 class Camera : public Object {
 protected:
-	void UpdateTransform();
+	bool UpdateTransform();
 
 public:
 	Camera(std::string name);
+	~Camera();
 
 	float FieldOfView() const { return m_FieldOfView; }
 	float Aspect() const { return m_Aspect; }
@@ -18,11 +22,14 @@ public:
 	void Aspect(float a) { m_Aspect = a; m_TransformDirty = true; }
 	void Near(float n) { m_Near = n; m_TransformDirty = true; }
 	void Far(float f) { m_Far = f; m_TransformDirty = true; }
+	D3D12_GPU_VIRTUAL_ADDRESS GetCBuffer() { if (m_TransformDirty) UpdateTransform(); return m_CBuffer->GetGPUVirtualAddress(); }
 
 	DirectX::XMMATRIX View() { if (m_TransformDirty) UpdateTransform(); return m_View; }
 	DirectX::XMMATRIX Projection() { if (m_TransformDirty) UpdateTransform(); return m_Projection; }
 	DirectX::XMMATRIX ViewProjection() { if (m_TransformDirty) UpdateTransform(); return m_ViewProjection; }
 
+	void CreateCB();
+	void ReleaseCB();
 private:
 	float m_FieldOfView = 70.0f;
 	float m_Aspect = 1.0f;
@@ -32,5 +39,15 @@ private:
 	DirectX::XMMATRIX m_View;
 	DirectX::XMMATRIX m_Projection;
 	DirectX::XMMATRIX m_ViewProjection;
+
+	struct CameraBuffer {
+	public:
+		DirectX::XMFLOAT4X4 View;
+		DirectX::XMFLOAT4X4 Projection;
+		DirectX::XMFLOAT4X4 ViewProjection;
+		DirectX::XMFLOAT3 CameraPosition;
+	} m_CameraBufferData;
+	_WRL::ComPtr<ID3D12Resource> m_CBuffer;
+	UINT8* m_MappedCBuffer;
 };
 

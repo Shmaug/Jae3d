@@ -20,7 +20,6 @@ class CommandQueue;
 class Game;
 class Mesh;
 class Shader;
-class Camera;
 class Window;
 
 // The min/max macros conflict with like-named member functions.
@@ -61,10 +60,7 @@ public:
 	static bool CheckTearingSupport();
 	static DXGI_SAMPLE_DESC GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags);
 
-	static void Graphics::SetCamera(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Camera* camera);
 	static void Graphics::SetShader(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Shader* shader);
-	static void Graphics::DrawMesh(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, DirectX::XMMATRIX modelMatrix);
-	static void Graphics::DrawMesh(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh);
 
 private:
 	static HANDLE m_Mutex;
@@ -80,12 +76,6 @@ private:
 
 	// DirectX 12 Objects
 	static _WRL::ComPtr<ID3D12Device2> m_Device;
-
-	static _WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
-	static _WRL::ComPtr<ID3D12Resource> m_CameraBuffer;
-	static _WRL::ComPtr<ID3D12Resource> m_ObjectBuffer;
-	static UINT8* m_MappedCameraBuffer;
-	static UINT8* m_MappedObjectBuffer;
 
 	static _WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 

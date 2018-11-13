@@ -1,7 +1,7 @@
 struct CameraBuffer {
-	float4x4 ViewProjection;
 	float4x4 View;
 	float4x4 Projection;
+	float4x4 ViewProjection;
 	float4 CameraPosition;
 };
 struct ObjectBuffer {

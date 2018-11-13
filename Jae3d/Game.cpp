@@ -20,7 +20,9 @@ using namespace Microsoft::WRL;
 using namespace std;
 
 Camera* camera;
-Mesh* mesh;
+Mesh* sphere;
+Mesh* cube;
+Mesh* rifle;
 
 float yaw;
 float pitch;
@@ -29,17 +31,31 @@ bool cursorVisible = true;
 
 void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	camera = new Camera("Camera");
-	camera->Position({ 0, .4f, 1, 0 });
+	camera->CreateCB();
+	camera->LocalPosition({ 0, .4f, 1, 0 });
 	
-	mesh = new Mesh("Mesh");
-	mesh->LoadObj("Assets/Models/sphere.obj");
-	mesh->Create();
+	sphere = new Mesh("Sphere");
+	sphere->LoadObj("Assets/Models/sphere.obj");
+	sphere->Create();
+	sphere->LocalPosition({-2, 0, -1, 0});
+
+	cube = new Mesh("Cube");
+	cube->LoadCube(.5f);
+	cube->Create();
+
+	rifle = new Mesh("Rifle");
+	rifle->LoadObj("Assets/Models/rifle.obj");
+	rifle->Create();
+	rifle->Parent(camera);
+	rifle->LocalPosition({.2f, -.1f, .25f, 0});
 
 	auto window = Graphics::GetWindow();
 	camera->Aspect((float)window->GetWidth() / (float)window->GetHeight());
 }
 Game::~Game() {
-	delete mesh;
+	delete sphere;
+	delete cube;
+	delete rifle;
 	delete camera;
 }
 
@@ -64,7 +80,7 @@ void Game::Update(double total, double delta) {
 		yaw += md.x * .005f;
 		pitch -= md.y * .005f;
 		pitch = fmin(fmax(pitch, -XM_PIDIV2), XM_PIDIV2);
-		camera->Rotation(XMQuaternionRotationRollPitchYaw(pitch, yaw, 0));
+		camera->LocalRotation(XMQuaternionRotationRollPitchYaw(pitch, yaw, 0));
 
 		if (cursorVisible) {
 			ShowCursor(false);
@@ -79,9 +95,9 @@ void Game::Update(double total, double delta) {
 	
 	XMVECTOR fwd = { 0, 0, -1, 0 };
 	XMVECTOR right = { -1, 0, 0, 0 };
-	fwd = XMVector3Rotate(fwd, camera->Rotation());
-	right = XMVector3Rotate(right, camera->Rotation());
-	XMVECTOR p = camera->Position();
+	fwd = XMVector3Rotate(fwd, camera->LocalRotation());
+	right = XMVector3Rotate(right, camera->LocalRotation());
+	XMVECTOR p = camera->LocalPosition();
 	if (Input::KeyDown(KeyCode::W))
 		p += fwd * (float)delta;
 	if (Input::KeyDown(KeyCode::S))
@@ -90,7 +106,7 @@ void Game::Update(double total, double delta) {
 		p += right * (float)delta;
 	if (Input::KeyDown(KeyCode::A))
 		p -= right * (float)delta;
-	camera->Position(p);
+	camera->LocalPosition(p);
 #pragma endregion
 
 	// fps stats
@@ -121,6 +137,7 @@ void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	Graphics::SetShader(commandList, ShaderLibrary::GetShader("default"));
-	Graphics::SetCamera(commandList, camera);
-	Graphics::DrawMesh(commandList, mesh);
+	sphere->Draw(commandList, camera);
+	cube->Draw(commandList, camera);
+	rifle->Draw(commandList, camera);
 }

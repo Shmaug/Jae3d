@@ -23,7 +23,9 @@ public:
 };
 
 class ShaderLibrary {
+private:
 	static std::map<std::string, Shader*> shaders;
+	static void LoadShader(_WRL::ComPtr<ID3D12Device> device, std::string name);
 
 public:
 	static void LoadShaders();

@@ -49,11 +49,7 @@ Shader::~Shader() {
 	delete m_RootSignature;
 }
 
-void ShaderLibrary::LoadShaders() {
-	auto device = Graphics::GetDevice();
-
-	string name = "default";
-
+void ShaderLibrary::LoadShader(ComPtr<ID3D12Device> device, string name) {
 	Shader *s = new Shader();
 	s->name = name;
 
@@ -65,18 +61,15 @@ void ShaderLibrary::LoadShaders() {
 	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 
-	CD3DX12_DESCRIPTOR_RANGE1 range[2];
-	CD3DX12_ROOT_PARAMETER1 rootParams[1];
-	range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0);
-	range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0);
-	rootParams[0].InitAsDescriptorTable(_countof(range), range, D3D12_SHADER_VISIBILITY_ALL);
+	CD3DX12_ROOT_PARAMETER1 rootParams[2];
+	rootParams[0].InitAsConstantBufferView(0, 0);
+	rootParams[1].InitAsConstantBufferView(1, 0);
 
 	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+		  D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-		//| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
 	rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 0, nullptr, rootSignatureFlags);
@@ -89,7 +82,6 @@ void ShaderLibrary::LoadShaders() {
 	DXGI_SAMPLE_DESC sampDesc = {};
 	sampDesc.Count = Graphics::GetMSAASamples();
 	sampDesc.Quality = 0;
-	//DXGI_SAMPLE_DESC sampDesc = Graphics::GetMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
 	state.InputLayout = { Vertex::InputElements, Vertex::InputElementCount };
@@ -109,6 +101,10 @@ void ShaderLibrary::LoadShaders() {
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&s->m_PipelineState)));
 
 	shaders[name] = s;
+}
+void ShaderLibrary::LoadShaders() {
+	auto device = Graphics::GetDevice();
+	LoadShader(device, "default");
 }
 Shader* ShaderLibrary::GetShader(string name) {
 	return shaders[name];

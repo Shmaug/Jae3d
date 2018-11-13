@@ -65,8 +65,7 @@ void RootSignature::SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootS
 			UINT numDescriptorRanges = rootParameter.DescriptorTable.NumDescriptorRanges;
 			D3D12_DESCRIPTOR_RANGE1* pDescriptorRanges = numDescriptorRanges > 0 ? new D3D12_DESCRIPTOR_RANGE1[numDescriptorRanges] : nullptr;
 
-			memcpy(pDescriptorRanges, rootParameter.DescriptorTable.pDescriptorRanges,
-				sizeof(D3D12_DESCRIPTOR_RANGE1) * numDescriptorRanges);
+			memcpy(pDescriptorRanges, rootParameter.DescriptorTable.pDescriptorRanges, sizeof(D3D12_DESCRIPTOR_RANGE1) * numDescriptorRanges);
 
 			pParameters[i].DescriptorTable.NumDescriptorRanges = numDescriptorRanges;
 			pParameters[i].DescriptorTable.pDescriptorRanges = pDescriptorRanges;
@@ -86,9 +85,8 @@ void RootSignature::SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootS
 			}
 
 			// Count the number of descriptors in the descriptor table.
-			for (UINT j = 0; j < numDescriptorRanges; ++j) {
+			for (UINT j = 0; j < numDescriptorRanges; ++j)
 				m_NumDescriptorsPerTable[i] += pDescriptorRanges[j].NumDescriptors;
-			}
 		}
 	}
 

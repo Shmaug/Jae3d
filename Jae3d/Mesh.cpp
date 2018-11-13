@@ -2,6 +2,7 @@
 
 #include "Graphics.h"
 #include "CommandQueue.h"
+#include "Camera.h"
 #include "Util.h"
 
 #include <map>
@@ -17,7 +18,7 @@ const D3D12_INPUT_ELEMENT_DESC Vertex::InputElements[] = {
 };
 
 Mesh::Mesh(std::string name) : Object(name) {}
-Mesh::~Mesh() {}
+Mesh::~Mesh() { Release(); }
 
 void Mesh::UploadData(ComPtr<ID3D12GraphicsCommandList2> commandList,
 	ID3D12Resource** dst,
@@ -118,32 +119,32 @@ void Mesh::LoadObj(LPCSTR path) {
 			unsigned long h1 = ((unsigned long)iv1 + (unsigned long)in1)*((unsigned long)iv1 + (unsigned long)in1 + 1) / 2 + (unsigned long)in1;
 			unsigned long h2 = ((unsigned long)iv2 + (unsigned long)in2)*((unsigned long)iv2 + (unsigned long)in2 + 1) / 2 + (unsigned long)in2;
 
-			//if (indexMap.count(h0) == 0) {
+			if (indexMap.count(h0) == 0) {
 				uint32_t index0 = (uint32_t)vertices.size();
 				indexMap.emplace(h0, index0);
 				indices.push_back(index0);
 				Vertex v0(tvertices[iv0], tnormals[in0], XMFLOAT2(0, 0));
 				vertices.push_back(v0);
-			//} else
-			//	indices.push_back(indexMap.at(h0));
+			} else
+				indices.push_back(indexMap.at(h0));
 
-			//if (indexMap.count(h1) == 0) {
+			if (indexMap.count(h1) == 0) {
 				uint32_t index1 = (uint32_t)vertices.size();
 				indexMap.emplace(h1, index1);
 				indices.push_back(index1);
 				Vertex v1(tvertices[iv1], tnormals[in1], XMFLOAT2(0, 0));
 				vertices.push_back(v1);
-			//} else
-			//	indices.push_back(indexMap.at(h1));
+			} else
+				indices.push_back(indexMap.at(h1));
 
-			//if (indexMap.count(h2) == 0) {
+			if (indexMap.count(h2) == 0) {
 				uint32_t index2 = (uint32_t)vertices.size();
 				indexMap.emplace(h2, index2);
 				indices.push_back(index2);
 				Vertex v2(tvertices[iv2], tnormals[in2], XMFLOAT2(0, 0));
 				vertices.push_back(v2);
-			//} else
-			//	indices.push_back(indexMap.at(h2));
+			} else
+				indices.push_back(indexMap.at(h2));
 		}
 	}
 
@@ -237,4 +238,47 @@ void Mesh::Create() {
 	auto commandQueue = Graphics::GetCommandQueue();
 	auto fenceValue = commandQueue->Execute(commandList);
 	commandQueue->WaitForFenceValue(fenceValue);
+
+	// Create Constant Buffer
+	ZeroMemory(&m_ObjectBufferData, sizeof(m_ObjectBufferData));
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(AlignUp(sizeof(ObjectBuffer), 256)),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_CBuffer)));
+	m_CBuffer->SetName(L"CB Object");
+
+	CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+	ThrowIfFailed(m_CBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_MappedCBuffer)));
+	ZeroMemory(m_MappedCBuffer, (UINT)AlignUp(sizeof(ObjectBuffer), 256));
+}
+
+void Mesh::Release() {
+	CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+	m_CBuffer->Unmap(0, &readRange);
+	m_CBuffer.Reset();
+	m_VertexBuffer.Reset();
+	m_IndexBuffer.Reset();
+}
+bool Mesh::UpdateTransform() {
+	if (!Object::UpdateTransform()) return false;
+
+	XMStoreFloat4x4(&m_ObjectBufferData.ObjectToWorld, ObjectToWorld());
+	XMStoreFloat4x4(&m_ObjectBufferData.WorldToObject, WorldToObject());
+	memcpy(m_MappedCBuffer, &m_ObjectBufferData, sizeof(ObjectBuffer));
+
+	return true;
+}
+void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList, Camera *camera) {
+	UpdateTransform();
+
+	commandList->SetGraphicsRootConstantBufferView(0, GetCBuffer());
+	commandList->SetGraphicsRootConstantBufferView(1, camera->GetCBuffer());
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
+	commandList->IASetIndexBuffer(&m_IndexBufferView);
+	commandList->DrawIndexedInstanced(m_IndexCount, 1, 0, 0, 0);
 }

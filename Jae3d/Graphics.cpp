@@ -16,27 +16,6 @@ using namespace DirectX;
 bool running = false;
 HANDLE renderThread;
 
-struct CameraBuffer {
-	XMFLOAT4X4 ViewProjection;
-	XMFLOAT4X4 View;
-	XMFLOAT4X4 Projection;
-	XMFLOAT3 CameraPosition;
-
-	static UINT64 AlignedSize() {
-		int s = sizeof(XMFLOAT4X4) * 3 + sizeof(XMFLOAT3);
-		return (UINT64)((sizeof(CameraBuffer) + 257) / 256) * 256;
-	}
-} g_CameraBufferData;
-struct ObjectBuffer {
-	XMFLOAT4X4 ObjectToWorld;
-	XMFLOAT4X4 WorldToObject;
-
-	static UINT64 AlignedSize() {
-		int s = sizeof(XMFLOAT4X4) * 3 + sizeof(XMFLOAT3);
-		return (UINT64)((sizeof(ObjectBuffer) + 257) / 256) * 256;
-	}
-} g_ObjectBufferData;
-
 #pragma region static variable initialization
 double Graphics::m_fps = 0;
 int Graphics::m_fpsCounter;
@@ -55,12 +34,6 @@ std::shared_ptr<CommandQueue> Graphics::m_CopyCommandQueue;
 
 // DirectX 12 Objects
 ComPtr<ID3D12Device2> Graphics::m_Device;
-
-ComPtr<ID3D12DescriptorHeap> Graphics::m_CbvHeap;
-ComPtr<ID3D12Resource> Graphics::m_CameraBuffer;
-UINT8* Graphics::m_MappedCameraBuffer;
-ComPtr<ID3D12Resource> Graphics::m_ObjectBuffer;
-UINT8* Graphics::m_MappedObjectBuffer;
 #pragma endregion
 
 #pragma region resource creation
@@ -126,7 +99,6 @@ ComPtr<ID3D12DescriptorHeap> Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEA
 
 	return descriptorHeap;
 }
-
 #pragma endregion
 
 #pragma region getters
@@ -234,63 +206,6 @@ void Graphics::Initialize(HWND hWnd) {
 
 	m_ScissorRect = CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX);
 
-	#pragma region Constant buffers
-	// Create a descriptor heap for the constant buffers.
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-		heapDesc.NumDescriptors = 2;
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		// This flag indicates that this descriptor heap can be bound to the pipeline and that descriptors contained in it can be referenced by a root table.
-		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_CbvHeap)));
-
-		m_CbvHeap->SetName(L"CBV Descriptor Heap");
-	}
-	ZeroMemory(&g_ObjectBufferData, sizeof(g_ObjectBufferData));
-	ZeroMemory(&g_CameraBufferData, sizeof(g_CameraBufferData));
-
-	ThrowIfFailed(m_Device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(ObjectBuffer::AlignedSize()),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_ObjectBuffer)));
-
-	m_ObjectBuffer->SetName(L"CB Object");
-
-	ThrowIfFailed(m_Device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(CameraBuffer::AlignedSize()),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_CameraBuffer)));
-	m_CameraBuffer->SetName(L"CB Camera");
-
-	// Describe and create a constant buffer view.
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc[2];
-	cbvDesc[0].BufferLocation = m_ObjectBuffer->GetGPUVirtualAddress();
-	cbvDesc[0].SizeInBytes = (UINT)ObjectBuffer::AlignedSize();
-	cbvDesc[1].BufferLocation = m_CameraBuffer->GetGPUVirtualAddress();
-	cbvDesc[1].SizeInBytes = (UINT)CameraBuffer::AlignedSize();
-
-	D3D12_CPU_DESCRIPTOR_HANDLE desch = m_CbvHeap->GetCPUDescriptorHandleForHeapStart();
-	UINT descs = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle0(desch, 0, descs);
-	m_Device->CreateConstantBufferView(&cbvDesc[0], cbvHandle0);
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle1(desch, 1, descs);
-	m_Device->CreateConstantBufferView(&cbvDesc[1], cbvHandle1);
-
-	// Map the constant buffers.
-	CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-	ThrowIfFailed(m_ObjectBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_MappedObjectBuffer)));
-	ThrowIfFailed(m_CameraBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_MappedCameraBuffer)));
-	ZeroMemory(m_MappedObjectBuffer, cbvDesc[0].SizeInBytes);
-	ZeroMemory(m_MappedCameraBuffer, cbvDesc[1].SizeInBytes);
-	#pragma endregion
-
 	m_Initialized = true;
 }
 void Graphics::StartRenderLoop(HANDLE mutex) {
@@ -359,57 +274,9 @@ DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UIN
 }
 
 void Graphics::SetShader(ComPtr<ID3D12GraphicsCommandList2> commandList, Shader *shader) {
-	commandList->SetGraphicsRootSignature(shader->m_RootSignature->GetRootSignature().Get());
 	commandList->SetPipelineState(shader->m_PipelineState.Get());
+	commandList->SetGraphicsRootSignature(shader->m_RootSignature->GetRootSignature().Get());
 }
-void Graphics::SetCamera(ComPtr<ID3D12GraphicsCommandList2> commandList, Camera *camera) {
-	XMStoreFloat4x4(&g_CameraBufferData.View, camera->View());
-	XMStoreFloat4x4(&g_CameraBufferData.Projection, camera->Projection());
-	XMStoreFloat4x4(&g_CameraBufferData.ViewProjection, camera->ViewProjection());
-	XMStoreFloat3(&g_CameraBufferData.CameraPosition, camera->Position());
-	memcpy(m_MappedCameraBuffer, &g_CameraBufferData, sizeof(CameraBuffer));
-}
-void Graphics::DrawMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh, XMMATRIX modelMatrix) {
-	XMVECTOR det = XMMatrixDeterminant(modelMatrix);
-	XMStoreFloat4x4(&g_ObjectBufferData.ObjectToWorld, modelMatrix);
-	XMStoreFloat4x4(&g_ObjectBufferData.WorldToObject, XMMatrixInverse(&det, modelMatrix));
-
-	memcpy(m_MappedObjectBuffer, &g_ObjectBufferData, sizeof(ObjectBuffer));
-	memcpy(m_MappedCameraBuffer, &g_CameraBufferData, sizeof(CameraBuffer));
-
-	// set constant buffer descriptor heap
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvHeap.Get() };
-	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-	// set the root descriptor table 0 to the constant buffer descriptor heap
-	commandList->SetGraphicsRootDescriptorTable(0, m_CbvHeap->GetGPUDescriptorHandleForHeapStart());
-
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->IASetVertexBuffers(0, 1, &mesh->m_VertexBufferView);
-	commandList->IASetIndexBuffer(&mesh->m_IndexBufferView);
-
-	commandList->DrawIndexedInstanced(mesh->m_IndexCount, 1, 0, 0, 0);
-}
-void Graphics::DrawMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh* mesh) {
-	XMStoreFloat4x4(&g_ObjectBufferData.ObjectToWorld, mesh->ObjectToWorld());
-	XMStoreFloat4x4(&g_ObjectBufferData.WorldToObject, mesh->WorldToObject());
-
-	memcpy(m_MappedObjectBuffer, &g_ObjectBufferData, sizeof(ObjectBuffer));
-
-	// set constant buffer descriptor heap
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvHeap.Get() };
-	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-	// set the root descriptor table 0 to the constant buffer descriptor heap
-	commandList->SetGraphicsRootDescriptorTable(0, m_CbvHeap->GetGPUDescriptorHandleForHeapStart());
-
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->IASetVertexBuffers(0, 1, &mesh->m_VertexBufferView);
-	commandList->IASetIndexBuffer(&mesh->m_IndexBufferView);
-
-	commandList->DrawIndexedInstanced(mesh->m_IndexCount, 1, 0, 0, 0);
-}
-
 void Graphics::Destroy(){
 	running = false;
 	::WaitForSingleObject(renderThread, INFINITE);
@@ -418,7 +285,5 @@ void Graphics::Destroy(){
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY)->Flush();
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->Flush();
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->Flush();
-
-	// TODO: call Reset() on all resource ComPtrs
 }
 #pragma endregion

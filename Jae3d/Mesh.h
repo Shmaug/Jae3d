@@ -9,6 +9,8 @@
 
 #include "Object.h"
 
+class Camera;
+
 struct Vertex {
 	static const int InputElementCount = 3;
 	static const D3D12_INPUT_ELEMENT_DESC InputElements[InputElementCount];
@@ -27,6 +29,9 @@ struct Vertex {
 };
 
 class Mesh : public Object {
+protected:
+	bool UpdateTransform();
+
 public:
 	UINT m_IndexCount;
 	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
@@ -35,9 +40,13 @@ public:
 	Mesh(std::string name);
 	~Mesh();
 
-	void Mesh::LoadObj(LPCSTR file);
-	void Mesh::LoadCube(float size);
-	void Mesh::Create();
+	void LoadObj(LPCSTR file);
+	void LoadCube(float size);
+	void Create();
+	void Release();
+	D3D12_GPU_VIRTUAL_ADDRESS GetCBuffer() { if (m_TransformDirty) UpdateTransform(); return m_CBuffer->GetGPUVirtualAddress(); }
+
+	void Mesh::Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Camera *camera);
 
 private:
 	std::vector<Vertex> vertices;
@@ -50,4 +59,13 @@ private:
 
 	_WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
 	_WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
+
+	struct ObjectBuffer {
+	public:
+		DirectX::XMFLOAT4X4 ObjectToWorld;
+		DirectX::XMFLOAT4X4 WorldToObject;
+	} m_ObjectBufferData;
+	_WRL::ComPtr<ID3D12Resource> m_CBuffer;
+	UINT8* m_MappedCBuffer;
+	_WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
 };
