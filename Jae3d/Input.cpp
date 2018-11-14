@@ -1,5 +1,5 @@
 #include <utility>
-#include "Input.h"
+#include "Input.hpp"
 
 bool Input::m_LockMouse;
 

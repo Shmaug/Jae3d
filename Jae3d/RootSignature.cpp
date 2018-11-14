@@ -1,7 +1,7 @@
-#include "RootSignature.h"
+#include "RootSignature.hpp"
 
-#include "Graphics.h"
-#include "Util.h"
+#include "Graphics.hpp"
+#include "Util.hpp"
 
 using namespace Microsoft::WRL;
 

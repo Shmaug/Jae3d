@@ -1,4 +1,4 @@
-#include "Shader.h"
+#include "Shader.hpp"
 
 #include <winbase.h>
 #include <locale>
@@ -10,10 +10,10 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
-#include "Graphics.h"
-#include "Util.h"
-#include "Mesh.h"
-#include "RootSignature.h"
+#include "Graphics.hpp"
+#include "Util.hpp"
+#include "Mesh.hpp"
+#include "RootSignature.hpp"
 
 using namespace std;
 using namespace DirectX;

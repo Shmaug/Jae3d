@@ -1,5 +1,5 @@
-#include "Profiler.h"
-#include "Util.h"
+#include "Profiler.hpp"
+#include "Util.hpp"
 #include <chrono>
 
 using namespace Profiler;

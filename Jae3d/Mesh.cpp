@@ -1,20 +1,22 @@
-#include "Mesh.h"
+#include "Mesh.hpp"
 
-#include "Graphics.h"
-#include "CommandQueue.h"
-#include "Camera.h"
-#include "Util.h"
+#include "Graphics.hpp"
+#include "CommandQueue.hpp"
+#include "Camera.hpp"
+#include "Util.hpp"
 
 #include <map>
 #include <fstream>
+#include <fbxsdk.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
+using namespace std;
 
 const D3D12_INPUT_ELEMENT_DESC Vertex::InputElements[] = {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 };
 
 Mesh::Mesh(std::string name) : Object(name) {}
@@ -161,6 +163,94 @@ void Mesh::LoadObj(LPCSTR path) {
 	OutputDebugString(str);
 
 }
+
+
+XMVECTOR FbxToDirectX(FbxVector4 vec) {
+	return { (float)vec[0], (float)vec[1], (float)vec[2], (float)vec[3] };
+}
+XMVECTOR FbxToDirectX(FbxVector2 vec) {
+	return { (float)vec[0], (float)vec[1], 0.0f, 0.0f };
+}
+void Mesh::LoadFbx(LPCSTR path) {
+	FbxManager* sdkManager = FbxManager::Create();
+	FbxImporter* importer = FbxImporter::Create(sdkManager, "");
+	if (!importer->Initialize(path, -1, sdkManager->GetIOSettings())) {
+		OutputDebugString("Failed to import file: ");
+		OutputDebugString(importer->GetStatus().GetErrorString());
+		OutputDebugString("\n");
+	}
+
+	FbxScene *scene = FbxScene::Create(sdkManager, "import scene");
+	importer->Import(scene);
+	importer->Destroy();
+
+	FbxNode *rootNode = scene->GetRootNode();
+	if (rootNode) {
+		for (int i = 0; i < rootNode->GetChildCount(); i++) {
+			FbxNode *child = rootNode->GetChild(i);
+			FbxNodeAttribute *attrib = child->GetNodeAttribute();
+
+			if (attrib == NULL || attrib->GetAttributeType() != FbxNodeAttribute::eMesh) continue;
+
+			vertices.clear();
+			indices.clear();
+
+			FbxMesh *mesh = (FbxMesh*)attrib;
+			if (!mesh->IsTriangleMesh()) {
+				FbxGeometryConverter clsConverter(sdkManager);
+				mesh = (FbxMesh*)clsConverter.Triangulate(mesh, true);
+			}
+
+			int nc = 0;
+			int nu = 0;
+
+			FbxVector4 *verts = mesh->GetControlPoints();
+			for (int i = 0; i < mesh->GetControlPointsCount(); i++) {
+				Vertex v;
+				XMStoreFloat3(&v.position, FbxToDirectX(verts[i]));
+
+				// TODO: Normals and UVs aren't read in
+				// Normal
+				for (int j = 0; j < mesh->GetElementNormalCount(); j++) {
+					FbxGeometryElementNormal *norms = mesh->GetElementNormal(j);
+					if (norms->GetMappingMode() == FbxGeometryElement::eByControlPoint && norms->GetReferenceMode() == FbxGeometryElement::eDirect) {
+						XMStoreFloat3(&v.normal, FbxToDirectX(norms->GetDirectArray().GetAt(i)));
+					}
+				}
+				// UVs
+				if (mesh->GetElementUVCount() >= 1) {
+					FbxGeometryElementUV *uvs = mesh->GetElementUV(0);
+					if (uvs->GetMappingMode() == FbxGeometryElement::eByControlPoint && uvs->GetReferenceMode() == FbxGeometryElement::eDirect) {
+						XMStoreFloat2(&v.uv, FbxToDirectX(uvs->GetDirectArray().GetAt(i)));
+					}
+				}
+				vertices.push_back(v);
+			}
+
+			for (int i = 0; i < mesh->GetPolygonCount(); i++) {
+				int s = mesh->GetPolygonSize(i);
+				for (int j = 0; j < s; j++) {
+					if (s < 3)
+						indices.push_back(mesh->GetPolygonVertex(i, j));
+					else {
+						indices.push_back(mesh->GetPolygonVertex(i, j-2));
+						indices.push_back(mesh->GetPolygonVertex(i, j-1));
+						indices.push_back(mesh->GetPolygonVertex(i, j));
+					}
+				}
+			}
+		}
+	}
+	sdkManager->Destroy();
+
+
+	m_IndexCount = (UINT)indices.size();
+
+	char str[128];
+	sprintf_s(str, "Loaded %s, %d vertices, %d tris\n", path, (int)vertices.size(), (int)indices.size() / 3);
+	OutputDebugString(str);
+}
+
 void Mesh::LoadCube(float s) {
 	vertices = {
 		// top
@@ -271,11 +361,10 @@ bool Mesh::UpdateTransform() {
 
 	return true;
 }
-void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList, Camera *camera) {
+void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	UpdateTransform();
 
 	commandList->SetGraphicsRootConstantBufferView(0, GetCBuffer());
-	commandList->SetGraphicsRootConstantBufferView(1, camera->GetCBuffer());
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);

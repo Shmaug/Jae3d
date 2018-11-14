@@ -1,36 +1,29 @@
-#include "Graphics.h"
+#include "Graphics.hpp"
 #include <process.h>
 
-#include "Profiler.h"
-#include "Util.h"
-#include "RootSignature.h"
-#include "CommandQueue.h"
-#include "Mesh.h"
-#include "Shader.h"
-#include "Camera.h"
-#include "Window.h"
+#include "Profiler.hpp"
+#include "Util.hpp"
+#include "RootSignature.hpp"
+#include "CommandQueue.hpp"
+#include "Camera.hpp"
+#include "Mesh.hpp"
+#include "Shader.hpp"
+#include "Window.hpp"
+#include "Game.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
-
-bool running = false;
-HANDLE renderThread;
+using namespace std;
 
 #pragma region static variable initialization
-double Graphics::m_fps = 0;
-int Graphics::m_fpsCounter;
-
 D3D12_RECT Graphics::m_ScissorRect;
 
-OnRenderDelegate Graphics::OnRender;
-
-HANDLE Graphics::m_Mutex;
 bool Graphics::m_Initialized = false;
 
-std::shared_ptr<Window> Graphics::m_Window;
-std::shared_ptr<CommandQueue> Graphics::m_DirectCommandQueue;
-std::shared_ptr<CommandQueue> Graphics::m_ComputeCommandQueue;
-std::shared_ptr<CommandQueue> Graphics::m_CopyCommandQueue;
+shared_ptr<Window> Graphics::m_Window;
+shared_ptr<CommandQueue> Graphics::m_DirectCommandQueue;
+shared_ptr<CommandQueue> Graphics::m_ComputeCommandQueue;
+shared_ptr<CommandQueue> Graphics::m_CopyCommandQueue;
 
 // DirectX 12 Objects
 ComPtr<ID3D12Device2> Graphics::m_Device;
@@ -102,7 +95,7 @@ ComPtr<ID3D12DescriptorHeap> Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEA
 #pragma endregion
 
 #pragma region getters
-std::shared_ptr<CommandQueue> Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
+shared_ptr<CommandQueue> Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
 	switch (type) {
 	case D3D12_COMMAND_LIST_TYPE_DIRECT:
 		return m_DirectCommandQueue;
@@ -170,11 +163,6 @@ bool Graphics::CheckTearingSupport() {
 	return allowTearing == TRUE;
 }
 
-int Graphics::GetAndResetFPS() {
-	int x = m_fpsCounter;
-	m_fpsCounter = 0;
-	return x;
-}
 UINT Graphics::GetMSAASamples() {
 	return m_Window->GetMSAASamples();
 }
@@ -208,44 +196,31 @@ void Graphics::Initialize(HWND hWnd) {
 
 	m_Initialized = true;
 }
-void Graphics::StartRenderLoop(HANDLE mutex) {
-	running = true;
-	m_Mutex = mutex;
-	renderThread = (HANDLE)_beginthreadex(0, 0, &Graphics::RenderLoop, nullptr, 0, 0);
+void Graphics::Render(Game *game) {
+	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto commandList = commandQueue->GetCommandList();
+
+	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)m_Window->GetWidth(), (float)m_Window->GetHeight());
+	commandList->RSSetViewports(1, &vp);
+	commandList->RSSetScissorRects(1, &m_ScissorRect);
+
+	// Draw scene
+	m_Window->PrepareRenderTargets(commandList);
+
+	auto rtv = m_Window->GetCurrentRenderTargetView();
+	auto dsv = m_Window->GetDepthStencilView();
+	commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+
+	game->Render(commandList);
+
+	m_Window->Present(commandList, commandQueue);
+
+	// TODO: actually handle preparing the next frame while the GPU renders the last frame
+	// instead of just waiting for the GPU to finish here
+	commandQueue->Flush();
 }
-
-unsigned int __stdcall Graphics::RenderLoop(void *g_this) {
-	while (running) {
-		WaitForSingleObject(m_Mutex, INFINITE);
-		m_fpsCounter++;
-
-		// Get current back buffer data
-		auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-		auto commandList = commandQueue->GetCommandList();
-		auto backBuffer = m_Window->GetBackBuffer();
-
-		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)m_Window->GetWidth(), (float)m_Window->GetHeight());
-		commandList->RSSetViewports(1, &vp);
-		commandList->RSSetScissorRects(1, &m_ScissorRect);
-
-		// Draw scene
-		m_Window->PrepareRenderTargets(commandList);
-
-		auto rtv = m_Window->GetCurrentRenderTargetView();
-		auto dsv = m_Window->GetDepthStencilView();
-		commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-
-		OnRender(commandList);
-
-		// Present
-		m_Window->PreparePresent(commandList, commandQueue);
-
-		// Release mutex before rendering to prevent vsync from halting main thread
-		ReleaseMutex(m_Mutex);
-
-		m_Window->Present(commandQueue);
-	}
-	return 0;
+bool Graphics::FrameReady() {
+	return m_Window->LastFrameCompleted(GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT));
 }
 
 DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) {
@@ -273,15 +248,15 @@ DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UIN
 	return sampleDesc;
 }
 
+void Graphics::SetCamera(ComPtr<ID3D12GraphicsCommandList2> commandList, shared_ptr<Camera> camera){
+	commandList->SetGraphicsRootConstantBufferView(1, camera->GetCBuffer());
+}
 void Graphics::SetShader(ComPtr<ID3D12GraphicsCommandList2> commandList, Shader *shader) {
 	commandList->SetPipelineState(shader->m_PipelineState.Get());
 	commandList->SetGraphicsRootSignature(shader->m_RootSignature->GetRootSignature().Get());
 }
-void Graphics::Destroy(){
-	running = false;
-	::WaitForSingleObject(renderThread, INFINITE);
-	::CloseHandle(renderThread);
 
+void Graphics::Destroy(){
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY)->Flush();
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->Flush();
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->Flush();

@@ -1,10 +1,11 @@
-#include "Window.h"
+#include "Window.hpp"
 
-#include "Graphics.h"
-#include "CommandQueue.h"
-#include "Util.h"
+#include "Graphics.hpp"
+#include "CommandQueue.hpp"
+#include "Util.hpp"
 
 using namespace Microsoft::WRL;
+using namespace std;
 
 Window::Window(HWND hWnd, UINT bufferCount) : m_hWnd(hWnd), m_BufferCount(bufferCount) {
 	m_RenderBuffers = new ComPtr<ID3D12Resource>[m_BufferCount];
@@ -219,8 +220,8 @@ void Window::Resize() {
 		auto device = Graphics::GetDevice();
 
 		// Don't allow 0 size swap chain back buffers.
-		m_ClientWidth = std::max(1u, width);
-		m_ClientHeight = std::max(1u, height);
+		m_ClientWidth = max(1u, width);
+		m_ClientHeight = max(1u, height);
 
 		// Flush the GPU queue to make sure the swap chain's back buffers
 		// are not being referenced by an in-flight command list.
@@ -279,11 +280,10 @@ void Window::Resize() {
 	}
 }
 void Window::Close() {
-
+	PostQuitMessage(0);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE Window::GetCurrentRenderTargetView() {
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBufferIndex, m_RTVDescriptorSize);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_msaaRTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_RTVDescriptorSize);
 	return rtv;
 }
@@ -297,7 +297,8 @@ ComPtr<ID3D12Resource> Window::GetBackBuffer() {
 void Window::PrepareRenderTargets(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	Graphics::TransitionResource(commandList, m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
-void Window::PreparePresent(ComPtr<ID3D12GraphicsCommandList2> commandList, std::shared_ptr<CommandQueue> commandQueue) {
+
+void Window::Present(ComPtr<ID3D12GraphicsCommandList2> commandList, shared_ptr<CommandQueue> commandQueue){
 	auto backBuffer = GetBackBuffer();
 
 	// Resolve msaa buffers
@@ -308,12 +309,13 @@ void Window::PreparePresent(ComPtr<ID3D12GraphicsCommandList2> commandList, std:
 
 	// Execute the command list
 	m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Execute(commandList);
+
+	UINT syncInterval = m_VSync ? 1 : 0;
+	UINT flags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+	ThrowIfFailed(m_SwapChain->Present(syncInterval, flags));
+	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 }
 
-void Window::Present(std::shared_ptr<CommandQueue> commandQueue){
-	UINT flags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-	ThrowIfFailed(m_SwapChain->Present(m_VSync ? 1 : 0, flags));
-
-	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-	commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
+bool Window::LastFrameCompleted(shared_ptr<CommandQueue> commandQueue) {
+	return commandQueue->IsFenceComplete(m_FenceValues[m_CurrentBackBufferIndex]);
 }

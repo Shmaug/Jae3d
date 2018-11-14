@@ -1,8 +1,8 @@
-#include "Camera.h"
+#include "Camera.hpp"
 
 #include <DirectXMath.h>
-#include "Graphics.h"
-#include "Util.h"
+#include "Graphics.hpp"
+#include "Util.hpp"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;

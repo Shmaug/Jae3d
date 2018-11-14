@@ -1,5 +1,5 @@
-#include "CommandQueue.h"
-#include "Util.h"
+#include "CommandQueue.hpp"
+#include "Util.hpp"
 #include <assert.h>
 
 using namespace Microsoft::WRL;
@@ -86,9 +86,7 @@ uint64_t CommandQueue::Execute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	UINT dataSize = sizeof(commandAllocator);
 	ThrowIfFailed(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
 
-	ID3D12CommandList* const ppCommandLists[] = {
-		commandList.Get()
-	};
+	ID3D12CommandList* const ppCommandLists[] = { commandList.Get() };
 
 	m_d3d12CommandQueue->ExecuteCommandLists(1, ppCommandLists);
 	uint64_t fenceValue = Signal();
