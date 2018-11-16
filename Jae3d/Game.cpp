@@ -10,7 +10,7 @@
 #include "Input.hpp"
 #include "Util.hpp"
 #include "Graphics.hpp"
-#include "Mesh.hpp"
+#include "MeshRenderer.hpp"
 #include "Camera.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
@@ -20,9 +20,9 @@ using namespace Microsoft::WRL;
 using namespace std;
 
 shared_ptr<Camera> camera;
-shared_ptr<Mesh> barrel;
-shared_ptr<Mesh> cube;
-shared_ptr<Mesh> rifle;
+shared_ptr<MeshRenderer> barrel;
+shared_ptr<MeshRenderer> cube;
+shared_ptr<MeshRenderer> rifle;
 
 float yaw;
 float pitch;
@@ -32,24 +32,35 @@ bool cursorVisible = true;
 void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	camera = shared_ptr<Camera>(new Camera("Camera"));
 	camera->CreateCB();
-	camera->LocalPosition({ 0, .4f, 1, 0 });
+	camera->LocalPosition(0, 1.668f, -2.0f);
+	camera->FieldOfView(60);
+
+	shared_ptr<Mesh> barrelMesh = shared_ptr<Mesh>(new Mesh("Barrel"));
+	barrelMesh->LoadFbx("Assets/Models/barrel.fbx", 2.75f);
+	barrelMesh->Create();
+
+	shared_ptr<Mesh> cubeMesh = shared_ptr<Mesh>(new Mesh("Cube"));
+	cubeMesh->LoadCube(1.0f);
+	cubeMesh->Create();
+
+	shared_ptr<Mesh> rifleMesh = shared_ptr<Mesh>(new Mesh("Rifle"));
+	rifleMesh->LoadObj("Assets/Models/rifle.obj", .6f);
+	rifleMesh->Create();
 	
-	barrel = shared_ptr<Mesh>(new Mesh("Barrel"));
-	barrel->LoadFbx("Assets/Models/barrel.fbx");
-	barrel->Create();
-	barrel->LocalPosition({ 0, .2f, 0, 0 });
+	barrel = shared_ptr<MeshRenderer>(new MeshRenderer("Barrel"));
+	barrel->m_Mesh = barrelMesh;
+	barrel->LocalPosition(0, .574f, 0);
 	
-	cube = shared_ptr<Mesh>(new Mesh("Cube"));
-	cube->LoadCube(1.0f);
-	cube->Create();
-	cube->LocalPosition({ 0, -.1f, 0, 0 });
-	cube->LocalScale({10.0f, .1f, 10.0f, 1.0f});
+	cube = shared_ptr<MeshRenderer>(new MeshRenderer("Cube"));
+	cube->m_Mesh = cubeMesh;
+	cube->LocalPosition(0, -.1f, 0);
+	cube->LocalScale(10.0f, .1f, 10.0f);
 	
-	rifle = shared_ptr<Mesh>(new Mesh("Rifle"));
-	rifle->LoadObj("Assets/Models/rifle.obj");
-	rifle->Create();
+	rifle = shared_ptr<MeshRenderer>(new MeshRenderer("Rifle"));
+	rifle->m_Mesh = rifleMesh;
 	rifle->Parent(camera);
-	rifle->LocalPosition({ -.25f, -.6f, -.25f, 0 });
+	rifle->LocalScale(.6f, .6f, .6f);
+	rifle->LocalPosition(.21f, -.3f, .2f);
 
 	auto window = Graphics::GetWindow();
 	camera->Aspect((float)window->GetWidth() / (float)window->GetHeight());
@@ -62,6 +73,7 @@ void Game::OnResize() {
 }
 
 void Game::Update(double total, double delta) {
+	// TODO: switched to RH coordinate system - everything is backwards
 	auto window = Graphics::GetWindow();
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		window->SetFullscreen(!window->IsFullscreen());
@@ -89,28 +101,26 @@ void Game::Update(double total, double delta) {
 			cursorVisible = true;
 		}
 	}
-	
-	XMVECTOR fwd = { 0, 0, -1, 0 };
-	XMVECTOR right = { -1, 0, 0, 0 };
-	fwd = XMVector3Rotate(fwd, camera->LocalRotation());
-	right = XMVector3Rotate(right, camera->LocalRotation());
-	XMVECTOR p = camera->LocalPosition();
+
+	XMVECTOR fwd = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), camera->LocalRotation());
+	XMVECTOR right = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), camera->LocalRotation());
+	XMVECTOR d;
 	if (Input::KeyDown(KeyCode::W))
-		p += fwd * (float)delta;
+		d += fwd * (float)delta;
 	if (Input::KeyDown(KeyCode::S))
-		p -= fwd * (float)delta;
+		d -= fwd * (float)delta;
 	if (Input::KeyDown(KeyCode::D))
-		p += right * (float)delta;
+		d += right * (float)delta;
 	if (Input::KeyDown(KeyCode::A))
-		p -= right * (float)delta;
-	camera->LocalPosition(p);
+		d -= right * (float)delta;
+	if (!XMVector3Equal(d, XMVectorZero()))
+		camera->LocalPosition(camera->LocalPosition() + XMVector3Normalize(d) * 1.4f);
 #pragma endregion
 
 	// fps stats
 	static double timer = 0;
 	timer += delta;
 	if (timer >= 1.0) {
-
 		char fps[16];
 		PrintFormattedf(fps, sizeof(fps), "%.1f", (float)m_fps);
 

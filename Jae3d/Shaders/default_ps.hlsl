@@ -9,7 +9,7 @@ float4 main(v2f i) : SV_Target {
 	float3 normal = normalize(i.pack1.xyz);
 	float3 eye = normalize(worldPos - Camera.CameraPosition);
 
-	float3 color = 1.0;
+	float3 color = float3(uv * .5 + .5, 1);
 	float3 light = .025;
 	float3 refl = 0.0;
 

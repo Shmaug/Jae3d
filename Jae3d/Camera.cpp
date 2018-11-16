@@ -13,18 +13,16 @@ Camera::~Camera() { ReleaseCB(); }
 bool Camera::UpdateTransform(){
 	if (!Object::UpdateTransform()) return false;
 
-	XMVECTOR fwd = { 0, 0, -1, 0 };
-	XMVECTOR up = { 0, 1, 0, 0 };
-	fwd = XMVector3Rotate(fwd, LocalRotation());
-	up = XMVector3Rotate(up, LocalRotation());
-	m_View = XMMatrixLookAtLH(LocalPosition(), LocalPosition() + fwd, up);
-	m_Projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FieldOfView), m_Aspect, m_Near, m_Far);
+	XMVECTOR fwd = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), WorldRotation());
+	XMVECTOR up = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), WorldRotation());
+	m_View = XMMatrixLookAtRH(WorldPosition(), WorldPosition() + fwd, up);
+	m_Projection = XMMatrixPerspectiveFovRH(XMConvertToRadians(m_FieldOfView), m_Aspect, m_Near, m_Far);
 	m_ViewProjection = m_View * m_Projection;
 
 	XMStoreFloat4x4(&m_CameraBufferData.View, m_View);
 	XMStoreFloat4x4(&m_CameraBufferData.Projection, m_Projection);
 	XMStoreFloat4x4(&m_CameraBufferData.ViewProjection, m_ViewProjection);
-	XMStoreFloat3(&m_CameraBufferData.CameraPosition, LocalPosition());
+	XMStoreFloat3(&m_CameraBufferData.CameraPosition, WorldPosition());
 	memcpy(m_MappedCBuffer, &m_CameraBufferData, sizeof(CameraBuffer));
 
 	return true;

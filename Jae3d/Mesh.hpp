@@ -5,9 +5,8 @@
 #define _WRL Microsoft::WRL
 
 #include <d3d12.h>
+#include <DirectXMath.h>
 #include "d3dx12.hpp"
-
-#include "Object.hpp"
 
 class Camera;
 
@@ -28,11 +27,9 @@ struct Vertex {
 	}
 };
 
-class Mesh : public Object {
-protected:
-	bool UpdateTransform();
-
+class Mesh {
 public:
+	std::string m_Name;
 	UINT m_IndexCount;
 	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
@@ -40,12 +37,11 @@ public:
 	Mesh(std::string name);
 	~Mesh();
 
-	void LoadObj(LPCSTR file);
-	void LoadFbx(LPCSTR file);
+	void LoadObj(std::string file, float scale = 1.0f);
+	void LoadFbx(std::string file, float scale = 1.0f);
 	void LoadCube(float size);
 	void Create();
 	void Release();
-	D3D12_GPU_VIRTUAL_ADDRESS GetCBuffer() { if (m_TransformDirty) UpdateTransform(); return m_CBuffer->GetGPUVirtualAddress(); }
 
 	void Mesh::Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
@@ -60,13 +56,4 @@ private:
 
 	_WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
 	_WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
-
-	struct ObjectBuffer {
-	public:
-		DirectX::XMFLOAT4X4 ObjectToWorld;
-		DirectX::XMFLOAT4X4 WorldToObject;
-	} m_ObjectBufferData;
-	_WRL::ComPtr<ID3D12Resource> m_CBuffer;
-	UINT8* m_MappedCBuffer;
-	_WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
 };

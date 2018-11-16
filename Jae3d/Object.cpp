@@ -1,5 +1,4 @@
 #include "Object.hpp"
-
 #include <d3d12.h>
 
 using namespace DirectX;
@@ -8,15 +7,32 @@ using namespace std;
 Object::Object(std::string name) : m_Name(name) {}
 Object::~Object() {}
 
+// TODO: World space setters/getters don't really work
+void Object::WorldRotation(XMVECTOR r) {
+	m_WorldRotation = r;
+	if (m_Parent)
+		LocalRotation(XMQuaternionInverse(m_Parent->WorldRotation()) * r);
+	else
+		LocalRotation(r);
+}
+
 bool Object::UpdateTransform() {
 	if (!m_TransformDirty) return false;
 
-	m_ObjectToWorld = XMMatrixTransformation({ 0,0,0,0 }, { 0,0,0,1 }, m_LocalScale, { 0,0,0,0 }, m_LocalRotation, m_LocalPosition);
-	if (m_Parent) m_ObjectToWorld = XMMatrixMultiply(m_ObjectToWorld, m_Parent->ObjectToWorld());
+	m_ObjectToWorld = XMMatrixAffineTransformation(m_LocalScale, XMVectorZero(), m_LocalRotation, m_LocalPosition);
+	if (m_Parent) {
+		m_ObjectToWorld = m_ObjectToWorld * m_Parent->ObjectToWorld();
+
+		m_WorldPosition = XMVector3Transform(m_LocalPosition, m_WorldToObject);
+		m_WorldRotation = m_Parent->WorldRotation() * m_LocalRotation;
+	}else{
+		m_WorldPosition = m_LocalPosition;
+		m_WorldRotation = m_LocalRotation;
+	}
 
 	DirectX::XMVECTOR det = XMMatrixDeterminant(m_ObjectToWorld);
 	m_WorldToObject = XMMatrixInverse(&det, m_ObjectToWorld);
-	
+
 	m_TransformDirty = false;
 	return true;
 }
