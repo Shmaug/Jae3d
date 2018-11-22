@@ -7,27 +7,30 @@
 #include <vector>
 #include <map>
 
+#include "Asset.hpp"
+
 class RootSignature;
 
-class Shader {
+class Shader : public Asset {
 public:
-	Shader();
+	enum ShaderStage {
+		Vertex = 1,
+		Hull = 2,
+		Domain = 3,
+		Geometry = 4,
+		Pixel = 5,
+		Compute = 6
+	};
+
+	Shader(std::string name);
 	~Shader();
 
-	std::string name;
-	_WRL::ComPtr<ID3DBlob> vertexBlob;
-	_WRL::ComPtr<ID3DBlob> pixelBlob;
+	void Create();
+	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+
+private:
+	_WRL::ComPtr<ID3DBlob> m_Blobs[6];
 
 	RootSignature *m_RootSignature;
 	_WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
-};
-
-class ShaderLibrary {
-private:
-	static std::map<std::string, Shader*> shaders;
-	static void LoadShader(_WRL::ComPtr<ID3D12Device> device, std::string name);
-
-public:
-	static void LoadShaders();
-	static Shader* GetShader(std::string name);
 };

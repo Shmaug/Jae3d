@@ -10,6 +10,10 @@ using namespace Microsoft::WRL;
 Camera::Camera(std::string name) : Object(name) {}
 Camera::~Camera() { ReleaseCB(); }
 
+void Camera::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList){
+	commandList->SetGraphicsRootConstantBufferView(1, GetCBuffer());
+}
+
 bool Camera::UpdateTransform(){
 	if (!Object::UpdateTransform()) return false;
 

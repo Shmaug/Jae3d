@@ -7,8 +7,7 @@
 #include <d3d12.h>
 #include <DirectXMath.h>
 #include "d3dx12.hpp"
-
-class Camera;
+#include "Asset.hpp"
 
 struct Vertex {
 	static const int InputElementCount = 3;
@@ -27,33 +26,45 @@ struct Vertex {
 	}
 };
 
-class Mesh {
+class Mesh : public Asset {
 public:
-	std::string m_Name;
-	UINT m_IndexCount;
-	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
-	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
+	struct Bone {
+		std::string m_Name;
+		DirectX::XMFLOAT4X4 m_BoneToMesh;
+	};
 
 	Mesh(std::string name);
 	~Mesh();
 
-	void LoadObj(std::string file, float scale = 1.0f);
-	void LoadFbx(std::string file, float scale = 1.0f);
 	void LoadCube(float size);
 	void Create();
 	void Release();
 
-	void Mesh::Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 private:
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
+	std::vector<Bone> bones;
 
-	void Mesh::UploadData(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	std::vector<DirectX::XMFLOAT3> m_Vertices;
+	std::vector<DirectX::XMFLOAT3> m_Normals;
+	std::vector<DirectX::XMFLOAT3> m_Tangents;
+	std::vector<DirectX::XMFLOAT3> m_Bitangents;
+	std::vector<DirectX::XMFLOAT4> m_Colors;
+	std::vector<DirectX::XMINT4> m_BlendIndices;
+	std::vector<DirectX::XMFLOAT4> m_BlendWeights;
+	std::vector<DirectX::XMFLOAT3> m_Texcoords[8];
+	std::vector<int> m_Indices;
+
+	std::vector<Vertex> vertices;
+
+	void UploadData(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 		ID3D12Resource** dst,
 		ID3D12Resource** intermediate,
 		size_t count, size_t stride, const void* data);
 
 	_WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
 	_WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
+	UINT m_IndexCount;
+	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
+	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
 };

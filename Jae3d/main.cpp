@@ -2,6 +2,7 @@
 
 #include "Util.hpp"
 
+#include "AssetDatabase.hpp"
 #include "Graphics.hpp"
 #include "Input.hpp"
 #include "Profiler.hpp"
@@ -27,16 +28,16 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 void ParseCommandLineArguments() {
 	int argc;
-	wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+	wchar_t** argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
 	for (size_t i = 0; i < argc; ++i) {
-		//if (::wcscmp(argv[i], L"-warp") == 0 || ::wcscmp(argv[i], L"--warp") == 0) {
+		//if (wcscmp(argv[i], L"-warp") == 0 || wcscmp(argv[i], L"--warp") == 0) {
 
 		//}
 	}
 
 	// Free memory allocated by CommandLineToArgvW
-	::LocalFree(argv);
+	LocalFree(argv);
 }
 
 #define IsKeyDown(key) (GetAsyncKeyState(key) & 0x8000) != 0
@@ -259,7 +260,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		OutputDebugString("Failed to register raw input device(s)\n");
 
 	Graphics::Initialize(hWnd);
-	ShaderLibrary::LoadShaders();
+	AssetDatabase::LoadAssets("common.asset");
 	g_Game = new Game();
 	g_Game->Initialize(Graphics::GetCommandQueue()->GetCommandList());
 

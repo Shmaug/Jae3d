@@ -215,7 +215,7 @@ void Graphics::Render(Game *game) {
 
 	m_Window->Present(commandList, commandQueue);
 
-	// TODO: actually handle preparing the next frame while the GPU renders the last frame
+	// TODO actually handle preparing the next frame while the GPU renders the last frame
 	// instead of just waiting for the GPU to finish here
 	commandQueue->Flush();
 }
@@ -246,14 +246,6 @@ DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UIN
 	qualityLevels.SampleCount = numSamples;
 
 	return sampleDesc;
-}
-
-void Graphics::SetCamera(ComPtr<ID3D12GraphicsCommandList2> commandList, shared_ptr<Camera> camera){
-	commandList->SetGraphicsRootConstantBufferView(1, camera->GetCBuffer());
-}
-void Graphics::SetShader(ComPtr<ID3D12GraphicsCommandList2> commandList, Shader *shader) {
-	commandList->SetPipelineState(shader->m_PipelineState.Get());
-	commandList->SetGraphicsRootSignature(shader->m_RootSignature->GetRootSignature().Get());
 }
 
 void Graphics::Destroy(){

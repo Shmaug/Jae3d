@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28010.2041
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Jae3d", "Jae3d\Jae3d.vcxproj", "{8E825BBE-6FB0-4FF4-B407-015F4C9AB372}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AssetImporter", "AssetImporter\AssetImporter.vcxproj", "{8FDD3586-DD3C-4449-A251-D1DEA640F31D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{8E825BBE-6FB0-4FF4-B407-015F4C9AB372}.Release|x64.Build.0 = Release|x64
 		{8E825BBE-6FB0-4FF4-B407-015F4C9AB372}.Release|x86.ActiveCfg = Release|Win32
 		{8E825BBE-6FB0-4FF4-B407-015F4C9AB372}.Release|x86.Build.0 = Release|Win32
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Debug|x64.ActiveCfg = Debug|x64
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Debug|x64.Build.0 = Debug|x64
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Debug|x86.ActiveCfg = Debug|Win32
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Debug|x86.Build.0 = Debug|Win32
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Release|x64.ActiveCfg = Release|x64
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Release|x64.Build.0 = Release|x64
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Release|x86.ActiveCfg = Release|Win32
+		{8FDD3586-DD3C-4449-A251-D1DEA640F31D}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

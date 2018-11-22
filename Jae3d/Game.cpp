@@ -1,11 +1,5 @@
 #include "Game.hpp"
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <Windowsx.h>
-#include <stdio.h>
-#include <locale.h>
-
 #include "Profiler.hpp"
 #include "Input.hpp"
 #include "Util.hpp"
@@ -14,6 +8,7 @@
 #include "Camera.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
+#include "AssetDatabase.hpp"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
@@ -23,6 +18,7 @@ shared_ptr<Camera> camera;
 shared_ptr<MeshRenderer> barrel;
 shared_ptr<MeshRenderer> cube;
 shared_ptr<MeshRenderer> rifle;
+shared_ptr<Shader> shader;
 
 float yaw;
 float pitch;
@@ -35,21 +31,16 @@ void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	camera->LocalPosition(0, 1.668f, -2.0f);
 	camera->FieldOfView(60);
 
-	shared_ptr<Mesh> barrelMesh = shared_ptr<Mesh>(new Mesh("Barrel"));
-	barrelMesh->LoadFbx("Assets/Models/barrel.fbx", 2.75f);
-	barrelMesh->Create();
+	shader = AssetDatabase::GetAsset<Shader>("default");
 
 	shared_ptr<Mesh> cubeMesh = shared_ptr<Mesh>(new Mesh("Cube"));
 	cubeMesh->LoadCube(1.0f);
 	cubeMesh->Create();
 
-	shared_ptr<Mesh> rifleMesh = shared_ptr<Mesh>(new Mesh("Rifle"));
-	rifleMesh->LoadObj("Assets/Models/rifle.obj", .6f);
-	rifleMesh->Create();
-	
 	barrel = shared_ptr<MeshRenderer>(new MeshRenderer("Barrel"));
-	barrel->m_Mesh = barrelMesh;
+	barrel->m_Mesh = AssetDatabase::GetAsset<Mesh>("barrel");
 	barrel->LocalPosition(0, .574f, 0);
+	barrel->LocalScale(2.75f, 2.75f, 2.75f);
 	
 	cube = shared_ptr<MeshRenderer>(new MeshRenderer("Cube"));
 	cube->m_Mesh = cubeMesh;
@@ -57,7 +48,7 @@ void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	cube->LocalScale(10.0f, .1f, 10.0f);
 	
 	rifle = shared_ptr<MeshRenderer>(new MeshRenderer("Rifle"));
-	rifle->m_Mesh = rifleMesh;
+	rifle->m_Mesh = AssetDatabase::GetAsset<Mesh>("rifle");
 	rifle->Parent(camera);
 	rifle->LocalScale(.6f, .6f, .6f);
 	rifle->LocalPosition(.21f, -.3f, .2f);
@@ -73,7 +64,7 @@ void Game::OnResize() {
 }
 
 void Game::Update(double total, double delta) {
-	// TODO: switched to RH coordinate system - everything is backwards
+	// TODO switched to RH coordinate system - everything is backwards
 	auto window = Graphics::GetWindow();
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		window->SetFullscreen(!window->IsFullscreen());
@@ -104,7 +95,7 @@ void Game::Update(double total, double delta) {
 
 	XMVECTOR fwd = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), camera->LocalRotation());
 	XMVECTOR right = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), camera->LocalRotation());
-	XMVECTOR d;
+	XMVECTOR d = XMVectorZero();
 	if (Input::KeyDown(KeyCode::W))
 		d += fwd * (float)delta;
 	if (Input::KeyDown(KeyCode::S))
@@ -144,9 +135,11 @@ void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	commandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	Graphics::SetShader(commandList, ShaderLibrary::GetShader("default"));
-	Graphics::SetCamera(commandList, camera);
-	barrel->Draw(commandList);
-	cube->Draw(commandList);
-	rifle->Draw(commandList);
+	if (shader) {
+		shader->SetActive(commandList);
+		camera->SetActive(commandList);
+		barrel->Draw(commandList);
+		cube->Draw(commandList);
+		rifle->Draw(commandList);
+	}
 }
