@@ -70,9 +70,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ExecutablePath>D:\Programs\Assimp\bin\x64;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>D:\Programs\Assimp\include;D:\Programs\DirectXTex-nov2018\DirectXTex;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Programs\Assimp\lib\x64;D:\Programs\DirectXTex-nov2018\DirectXTex\Bin\Desktop_2017_Win10\x64\Debug;$(LibraryPath)</LibraryPath>
+    <ExecutablePath>$(ASSIMP_HOME)\bin\x64;$(ExecutablePath)</ExecutablePath>
+    <IncludePath>$(ASSIMP_HOME)\include;$(DIRECTXTEX_HOME);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -86,7 +86,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>assimp-vc140-mt.lib;DirectXTex.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\Programs\Assimp\lib\x64;D:\Programs\DirectXTex-nov2018\DirectXTex\Bin\Desktop_2017_Win10\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

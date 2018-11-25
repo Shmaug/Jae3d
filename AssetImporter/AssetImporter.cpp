@@ -540,8 +540,10 @@ void AssetImporter::Write(const char *file) {
 		uint64_t p = fs.tellp();
 		assets[i]->WriteHeader(fs);
 
+		// Write the size of the header in the appropriate place
 		uint64_t q = fs.tellp();
-		// TODO calculate size of the header with p-q and write to appropriate location
+		fs.seekp(p + sizeof(uint8_t) + sizeof(uint64_t));
+		WriteStream(fs, q - p);
 		fs.seekp(q);
 	}
 
@@ -550,7 +552,10 @@ void AssetImporter::Write(const char *file) {
 		assets[i]->WriteData(fs);
 
 		uint64_t q = fs.tellp();
-		// TODO calculate size of the data with p-q and write to appropriate locations (header and data)
+		fs.seekp(assets[i]->m_HeaderPositionPos + sizeof(uint8_t));
+		WriteStream(fs, p); // data pos
+		fs.seekp(assets[i]->m_HeaderPositionPos + sizeof(uint8_t) + 2 * sizeof(uint64_t));
+		WriteStream(fs, q - p); // data size
 		fs.seekp(q);
 	}
 

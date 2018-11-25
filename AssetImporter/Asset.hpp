@@ -6,6 +6,8 @@
 
 #include "Util.hpp"
 
+class AssetImporter;
+
 class Asset {
 public:
 	struct AssetHeader {
@@ -73,6 +75,7 @@ public:
 	virtual void WriteData(std::ofstream &stream);
 
 private:
+	friend class AssetImporter;
 	uint64_t m_HeaderPositionPos;
 };
 
