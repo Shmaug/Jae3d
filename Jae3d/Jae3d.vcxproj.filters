@@ -140,5 +140,6 @@
   <ItemGroup>
     <None Include="..\Assets\Shaders\Common.hlsli" />
     <None Include="..\Assets\Shaders\default.hlsl" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

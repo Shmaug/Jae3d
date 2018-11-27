@@ -12,68 +12,59 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "runtimeobject.lib")
 
-#include "AssetImporter.hpp"
+#include "..\Common\IOUtil.hpp"
+#include "..\Common\AssetImporter.hpp"
+#include "..\Common\AssetFile.hpp"
+#include "..\Common\Asset.hpp"
 
 using namespace std;
 
-string GetExt(string path) {
-	int k = -1;
-	for (int i = 0; i < path.size(); i++)
-		if (path[i] == '.')
-			k = i;
-	if (k == -1) return "";
-	return path.substr(k + 1);
-}
-string GetFullPath(string str) {
-	char buf[256];
-	if (GetFullPathNameA(str.c_str(), 256, buf, nullptr) == 0) {
-		printf("Failed to get full file path of %s (%d)", str.c_str(), GetLastError());
-		return str;
-	}
-	return string(buf);
-}
-
-void LoadFile(string file) {
+void LoadFile(string file, vector<Asset*> &assets) {
 	if (PathFileExists(file.c_str()) != 1) {
 		printf("Could not find %s\n", file.c_str());
 		return;
 	}
 
-	int assetc = 0;
 	string ext = GetExt(file);
 
-	if (AssetImporter::verbose)
-		printf("Loading %s (%s)\n", file.c_str(), ext.c_str());
-
-	if (ext == "obj")
-		AssetImporter::ImportObj(file);
-	else if (ext == "fbx")
-		AssetImporter::ImportFbx(file);
-	else if (ext == "blend")
-		AssetImporter::ImportBlend(file);
-
+	if (ext == "obj") {
+		int count;
+		Asset** arr = AssetImporter::ImportObj(file, count);
+		for (int i = 0; i < count; i++)
+			assets.push_back(arr[i]);
+		delete[] arr;
+	} else if (ext == "fbx") {
+		int count;
+		Asset** arr = AssetImporter::ImportFbx(file, count);
+		for (int i = 0; i < count; i++)
+			assets.push_back(arr[i]);
+		delete[] arr;
+	} else if (ext == "blend") {
+		int count;
+		Asset** arr = AssetImporter::ImportBlend(file, count);
+		for (int i = 0; i < count; i++)
+			assets.push_back(arr[i]);
+		delete[] arr;
+	}
 	else if (ext == "png")
-		AssetImporter::ImportPng(file);
+		assets.push_back((Asset*)AssetImporter::ImportPng(file));
 	else if (ext == "gif")
-		AssetImporter::ImportGif(file);
+		assets.push_back((Asset*)AssetImporter::ImportGif(file));
 	else if (ext == "bmp")
-		AssetImporter::ImportBmp(file);
+		assets.push_back((Asset*)AssetImporter::ImportBmp(file));
 	else if (ext == "tif" || ext == "tiff")
-		AssetImporter::ImportTif(file);
+		assets.push_back((Asset*)AssetImporter::ImportTif(file));
 	else if (ext == "jpg" || ext == "jpeg")
-		AssetImporter::ImportJpg(file);
+		assets.push_back((Asset*)AssetImporter::ImportJpg(file));
 	else if (ext == "dds")
-		AssetImporter::ImportDds(file);
+		assets.push_back((Asset*)AssetImporter::ImportDDS(file));
 	else if (ext == "tga")
-		AssetImporter::ImportTga(file);
+		assets.push_back((Asset*)AssetImporter::ImportTga(file));
 
 	else if (ext == "cso")
-		AssetImporter::ImportShader(file);
+		assets.push_back((Asset*)AssetImporter::ImportShader(file));
 	else if (ext == "hlsl")
-		AssetImporter::CompileShader(file);
-
-	if (AssetImporter::verbose)
-		printf("\n");
+		assets.push_back((Asset*)AssetImporter::CompileShader(file));
 }
 
 void LoadDirectory(string dir, vector<string>* files) {
@@ -115,6 +106,7 @@ int main(int argc, char **argv) {
 	vector<string> files;
 	vector<string> directories;
 	string output;
+	string input;
 
 	int mode = 0;
 	for (int i = 1; i < argc; i++) {
@@ -128,6 +120,8 @@ int main(int argc, char **argv) {
 				mode = 2;
 			} else if (str == "-v") {
 				AssetImporter::verbose = true;
+			} else if (str == "-r") {
+				mode = 3;
 			}
 		} else {
 			switch (mode) {
@@ -140,25 +134,48 @@ int main(int argc, char **argv) {
 			case 2:
 				output = str;
 				break;
+			case 3:
+				input = GetFullPath(str);
+				break;
 			}
 		}
 	}
 
+	if (!input.empty()) {
+		printf("Reading %s\n", input.c_str());
+		int c;
+		Asset** a = AssetFile::Read(input, c);
+		for (int i = 0; i < c; i++)
+			delete a[i];
+		delete a;
+		printf("Successfully read %s\n", input.c_str());
+		return 0;
+	}
+
+	if (output.empty()) printf("Please specify an output file [-o]");
+	if (files.empty() && directories.empty()) printf("Please specify input files [-f] or input directories [-d]");
+
 	for (int i = 0; i < directories.size(); i++)
 		LoadDirectory(directories[i], &files);
 
+	// print file names
+	vector<Asset*> assets;
 	printf("Loading %d files\n", (int)files.size());
+	if (AssetImporter::verbose) {
+		for (int i = 0; i < files.size(); i++)
+			printf("   %s\n", files[i].c_str());
+		printf("\n");
+	}
 	for (int i = 0; i < files.size(); i++)
-		LoadFile(files[i]);
+		LoadFile(files[i], assets);
 
-	AssetImporter::Write(output.c_str());
+	printf("\n");
 
-	if (AssetImporter::Validate(output.c_str()))
-		printf("Output validated.");
-	else
-		printf("Output failed to validate!");
+	AssetFile::Write(output.c_str(), assets);
 
-	AssetImporter::CleanUp();
+	for (int i = 0; i < assets.size(); i++)
+		delete assets[i];
+	assets.clear();
 
 	return 0;
 }

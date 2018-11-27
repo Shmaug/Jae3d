@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -126,22 +126,43 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Asset.cpp" />
-    <ClCompile Include="ShaderAsset.cpp" />
-    <ClCompile Include="TextureAsset.cpp" />
-    <ClCompile Include="AssetImporter.cpp" />
+    <ClCompile Include="..\Common\Asset.cpp" />
+    <ClCompile Include="..\Common\AssetFile.cpp" />
+    <ClCompile Include="..\Common\AssetImporter.cpp" />
+    <ClCompile Include="..\Common\IOUtil.cpp" />
+    <ClCompile Include="..\Common\MemoryStream.cpp" />
+    <ClCompile Include="..\Common\MeshAsset.cpp" />
+    <ClCompile Include="..\Common\MeshImporter.cpp" />
+    <ClCompile Include="..\Common\ShaderAsset.cpp" />
+    <ClCompile Include="..\Common\TextureAsset.cpp" />
+    <ClCompile Include="..\Common\TextureImporter.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MeshAsset.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Asset.hpp" />
-    <ClInclude Include="ShaderAsset.hpp" />
-    <ClInclude Include="TextureAsset.hpp" />
-    <ClInclude Include="AssetImporter.hpp" />
-    <ClInclude Include="MeshAsset.hpp" />
-    <ClInclude Include="Util.hpp" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Common\Asset.hpp" />
+    <ClInclude Include="..\Common\AssetFile.hpp" />
+    <ClInclude Include="..\Common\AssetImporter.hpp" />
+    <ClInclude Include="..\Common\IOUtil.hpp" />
+    <ClInclude Include="..\Common\MemoryStream.hpp" />
+    <ClInclude Include="..\Common\MeshAsset.hpp" />
+    <ClInclude Include="..\Common\MeshImporter.hpp" />
+    <ClInclude Include="..\Common\ShaderAsset.hpp" />
+    <ClInclude Include="..\Common\TextureAsset.hpp" />
+    <ClInclude Include="..\Common\TextureImporter.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\zlib-msvc14-x64.1.2.11.7795\build\native\zlib-msvc14-x64.targets" Condition="Exists('..\packages\zlib-msvc14-x64.1.2.11.7795\build\native\zlib-msvc14-x64.targets')" />
+    <Import Project="..\packages\zlib-msvc14-x86.1.2.11.7795\build\native\zlib-msvc14-x86.targets" Condition="Exists('..\packages\zlib-msvc14-x86.1.2.11.7795\build\native\zlib-msvc14-x86.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\zlib-msvc14-x64.1.2.11.7795\build\native\zlib-msvc14-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\zlib-msvc14-x64.1.2.11.7795\build\native\zlib-msvc14-x64.targets'))" />
+    <Error Condition="!Exists('..\packages\zlib-msvc14-x86.1.2.11.7795\build\native\zlib-msvc14-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\zlib-msvc14-x86.1.2.11.7795\build\native\zlib-msvc14-x86.targets'))" />
+  </Target>
 </Project>

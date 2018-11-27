@@ -1,18 +1,35 @@
 #include "ShaderAsset.hpp"
 #include "AssetImporter.hpp"
-#include "Util.hpp"
+#include "AssetFile.hpp"
+#include "IOUtil.hpp"
+
+#include "MemoryStream.hpp"
 
 #include <vector>
 #include <d3dcompiler.h>
 
 using namespace std;
+using namespace Microsoft::WRL;
 
 ShaderAsset::ShaderAsset(string name) : Asset(name) {}
+ShaderAsset::ShaderAsset(string name, MemoryStream &ms) : Asset(name) {
+	uint8_t mask = ms.Read<uint8_t>();
+	for (int i = 0; i < 6; i++) {
+		if (mask & (1 << i)) {
+			uint64_t size = ms.Read<uint64_t>();
+			if (FAILED(D3DCreateBlob(size, &m_Blobs[i]))) throw exception();
+			ms.Read(reinterpret_cast<char*>(m_Blobs[i]->GetBufferPointer()), size);
+		}
+	}
+}
 ShaderAsset::~ShaderAsset() {
 	for (int i = 0; i < 6; i++)
-		if (m_Blobs[i])
+		if (m_Blobs[i]) {
 			m_Blobs[i]->Release();
+			m_Blobs[i] = nullptr;
+		}
 }
+uint64_t ShaderAsset::TypeId() { return (uint64_t)AssetFile::TYPEID_SHADER; }
 
 HRESULT ShaderAsset::ReadShaderStage(wstring path, ShaderStage stage) {
 	return D3DReadFileToBlob(path.c_str(), &m_Blobs[stage]);
@@ -57,9 +74,13 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, ShaderS
 
 	defines.push_back({ NULL, NULL });
 
-	if (AssetImporter::verbose)
-		printf("   Compiling %s with %s\n", entryPoint.c_str(), profile);
-
+	if (AssetImporter::verbose) {
+		int n = 0;
+		for (int i = 0; i < file.length(); i++)
+			if (file[i] == '\\')
+				n = i + 1;
+		printf("%S: Compiling %s with %s\n", file.substr(n, file.length() - n).c_str(), entryPoint.c_str(), profile);
+	}
 	ID3DBlob *errorBlob = nullptr;
 	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), profile, flags, 0, &m_Blobs[stage], &errorBlob);
 	
@@ -71,22 +92,17 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, ShaderS
 	return hr;
 }
 
-void ShaderAsset::WriteHeader(ofstream &stream) {
-	Asset::WriteHeader(stream);
-	//WriteStream(stream, "SHADER");
-	//for (int i = 0; i < 6; i++)
-	//	if (m_Blobs[i])
-	//		WriteStream(stream, stageEnum[i]);
-}
-void ShaderAsset::WriteData(ofstream &stream) {
-	Asset::WriteData(stream);
-	//WriteStream(stream, "SHADER");
-	//
-	//for (int i = 0; i < 6; i++) {
-	//	if (m_Blobs[i]) {
-	//		WriteStream(stream, stageEnum[i]);
-	//		WriteStream(stream, (uint64_t)m_Blobs[i]->GetBufferSize());
-	//		stream.write(reinterpret_cast<const char*>(m_Blobs[i]->GetBufferPointer()), m_Blobs[i]->GetBufferSize());
-	//	}
-	//}
+void ShaderAsset::WriteData(MemoryStream &ms) {
+	Asset::WriteData(ms);
+	uint8_t mask = 0;
+	for (int i = 0; i < 6; i++)
+		if (m_Blobs[i])
+			mask |= 1 << i;
+	ms.Write(mask);
+	for (int i = 0; i < 6; i++) {
+		if (m_Blobs[i]) {
+			ms.Write((uint64_t)m_Blobs[i]->GetBufferSize());
+			ms.Write(reinterpret_cast<const char*>(m_Blobs[i]->GetBufferPointer()), m_Blobs[i]->GetBufferSize());
+		}
+	}
 }

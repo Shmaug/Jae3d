@@ -4,8 +4,6 @@
 #define _WRL Microsoft::WRL
 
 #include <d3d12.h>
-#include <vector>
-#include <map>
 
 #include "Asset.hpp"
 

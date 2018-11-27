@@ -1,1 +1,2 @@
-This requires Assimp http://www.assimp.org/index.php/downloads and DirectXTex https://github.com/Microsoft/DirectXTex/wiki/DirectXTex
+This requires Assimp (http://www.assimp.org/index.php/downloads) and DirectXTex (https://github.com/Microsoft/DirectXTex/wiki/DirectXTex), as well as zlib
+zlib can be installed via NuGet: Install-Package zlib-msvc14-x64
