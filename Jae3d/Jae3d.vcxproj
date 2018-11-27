@@ -78,6 +78,7 @@
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <IncludePath>$(IncludePath)</IncludePath>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
@@ -88,6 +89,7 @@
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <ExecutablePath>$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(FxCopDir);$(PATH);</ExecutablePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -134,8 +136,8 @@
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Windows Kits\10\Lib\10.0.17134.0\um\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Windows Kits\10\Lib\10.0.17134.0\um\x64;$(SolutionDir)Common\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;Common.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
@@ -144,7 +146,8 @@
       <ObjectFileOutput>$(OutDir)Assets\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>$(OutputPath)AssetImporter.exe -d $(SolutionDir)Assets -o $(OutputPath)common.asset</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -203,6 +206,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -230,7 +234,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Asset.cpp" />
     <ClCompile Include="AssetDatabase.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CommandQueue.cpp" />
@@ -248,7 +251,6 @@
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Asset.hpp" />
     <ClInclude Include="AssetDatabase.hpp" />
     <ClInclude Include="Camera.hpp" />
     <ClInclude Include="CommandQueue.hpp" />
@@ -267,11 +269,6 @@
     <ClInclude Include="Util.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AssetImporter\AssetImporter.vcxproj">
-      <Project>{8fdd3586-dd3c-4449-a251-d1dea640f31d}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\Assets\Shaders\Common.hlsli" />
     <None Include="packages.config" />
   </ItemGroup>
@@ -279,6 +276,11 @@
     <None Include="..\Assets\Shaders\default.hlsl">
       <FileType>Document</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.vcxproj">
+      <Project>{9f2adca6-211c-4a5d-8604-b4dd692ce7e0}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

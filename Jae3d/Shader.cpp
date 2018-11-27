@@ -20,22 +20,26 @@ using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Shader::Shader(string name) : Asset(name) {
+Shader::Shader(string name) : ShaderAsset(name) {
+	m_RootSignature = new RootSignature();
+}
+Shader::Shader(string name, MemoryStream &ms) : ShaderAsset(name, ms) {
 	m_RootSignature = new RootSignature();
 }
 Shader::~Shader() {
-	for (int i = 0; i < 6; i++)
-		if (m_Blobs[i])
-			m_Blobs[i].Reset();
 	delete m_RootSignature;
 }
 
-void Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+	if (!m_Created) Create();
 	commandList->SetPipelineState(m_PipelineState.Get());
 	commandList->SetGraphicsRootSignature(m_RootSignature->GetRootSignature().Get());
+	return true;
 }
 
 void Shader::Create(){
+	if (m_Created) return;
+	m_Created = true;
 	auto device = Graphics::GetDevice();
 
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -68,11 +72,11 @@ void Shader::Create(){
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
 	state.InputLayout = { Vertex::InputElements, Vertex::InputElementCount };
 	state.pRootSignature = m_RootSignature->GetRootSignature().Get();
-	if (m_Blobs[ShaderStage::Vertex]) state.VS = CD3DX12_SHADER_BYTECODE(m_Blobs[ShaderStage::Vertex].Get());
-	if (m_Blobs[ShaderStage::Hull]) state.HS = CD3DX12_SHADER_BYTECODE(m_Blobs[ShaderStage::Hull].Get());
-	if (m_Blobs[ShaderStage::Domain]) state.DS = CD3DX12_SHADER_BYTECODE(m_Blobs[ShaderStage::Domain].Get());
-	if (m_Blobs[ShaderStage::Geometry]) state.GS = CD3DX12_SHADER_BYTECODE(m_Blobs[ShaderStage::Geometry].Get());
-	if (m_Blobs[ShaderStage::Pixel]) state.PS = CD3DX12_SHADER_BYTECODE(m_Blobs[ShaderStage::Pixel].Get());
+	if (GetBlob(SHADERSTAGE_VERTEX))	state.VS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_VERTEX));
+	if (GetBlob(SHADERSTAGE_HULL))		state.HS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_HULL));
+	if (GetBlob(SHADERSTAGE_DOMAIN))	state.DS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_DOMAIN));
+	if (GetBlob(SHADERSTAGE_GEOMETRY))	state.GS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_GEOMETRY));
+	if (GetBlob(SHADERSTAGE_PIXEL))		state.PS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_PIXEL));
 	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
@@ -84,4 +88,11 @@ void Shader::Create(){
 	state.SampleDesc = sampDesc;
 
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_PipelineState)));
+
+	if (GetBlob(SHADERSTAGE_VERTEX))	OutputDebugString("VERTEX  ");
+	if (GetBlob(SHADERSTAGE_HULL))		OutputDebugString("HULL  ");
+	if (GetBlob(SHADERSTAGE_DOMAIN))	OutputDebugString("DOMAIN  ");
+	if (GetBlob(SHADERSTAGE_GEOMETRY))	OutputDebugString("GEOMETRY  ");
+	if (GetBlob(SHADERSTAGE_PIXEL))		OutputDebugString("PIXEL  ");
+	OutputDebugString("\n");
 }

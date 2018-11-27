@@ -15,10 +15,10 @@ using namespace Microsoft::WRL;
 using namespace std;
 
 shared_ptr<Camera> camera;
-shared_ptr<MeshRenderer> barrel;
-shared_ptr<MeshRenderer> cube;
-shared_ptr<MeshRenderer> rifle;
 shared_ptr<Shader> shader;
+shared_ptr<MeshRenderer> cube;
+//shared_ptr<MeshRenderer> barrel;
+//shared_ptr<MeshRenderer> rifle;
 
 float yaw;
 float pitch;
@@ -35,23 +35,24 @@ void Game::Initialize(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 
 	shared_ptr<Mesh> cubeMesh = shared_ptr<Mesh>(new Mesh("Cube"));
 	cubeMesh->LoadCube(1.0f);
-	cubeMesh->Create();
 
+	cube = shared_ptr<MeshRenderer>(new MeshRenderer("Cube"));
+	cube->SetMesh(cubeMesh);
+	cube->LocalPosition(0, -.1f, 0);
+	cube->LocalScale(10.0f, .1f, 10.0f);
+
+	/*
 	barrel = shared_ptr<MeshRenderer>(new MeshRenderer("Barrel"));
 	barrel->m_Mesh = AssetDatabase::GetAsset<Mesh>("barrel");
 	barrel->LocalPosition(0, .574f, 0);
 	barrel->LocalScale(2.75f, 2.75f, 2.75f);
-	
-	cube = shared_ptr<MeshRenderer>(new MeshRenderer("Cube"));
-	cube->m_Mesh = cubeMesh;
-	cube->LocalPosition(0, -.1f, 0);
-	cube->LocalScale(10.0f, .1f, 10.0f);
 	
 	rifle = shared_ptr<MeshRenderer>(new MeshRenderer("Rifle"));
 	rifle->m_Mesh = AssetDatabase::GetAsset<Mesh>("rifle");
 	rifle->Parent(camera);
 	rifle->LocalScale(.6f, .6f, .6f);
 	rifle->LocalPosition(.21f, -.3f, .2f);
+	*/
 
 	auto window = Graphics::GetWindow();
 	camera->Aspect((float)window->GetWidth() / (float)window->GetHeight());
@@ -135,11 +136,10 @@ void Game::Render(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	commandList->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	if (shader) {
-		shader->SetActive(commandList);
+	if (shader->SetActive(commandList)) {
 		camera->SetActive(commandList);
-		barrel->Draw(commandList);
 		cube->Draw(commandList);
-		rifle->Draw(commandList);
+		//barrel->Draw(commandList);
+		//rifle->Draw(commandList);
 	}
 }

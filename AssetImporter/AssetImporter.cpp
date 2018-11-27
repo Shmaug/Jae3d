@@ -5,11 +5,11 @@
 #include "MeshImporter.hpp"
 #include "TextureImporter.hpp"
 
-#include "IOUtil.hpp"
-#include "Asset.hpp"
-#include "MeshAsset.hpp"
-#include "TextureAsset.hpp"
-#include "ShaderAsset.hpp"
+#include "../Common/IOUtil.hpp"
+#include "../Common/Asset.hpp"
+#include "../Common/MeshAsset.hpp"
+#include "../Common/TextureAsset.hpp"
+#include "../Common/ShaderAsset.hpp"
 
 using namespace std;
 using namespace DirectX;
@@ -51,20 +51,20 @@ TextureAsset* AssetImporter::ImportDDS(string path) {
 ShaderAsset* AssetImporter::ImportShader(string path) {
 	ShaderAsset* shader = new ShaderAsset(GetName(path));
 
-	ShaderAsset::ShaderStage stage;
+	ShaderAsset::SHADERSTAGE stage;
 	string end = GetName(path).substr(-3);
 	if (end == "_vs")
-		stage = ShaderAsset::ShaderStage::Vertex;
+		stage = ShaderAsset::SHADERSTAGE_VERTEX;
 	else if (end == "_hs")
-		stage = ShaderAsset::ShaderStage::Hull;
+		stage = ShaderAsset::SHADERSTAGE_HULL;
 	else if (end == "_ds")
-		stage = ShaderAsset::ShaderStage::Domain;
+		stage = ShaderAsset::SHADERSTAGE_DOMAIN;
 	else if (end == "_gs")
-		stage = ShaderAsset::ShaderStage::Geometry;
+		stage = ShaderAsset::SHADERSTAGE_GEOMETRY;
 	else if (end == "_ps")
-		stage = ShaderAsset::ShaderStage::Pixel;
+		stage = ShaderAsset::SHADERSTAGE_PIXEL;
 	else if (end == "_cs")
-		stage = ShaderAsset::ShaderStage::Compute;
+		stage = ShaderAsset::SHADERSTAGE_COMPUTE;
 
 	shader->ReadShaderStage(utf8toUtf16(path), stage);
 	return shader;
@@ -78,7 +78,7 @@ ShaderAsset* AssetImporter::CompileShader(string path) {
 	string line;
 	while (getline(infile, line)) {
 		int mode = -1;
-		ShaderAsset::ShaderStage stage;
+		ShaderAsset::SHADERSTAGE stage;
 
 		// scan for whitespace delimited words
 		const char *linec = line.c_str();
@@ -107,22 +107,22 @@ ShaderAsset* AssetImporter::CompileShader(string path) {
 
 			if (mode == 0) {
 				if (word == "vertex") {
-					stage = ShaderAsset::ShaderStage::Vertex;
+					stage = ShaderAsset::SHADERSTAGE_VERTEX;
 					mode = 1;
 				} else if (word == "hull") {
-					stage = ShaderAsset::ShaderStage::Hull;
+					stage = ShaderAsset::SHADERSTAGE_HULL;
 					mode = 1;
 				} else if (word == "domain") {
-					stage = ShaderAsset::ShaderStage::Domain;
+					stage = ShaderAsset::SHADERSTAGE_DOMAIN;
 					mode = 1;
 				} else if (word == "geometry") {
-					stage = ShaderAsset::ShaderStage::Geometry;
+					stage = ShaderAsset::SHADERSTAGE_GEOMETRY;
 					mode = 1;
 				} else if (word == "pixel") {
-					stage = ShaderAsset::ShaderStage::Pixel;
+					stage = ShaderAsset::SHADERSTAGE_PIXEL;
 					mode = 1;
 				} else if (word == "compute") {
-					stage = ShaderAsset::ShaderStage::Compute;
+					stage = ShaderAsset::SHADERSTAGE_COMPUTE;
 					mode = 1;
 				}
 			} else if (mode == 1) {

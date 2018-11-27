@@ -16,8 +16,8 @@
 #include <assimp/postprocess.h>
 
 #include "AssetImporter.hpp"
-#include "MeshAsset.hpp"
-#include "IOUtil.hpp"
+#include "../Common/MeshAsset.hpp"
+#include "../Common/IOUtil.hpp"
 
 #include <d3d12.h>
 #include <DirectXMath.h>

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <wrl.h>
 #define _WRL Microsoft::WRL
 
@@ -13,9 +15,11 @@ protected:
 	bool UpdateTransform();
 
 public:
-	std::shared_ptr<Mesh> m_Mesh;
 	MeshRenderer(std::string name);
 	~MeshRenderer();
+
+	void SetMesh(std::shared_ptr<Mesh> m) { if (m) m->Create(); m_Mesh = m; }
+	std::shared_ptr<Mesh> GetMesh() const { return m_Mesh; }
 
 	void Create();
 	void Release();
@@ -23,6 +27,7 @@ public:
 	void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 private:
+	std::shared_ptr<Mesh> m_Mesh;
 	struct ObjectBuffer {
 	public:
 		DirectX::XMFLOAT4X4 ObjectToWorld;

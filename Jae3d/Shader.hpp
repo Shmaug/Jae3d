@@ -5,30 +5,21 @@
 
 #include <d3d12.h>
 
-#include "Asset.hpp"
+#include "../Common/ShaderAsset.hpp"
 
 class RootSignature;
 
-class Shader : public Asset {
+class Shader : public ShaderAsset {
 public:
-	enum ShaderStage {
-		Vertex = 1,
-		Hull = 2,
-		Domain = 3,
-		Geometry = 4,
-		Pixel = 5,
-		Compute = 6
-	};
-
 	Shader(std::string name);
+	Shader(std::string name, MemoryStream &ms);
 	~Shader();
 
 	void Create();
-	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	bool SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 private:
-	_WRL::ComPtr<ID3DBlob> m_Blobs[6];
-
+	bool m_Created = false;
 	RootSignature *m_RootSignature;
 	_WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
 };

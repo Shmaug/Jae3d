@@ -1,0 +1,1 @@
+$(OutputPath)AssetImporter.exe -d $(SolutionDir)Assets -o $(OutputPath)common.asset

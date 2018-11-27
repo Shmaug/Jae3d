@@ -3,8 +3,7 @@
 #include <comdef.h>
 #include <DirectXTex.h>
 
-#include "AssetImporter.hpp"
-#include "TextureAsset.hpp"
+#include "../Common/TextureAsset.hpp"
 
 using namespace std;
 using namespace DirectX;
@@ -140,8 +139,8 @@ const char* formatToString(DXGI_FORMAT f) {
 }
 
 TextureAsset* Convert(ScratchImage &image, TexMetadata *info, string name) {
-	if (AssetImporter::verbose)
-		printf("%s: %dD %s %dx%d, %d slice(s) %d mip levels\n", name.c_str(), (int)info->dimension - 1, formatToString(info->format), (int)info->width, (int)info->height, (int)info->depth, (int)info->mipLevels);
+	//if (AssetImporter::verbose)
+	//	printf("%s: %dD %s %dx%d, %d slice(s) %d mip levels\n", name.c_str(), (int)info->dimension - 1, formatToString(info->format), (int)info->width, (int)info->height, (int)info->depth, (int)info->mipLevels);
 
 	TextureAsset *asset = new TextureAsset(name, (int)info->width, (int)info->height, (int)info->dimension - 1, info->format, (int)info->mipLevels);
 	asset->SetPixels(image.GetPixels(), image.GetPixelsSize());

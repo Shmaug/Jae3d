@@ -4,11 +4,6 @@
 #include <string>
 #include <DirectXMath.h>
 
-#include <wrl.h>
-#define _WRL Microsoft::WRL
-
-#include <d3d12.h>
-
 #include "Asset.hpp"
 
 class MeshAsset : public Asset {
@@ -41,17 +36,7 @@ public:
 	void Clear();
 
 	void Use32BitIndices(bool v);
-	void AddTriangle(uint16_t i0, uint16_t i1, uint16_t i2) {
-		if (m_32BitIndices) {
-			m_Indices32.push_back((uint32_t)i0);
-			m_Indices32.push_back((uint32_t)i1);
-			m_Indices32.push_back((uint32_t)i2);
-		} else {
-			m_Indices16.push_back(i0);
-			m_Indices16.push_back(i1);
-			m_Indices16.push_back(i2);
-		}
-	}
+	bool Use32BitIndices() const { return m_32BitIndices; }
 	void AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2) {
 		if (m_32BitIndices) {
 			m_Indices32.push_back(i0);
@@ -148,6 +133,9 @@ public:
 	DirectX::XMFLOAT4* GetColors() { return m_Colors.data(); }
 	DirectX::XMINT4*   GetBlendIndices() { return m_BlendIndices.data(); }
 	DirectX::XMFLOAT4* GetBlendWeights() { return m_BlendWeights.data(); }
+
+	uint16_t* GetIndices16() { return m_Indices16.data(); }
+	uint32_t* GetIndices32() { return m_Indices32.data(); }
 #pragma endregion
 
 private:

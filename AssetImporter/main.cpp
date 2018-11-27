@@ -13,9 +13,12 @@
 #pragma comment(lib, "runtimeobject.lib")
 
 #include "..\Common\IOUtil.hpp"
-#include "..\Common\AssetImporter.hpp"
 #include "..\Common\AssetFile.hpp"
 #include "..\Common\Asset.hpp"
+#include "..\Common\MeshAsset.hpp"
+#include "..\Common\ShaderAsset.hpp"
+#include "..\Common\TextureAsset.hpp"
+#include "AssetImporter.hpp"
 
 using namespace std;
 
@@ -144,11 +147,30 @@ int main(int argc, char **argv) {
 	if (!input.empty()) {
 		printf("Reading %s\n", input.c_str());
 		int c;
-		Asset** a = AssetFile::Read(input, c);
-		for (int i = 0; i < c; i++)
-			delete a[i];
-		delete a;
+		AssetFile::AssetData* a = AssetFile::Read(input, c);
+		for (int i = 0; i < c; i++) {
+			Asset* f = nullptr;
+			switch (a[i].type) {
+			case AssetFile::TYPEID_MESH:
+				f = new MeshAsset(a[i].name, *a[i].buffer);
+				if (AssetImporter::verbose)
+					printf("%d vertices, %d tris\n", ((MeshAsset*)f)->VertexCount(), ((MeshAsset*)f)->IndexCount() / 3);
+				break;
+			case AssetFile::TYPEID_SHADER:
+				f = new ShaderAsset(a[i].name, *a[i].buffer);
+				if (AssetImporter::verbose)
+					printf("%s\n", f->m_Name.c_str());
+				break;
+			case AssetFile::TYPEID_TEXTURE:
+				f = new TextureAsset(a[i].name, *a[i].buffer);
+				if (AssetImporter::verbose)
+					printf("%dx%d\n", ((TextureAsset*)f)->Width(), ((TextureAsset*)f)->Height());
+				break;
+			}
+			if (f) delete f;
+		}
 		printf("Successfully read %s\n", input.c_str());
+		delete[] a;
 		return 0;
 	}
 

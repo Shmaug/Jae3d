@@ -283,6 +283,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		}
 	}
 
+	AssetDatabase::UnloadAssets();
 	Graphics::Destroy();
 
 	delete g_Game;

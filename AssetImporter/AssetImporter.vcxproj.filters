@@ -9,87 +9,39 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="Source Files\Assets">
-      <UniqueIdentifier>{7805b639-8eb7-4836-b784-107e4ee3a1fc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Assets">
-      <UniqueIdentifier>{c24a447c-72f5-4add-b16a-a1506263d3ff}</UniqueIdentifier>
+    <Filter Include="Header Files\Importers">
+      <UniqueIdentifier>{c4dadd25-6288-4242-9ae6-597f54b65683}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Importers">
-      <UniqueIdentifier>{31eb3871-12c3-4003-a902-80f04b3f450f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Importers">
-      <UniqueIdentifier>{a39da319-fdfc-4b0b-9d36-98e3db9217cc}</UniqueIdentifier>
+      <UniqueIdentifier>{1363fd42-a31d-4800-9427-a4978f2fa8da}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\AssetFile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\IOUtil.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\MemoryStream.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\Asset.cpp">
-      <Filter>Source Files\Assets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\ShaderAsset.cpp">
-      <Filter>Source Files\Assets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\TextureAsset.cpp">
-      <Filter>Source Files\Assets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\MeshAsset.cpp">
-      <Filter>Source Files\Assets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\MeshImporter.cpp">
+    <ClCompile Include="TextureImporter.cpp">
       <Filter>Source Files\Importers</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\TextureImporter.cpp">
+    <ClCompile Include="MeshImporter.cpp">
       <Filter>Source Files\Importers</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\AssetImporter.cpp">
+    <ClCompile Include="AssetImporter.cpp">
       <Filter>Source Files\Importers</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TextureImporter.hpp">
+      <Filter>Header Files\Importers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshImporter.hpp">
+      <Filter>Header Files\Importers</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetImporter.hpp">
+      <Filter>Header Files\Importers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\Common\IOUtil.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\MemoryStream.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\AssetFile.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Asset.hpp">
-      <Filter>Header Files\Assets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\MeshAsset.hpp">
-      <Filter>Header Files\Assets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\ShaderAsset.hpp">
-      <Filter>Header Files\Assets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\TextureAsset.hpp">
-      <Filter>Header Files\Assets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\TextureImporter.hpp">
-      <Filter>Header Files\Importers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\MeshImporter.hpp">
-      <Filter>Header Files\Importers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\AssetImporter.hpp">
-      <Filter>Header Files\Importers</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

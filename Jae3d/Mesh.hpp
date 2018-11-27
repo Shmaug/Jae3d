@@ -7,7 +7,8 @@
 #include <d3d12.h>
 #include <DirectXMath.h>
 #include "d3dx12.hpp"
-#include "Asset.hpp"
+
+#include "../Common/MeshAsset.hpp"
 
 struct Vertex {
 	static const int InputElementCount = 3;
@@ -26,35 +27,20 @@ struct Vertex {
 	}
 };
 
-class Mesh : public Asset {
+class Mesh : public MeshAsset {
 public:
-	struct Bone {
-		std::string m_Name;
-		DirectX::XMFLOAT4X4 m_BoneToMesh;
-	};
-
 	Mesh(std::string name);
+	Mesh(std::string name, MemoryStream &ms);
 	~Mesh();
 
 	void LoadCube(float size);
 	void Create();
-	void Release();
+	void ReleaseGpu();
 
 	void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 private:
-	std::vector<Bone> bones;
-
-	std::vector<DirectX::XMFLOAT3> m_Vertices;
-	std::vector<DirectX::XMFLOAT3> m_Normals;
-	std::vector<DirectX::XMFLOAT3> m_Tangents;
-	std::vector<DirectX::XMFLOAT3> m_Bitangents;
-	std::vector<DirectX::XMFLOAT4> m_Colors;
-	std::vector<DirectX::XMINT4> m_BlendIndices;
-	std::vector<DirectX::XMFLOAT4> m_BlendWeights;
-	std::vector<DirectX::XMFLOAT3> m_Texcoords[8];
-	std::vector<int> m_Indices;
-
+	bool m_Created = false;
 	std::vector<Vertex> vertices;
 
 	void UploadData(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -20,8 +20,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{8FDD3586-DD3C-4449-A251-D1DEA640F31D}</ProjectGuid>
-    <RootNamespace>AssetImporter</RootNamespace>
+    <ProjectGuid>{9F2ADCA6-211C-4A5D-8604-B4DD692CE7E0}</ProjectGuid>
+    <RootNamespace>Common</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -39,13 +39,13 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -70,14 +70,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ExecutablePath>$(ASSIMP_HOME)\bin\x64;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>$(ASSIMP_HOME)\include;$(DIRECTXTEX_HOME);$(IncludePath)</IncludePath>
-    <LibraryPath>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -86,19 +82,14 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>assimp-vc140-mt.lib;DirectXTex.lib;d3dcompiler.lib;Common.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(SolutionDir)Common\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,7 +99,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -122,7 +113,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -130,20 +122,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AssetImporter.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="MeshImporter.cpp" />
-    <ClCompile Include="TextureImporter.cpp" />
+    <ClInclude Include="Asset.hpp" />
+    <ClInclude Include="AssetFile.hpp" />
+    <ClInclude Include="IOUtil.hpp" />
+    <ClInclude Include="MemoryStream.hpp" />
+    <ClInclude Include="MeshAsset.hpp" />
+    <ClInclude Include="ShaderAsset.hpp" />
+    <ClInclude Include="TextureAsset.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Common\Common.vcxproj">
-      <Project>{9f2adca6-211c-4a5d-8604-b4dd692ce7e0}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="AssetImporter.hpp" />
-    <ClInclude Include="MeshImporter.hpp" />
-    <ClInclude Include="TextureImporter.hpp" />
+    <ClCompile Include="Asset.cpp" />
+    <ClCompile Include="AssetFile.cpp" />
+    <ClCompile Include="IOUtil.cpp" />
+    <ClCompile Include="MemoryStream.cpp" />
+    <ClCompile Include="MeshAsset.cpp" />
+    <ClCompile Include="ShaderAsset.cpp" />
+    <ClCompile Include="TextureAsset.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,5 +1,4 @@
 #include "ShaderAsset.hpp"
-#include "AssetImporter.hpp"
 #include "AssetFile.hpp"
 #include "IOUtil.hpp"
 
@@ -9,7 +8,6 @@
 #include <d3dcompiler.h>
 
 using namespace std;
-using namespace Microsoft::WRL;
 
 ShaderAsset::ShaderAsset(string name) : Asset(name) {}
 ShaderAsset::ShaderAsset(string name, MemoryStream &ms) : Asset(name) {
@@ -31,10 +29,10 @@ ShaderAsset::~ShaderAsset() {
 }
 uint64_t ShaderAsset::TypeId() { return (uint64_t)AssetFile::TYPEID_SHADER; }
 
-HRESULT ShaderAsset::ReadShaderStage(wstring path, ShaderStage stage) {
+HRESULT ShaderAsset::ReadShaderStage(wstring path, SHADERSTAGE stage) {
 	return D3DReadFileToBlob(path.c_str(), &m_Blobs[stage]);
 }
-HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, ShaderStage stage) {
+HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, SHADERSTAGE stage) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -46,27 +44,27 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, ShaderS
 
 	switch (stage) {
 	default:
-	case ShaderStage::Vertex:
+	case SHADERSTAGE_VERTEX:
 		profile = "vs_5_1";
 		defines.push_back({ "SHADER_STAGE_VERTEX", "" });
 		break;
-	case ShaderStage::Hull:
+	case SHADERSTAGE_HULL:
 		profile = "hs_5_1";
 		defines.push_back({ "SHADER_STAGE_HULL", "" });
 		break;
-	case ShaderStage::Domain:
+	case SHADERSTAGE_DOMAIN:
 		profile = "ds_5_1";
 		defines.push_back({ "SHADER_STAGE_DOMAIN", "" });
 		break;
-	case ShaderStage::Geometry:
+	case SHADERSTAGE_GEOMETRY:
 		profile = "gs_5_1";
 		defines.push_back({ "SHADER_STAGE_GEOMETRY", "" });
 		break;
-	case ShaderStage::Pixel:
+	case SHADERSTAGE_PIXEL:
 		profile = "ps_5_1";
 		defines.push_back({ "SHADER_STAGE_PIXEL", "" });
 		break;
-	case ShaderStage::Compute:
+	case SHADERSTAGE_COMPUTE:
 		profile = "cs_5_1";
 		defines.push_back({ "SHADER_STAGE_COMPUTE", "" });
 		break;
@@ -74,13 +72,13 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, ShaderS
 
 	defines.push_back({ NULL, NULL });
 
-	if (AssetImporter::verbose) {
-		int n = 0;
-		for (int i = 0; i < file.length(); i++)
-			if (file[i] == '\\')
-				n = i + 1;
-		printf("%S: Compiling %s with %s\n", file.substr(n, file.length() - n).c_str(), entryPoint.c_str(), profile);
-	}
+	//if (AssetImporter::verbose) {
+	//	int n = 0;
+	//	for (int i = 0; i < file.length(); i++)
+	//		if (file[i] == '\\')
+	//			n = i + 1;
+	//	printf("%S: Compiling %s with %s\n", file.substr(n, file.length() - n).c_str(), entryPoint.c_str(), profile);
+	//}
 	ID3DBlob *errorBlob = nullptr;
 	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), profile, flags, 0, &m_Blobs[stage], &errorBlob);
 	

@@ -12,7 +12,6 @@ class MemoryStream;
 class Asset {
 public:
 	std::string m_Name;
-	std::string m_Group;
 
 	Asset(std::string name);
 	Asset(std::string name, MemoryStream &ms);

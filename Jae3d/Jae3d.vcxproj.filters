@@ -80,9 +80,6 @@
     <ClCompile Include="Shader.cpp">
       <Filter>Source Files\Assets</Filter>
     </ClCompile>
-    <ClCompile Include="Asset.cpp">
-      <Filter>Source Files\Assets</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dx12.hpp">
@@ -131,9 +128,6 @@
       <Filter>Header Files\Assets</Filter>
     </ClInclude>
     <ClInclude Include="Shader.hpp">
-      <Filter>Header Files\Assets</Filter>
-    </ClInclude>
-    <ClInclude Include="Asset.hpp">
       <Filter>Header Files\Assets</Filter>
     </ClInclude>
   </ItemGroup>
