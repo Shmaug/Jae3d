@@ -2,13 +2,13 @@
 
 #include <string>
 #include <memory>
-#include <map>
+#include <unordered_map>
 
 class Asset;
 
 class AssetDatabase {
 private:
-	static std::map<std::string, std::shared_ptr<Asset>> assets;
+	static std::unordered_map<std::string, std::shared_ptr<Asset>> assets;
 
 public:
 	static void LoadAssets(std::string assetFile);

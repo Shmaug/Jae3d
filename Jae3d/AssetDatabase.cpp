@@ -10,7 +10,7 @@
 
 using namespace std;
 
-map<string, shared_ptr<Asset>> AssetDatabase::assets;
+unordered_map<string, shared_ptr<Asset>> AssetDatabase::assets;
 
 void AssetDatabase::LoadAssets(string file) {
 	int count;

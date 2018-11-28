@@ -26,25 +26,31 @@ AssetFile::AssetData* AssetFile::Read_V1(istream &is, int &count) {
 		uint8_t id = ReadStream<uint8_t>(is);
 		uint64_t type = ReadStream<uint64_t>(is);
 		string name = ReadStream<string>(is);
+
+		bool compressed = ReadStream<uint8_t>(is);
 		uint64_t size = ReadStream<uint64_t>(is);
 		uint64_t sizeUncompressed = ReadStream<uint64_t>(is);
 
-		//if (AssetImporter::verbose)
-		//	printf("%s (%lu bytes/%lu uncompressed)\n", name.c_str(), (unsigned long)size, (unsigned long)sizeUncompressed);
-
 		uint64_t p = (int64_t)is.tellg();
 
-		cmem.Seek(0);
-		cmem.Fit(size);
-
-		is.read(cmem.Ptr(), size);
-
-		MemoryStream* mems = new MemoryStream(sizeUncompressed, false);
-		cmem.Decompress(*mems, size);
-		mems->Seek(0);
 		assets[i].name = name;
 		assets[i].type = (TYPEID)type;
-		assets[i].buffer = mems;
+
+		if (compressed) {
+			cmem.Seek(0);
+			cmem.Fit(size);
+			is.read(cmem.Ptr(), size);
+
+			MemoryStream* mems = new MemoryStream(sizeUncompressed, false);
+			cmem.Decompress(*mems, size);
+			mems->Seek(0);
+			assets[i].buffer = mems;
+		} else {
+			MemoryStream* mems = new MemoryStream(sizeUncompressed, false);
+			is.read(mems->Ptr(), sizeUncompressed);
+			mems->Seek(0);
+			assets[i].buffer = mems;
+		}
 
 		is.seekg(p + size);
 	}
@@ -52,7 +58,7 @@ AssetFile::AssetData* AssetFile::Read_V1(istream &is, int &count) {
 	count = assetCount;
 	return assets;
 }
-void AssetFile::Write_V1(ostream &os, vector<Asset*> &assets) {
+void AssetFile::Write_V1(ostream &os, vector<Asset*> &assets, bool compress) {
 	WriteStream(os, (uint32_t)assets.size());
 
 	MemoryStream mems(1024);
@@ -63,20 +69,24 @@ void AssetFile::Write_V1(ostream &os, vector<Asset*> &assets) {
 		WriteStream(os, assets[i]->TypeId());
 		WriteStream(os, assets[i]->m_Name);
 
+		WriteStream(os, (uint8_t)compress);
+
 		mems.Seek(0);
 		assets[i]->WriteData(mems);
 		uint64_t sizeUncompressed = (uint64_t)mems.Tell();
+		if (compress) {
+			cmem.Seek(0);
+			mems.Compress(cmem);
+			uint64_t size = (uint64_t)cmem.Tell();
 
-		cmem.Seek(0);
-		mems.Compress(cmem);
-		uint64_t size = (uint64_t)cmem.Tell();
-
-		WriteStream(os, size);
-		WriteStream(os, sizeUncompressed);
-		os.write(cmem.Ptr(), size);
-
-		//if (AssetImporter::verbose)
-		//	printf("%s (%lu bytes/%lu uncompressed)\n", assets[i]->m_Name.c_str(), (unsigned long)size, (unsigned long)sizeUncompressed);
+			WriteStream(os, size);
+			WriteStream(os, sizeUncompressed);
+			os.write(cmem.Ptr(), size);
+		} else {
+			WriteStream(os, sizeUncompressed); // compressed size
+			WriteStream(os, sizeUncompressed); // uncompressed size
+			os.write(mems.Ptr(), sizeUncompressed);
+		}
 	}
 }
 
@@ -112,7 +122,7 @@ AssetFile::AssetData* AssetFile::Read(const string file, int &count) {
 
 	return nullptr;
 }
-void AssetFile::Write(const string file, vector<Asset*> &assets, uint64_t version) {
+void AssetFile::Write(const string file, vector<Asset*> &assets, bool compress, uint64_t version) {
 	ofstream os;
 	os.open(file, ios::out | ios::binary);
 	if (!os.is_open()) {
@@ -129,7 +139,7 @@ void AssetFile::Write(const string file, vector<Asset*> &assets, uint64_t versio
 	switch (version) {
 	default:
 	case (uint64_t)0001:
-		Write_V1(os, assets);
+		Write_V1(os, assets, compress);
 		break;
 	}
 }

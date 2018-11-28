@@ -158,7 +158,7 @@ Texture::Texture(string name, MemoryStream &ms) : TextureAsset(name, ms) {}
 
 Texture::~Texture() {}
 
-void Texture::Create() {
+void Texture::Upload() {
 	auto device = Graphics::GetDevice();
 	auto commandQueue = Graphics::GetCommandQueue();
 	auto commandList = commandQueue->GetCommandList();

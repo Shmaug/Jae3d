@@ -192,6 +192,7 @@ void Graphics::Initialize(HWND hWnd) {
 	m_Initialized = true;
 }
 void Graphics::Render(Game *game) {
+	Profiler::BeginSample("Draw");
 	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList();
 	auto d3dCommandList = commandList->D3DCommandList();
@@ -209,12 +210,15 @@ void Graphics::Render(Game *game) {
 	d3dCommandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
 	game->Render(commandList);
+	Profiler::EndSample();
 
+	Profiler::BeginSample("Present");
 	m_Window->Present(commandList, commandQueue);
 
 	// TODO actually handle preparing the next frame while the GPU renders the last frame
 	// instead of just waiting for the GPU to finish here
 	commandQueue->Flush();
+	Profiler::EndSample();
 }
 bool Graphics::FrameReady() {
 	return m_Window->LastFrameCompleted(GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT));

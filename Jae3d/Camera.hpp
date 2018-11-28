@@ -33,7 +33,7 @@ public:
 
 private:
 	friend class CommandList;
-	bool SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 	float m_FieldOfView = 70.0f;
 	float m_Aspect = 1.0f;

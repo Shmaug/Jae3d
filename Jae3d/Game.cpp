@@ -24,6 +24,7 @@ shared_ptr<Camera> camera;
 shared_ptr<MeshRenderer> cube;
 shared_ptr<MeshRenderer> barrel;
 shared_ptr<MeshRenderer> rifle;
+shared_ptr<MeshRenderer> rifle2;
 
 float yaw;
 float pitch;
@@ -50,20 +51,36 @@ void Game::Initialize() {
 	shared_ptr<Mesh> barrelMesh = AssetDatabase::GetAsset<Mesh>("Barrel");
 	shared_ptr<Mesh> rifleMesh = AssetDatabase::GetAsset<Mesh>("Rifle.Rifle");
 
-	shared_ptr<Texture> barrelTexture = AssetDatabase::GetAsset<Texture>("barrel_albedo_roughness_rgba");
-
-	shared_ptr<Material> defaultMaterial = shared_ptr<Material>(new Material("Default", shader));
-	shared_ptr<Material> barrelMaterial = shared_ptr<Material>(new Material("Barrel", textured));
-
 	cubeMesh->LoadCube(1.0f);
 
 	cubeMesh->Upload();
 	barrelMesh->Upload();
 	rifleMesh->Upload();
 
-	barrelTexture->Create();
+	shared_ptr<Material> defaultMaterial = shared_ptr<Material>(new Material("Default", shader));
+	shared_ptr<Material> barrelMaterial = shared_ptr<Material>(new Material("Barrel", textured));
+	shared_ptr<Material> rifleMaterial = shared_ptr<Material>(new Material("Rifle", textured));
+
+	shared_ptr<Texture> barrelTexture = AssetDatabase::GetAsset<Texture>("barrel_albedo_roughness");
+	shared_ptr<Texture> barrelNormalTexture = AssetDatabase::GetAsset<Texture>("barrel_normal");
+	shared_ptr<Texture> barrelMetallicTexture = AssetDatabase::GetAsset<Texture>("barrel_metallic");
+	shared_ptr<Texture> rifleTexture = AssetDatabase::GetAsset<Texture>("rifle_albedo_roughness");
+	shared_ptr<Texture> rifleNormalTexture = AssetDatabase::GetAsset<Texture>("rifle_normal");
+	shared_ptr<Texture> rifleMetallicTexture = AssetDatabase::GetAsset<Texture>("rifle_metallic");
+
+	barrelTexture->Upload();
+	barrelNormalTexture->Upload();
+	barrelMetallicTexture->Upload();
+	rifleTexture->Upload();
+	rifleNormalTexture->Upload();
+	rifleMetallicTexture->Upload();
 
 	barrelMaterial->SetTexture("AlbedoRoughnessTex", barrelTexture);
+	barrelMaterial->SetTexture("NormalTex", barrelNormalTexture);
+	barrelMaterial->SetTexture("MetallicTex", barrelMetallicTexture);
+	rifleMaterial->SetTexture("AlbedoRoughnessTex", rifleTexture);
+	rifleMaterial->SetTexture("NormalTex", rifleNormalTexture);
+	rifleMaterial->SetTexture("MetallicTex", rifleMetallicTexture);
 
 	cube = shared_ptr<MeshRenderer>(new MeshRenderer("Cube"));
 	cube->m_Mesh = cubeMesh;
@@ -73,10 +90,16 @@ void Game::Initialize() {
 
 	rifle = shared_ptr<MeshRenderer>(new MeshRenderer("Rifle"));
 	rifle->m_Mesh = rifleMesh;
-	rifle->m_Material = defaultMaterial;
+	rifle->m_Material = rifleMaterial;
 	rifle->Parent(camera);
 	rifle->LocalScale(.6f, .6f, .6f);
 	rifle->LocalPosition(.21f, -.3f, .2f);
+
+	rifle2 = shared_ptr<MeshRenderer>(new MeshRenderer("Rifle"));
+	rifle2->m_Mesh = rifleMesh;
+	rifle2->m_Material = rifleMaterial;
+	rifle2->LocalScale(.6f, .6f, .6f);
+	rifle2->LocalPosition(0, 2, 0);
 
 	barrel = shared_ptr<MeshRenderer>(new MeshRenderer("Barrel"));
 	barrel->m_Mesh = barrelMesh;
@@ -166,5 +189,6 @@ void Game::Render(shared_ptr<CommandList> commandList) {
 	commandList->SetCamera(camera);
 	cube->Draw(commandList);
 	rifle->Draw(commandList);
+	rifle2->Draw(commandList);
 	barrel->Draw(commandList);
 }

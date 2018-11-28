@@ -3,6 +3,7 @@
 #include <wrl.h>
 #define _WRL Microsoft::WRL
 
+#include <variant>
 #include <memory>
 #include <map>
 #include <string>
@@ -13,14 +14,18 @@ class Shader;
 class Texture;
 class CommandList;
 
+#define PARAM_TYPES std::shared_ptr<Texture>, float, DirectX::XMFLOAT4
+
 class Material {
 public:
-	struct Parameter {
-	public:
-		std::shared_ptr<Texture> texValue;
-		float floatValue;
-		DirectX::XMFLOAT4 vecValue;
-	};
+	//union Parameter {
+	//	std::shared_ptr<Texture> texValue;
+	//	float floatValue;
+	//	DirectX::XMFLOAT4 vecValue;
+	//
+	//	Parameter() { texValue = nullptr; }
+	//	~Parameter() {}
+	//};
 
 	std::string m_Name;
 
@@ -36,6 +41,8 @@ private:
 	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 	std::shared_ptr<Shader> m_Shader;
-	std::map<std::string, Parameter> m_Params;
+	std::map<std::string, std::variant<PARAM_TYPES>> m_Params;
 };
+
+#undef PARAM_TYPES
 

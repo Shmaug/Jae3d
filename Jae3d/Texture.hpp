@@ -18,11 +18,10 @@ public:
 	Texture(std::string name, MemoryStream &ms);
 	~Texture();
 
-	void Create();
+	void Upload();
 
 	_WRL::ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_srvHeap; }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor() const { return m_srvHeap->GetGPUDescriptorHandleForHeapStart(); }
-	D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress() const { return m_Texture->GetGPUVirtualAddress(); }
 
 private:
 	_WRL::ComPtr<ID3D12Resource> m_Texture;

@@ -25,10 +25,10 @@ public:
 	};
 
 	static AssetData* Read(const std::string file, int &count);
-	static void Write(const std::string file, std::vector<Asset*> &assets, uint64_t version = (uint64_t)0001);
+	static void Write(const std::string file, std::vector<Asset*> &assets, bool compress, uint64_t version = (uint64_t)0001);
 
 private:
 	static AssetData* AssetFile::Read_V1(std::istream &fs, int &count);
-	static void AssetFile::Write_V1(std::ostream &os, std::vector<Asset*> &assets);
+	static void AssetFile::Write_V1(std::ostream &os, std::vector<Asset*> &assets, bool compress);
 };
 

@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
 	vector<string> directories;
 	string output;
 	string input;
+	bool compress = true;
 
 	int mode = 0;
 	for (int i = 1; i < argc; i++) {
@@ -125,6 +126,8 @@ int main(int argc, char **argv) {
 				AssetImporter::verbose = true;
 			} else if (str == "-r") {
 				mode = 3;
+			} else if (str == "-uc") {
+				compress = false;
 			}
 		} else {
 			switch (mode) {
@@ -193,7 +196,7 @@ int main(int argc, char **argv) {
 
 	printf("\n");
 
-	AssetFile::Write(output.c_str(), assets);
+	AssetFile::Write(output.c_str(), assets, compress);
 
 	for (int i = 0; i < assets.size(); i++)
 		delete assets[i];
