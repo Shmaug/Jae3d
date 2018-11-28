@@ -134,6 +134,11 @@ void MeshAsset::Use32BitIndices(bool v) {
 void MeshAsset::VertexCount(unsigned int size, bool shrink) {
 	if (size == m_Vertices.size()) return;
 
+	if (size > 65535 && m_Vertices.size() <= 65535)
+		Use32BitIndices(true);
+	else if (size <= 65535 && m_Vertices.size() > 65535)
+		Use32BitIndices(false);
+
 	m_Vertices.resize(size);
 	if (HasSemantic(SEMANTIC_NORMAL)) m_Normals.resize(size);
 	if (HasSemantic(SEMANTIC_TANGENT)) m_Tangents.resize(size);
@@ -161,6 +166,7 @@ void MeshAsset::VertexCount(unsigned int size, bool shrink) {
 		if (HasSemantic(SEMANTIC_TEXCOORD2)) m_Texcoord2.shrink_to_fit();
 		if (HasSemantic(SEMANTIC_TEXCOORD3)) m_Texcoord3.shrink_to_fit();
 	}
+
 }
 unsigned int MeshAsset::AddVertex(XMFLOAT3 &v){
 	m_Vertices.push_back(v);
@@ -175,5 +181,6 @@ unsigned int MeshAsset::AddVertex(XMFLOAT3 &v){
 	if (HasSemantic(SEMANTIC_TEXCOORD1)) m_Texcoord1.push_back(DirectX::XMFLOAT4());
 	if (HasSemantic(SEMANTIC_TEXCOORD2)) m_Texcoord2.push_back(DirectX::XMFLOAT4());
 	if (HasSemantic(SEMANTIC_TEXCOORD3)) m_Texcoord3.push_back(DirectX::XMFLOAT4());
+	if (m_Vertices.size() > 65535) Use32BitIndices(true);
 	return (unsigned int)m_Vertices.size() - 1;
 }

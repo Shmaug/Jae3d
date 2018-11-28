@@ -25,6 +25,7 @@ shared_ptr<MeshRenderer> cube;
 shared_ptr<MeshRenderer> barrel;
 shared_ptr<MeshRenderer> rifle;
 shared_ptr<MeshRenderer> rifle2;
+shared_ptr<MeshRenderer> dragon;
 
 float yaw;
 float pitch;
@@ -46,16 +47,17 @@ void Game::Initialize() {
 	shared_ptr<Shader> shader = AssetDatabase::GetAsset<Shader>("default");
 	shared_ptr<Shader> textured = AssetDatabase::GetAsset<Shader>("textured");
 
-
 	shared_ptr<Mesh> cubeMesh = shared_ptr<Mesh>(new Mesh("Cube"));
 	shared_ptr<Mesh> barrelMesh = AssetDatabase::GetAsset<Mesh>("Barrel");
 	shared_ptr<Mesh> rifleMesh = AssetDatabase::GetAsset<Mesh>("Rifle.Rifle");
+	shared_ptr<Mesh> dragonMesh = AssetDatabase::GetAsset<Mesh>("Dragon");
 
 	cubeMesh->LoadCube(1.0f);
 
 	cubeMesh->Upload();
 	barrelMesh->Upload();
 	rifleMesh->Upload();
+	dragonMesh->Upload();
 
 	shared_ptr<Material> defaultMaterial = shared_ptr<Material>(new Material("Default", shader));
 	shared_ptr<Material> barrelMaterial = shared_ptr<Material>(new Material("Barrel", textured));
@@ -106,6 +108,12 @@ void Game::Initialize() {
 	barrel->m_Material = barrelMaterial;
 	barrel->LocalPosition(0, .574f, 0);
 	barrel->LocalScale(2.75f, 2.75f, 2.75f);
+
+	dragon = shared_ptr<MeshRenderer>(new MeshRenderer("Dragon"));
+	dragon->m_Mesh = dragonMesh;
+	dragon->m_Material = defaultMaterial;
+	dragon->LocalPosition(1, 0, 1);
+	dragon->LocalRotation(XMQuaternionRotationRollPitchYaw(0.f, XMConvertToRadians(25.f), 0.f));
 }
 Game::~Game() {}
 
@@ -188,6 +196,7 @@ void Game::Render(shared_ptr<CommandList> commandList) {
 
 	commandList->SetCamera(camera);
 	cube->Draw(commandList);
+	dragon->Draw(commandList);
 	rifle->Draw(commandList);
 	rifle2->Draw(commandList);
 	barrel->Draw(commandList);
