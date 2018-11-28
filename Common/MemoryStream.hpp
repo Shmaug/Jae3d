@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <exception>
+#include <string>
 
 class MemoryStream {
 public:
@@ -28,8 +29,12 @@ public:
 		return v;
 	}
 
+
 	void Write(const char* ptr, size_t sz);
 	void Read(char* ptr, size_t sz);
+
+	void WriteString(std::string string);
+	std::string ReadString();
 
 	void Fit(size_t s);
 	void Seek(size_t p) { if (p >= m_Size || p < 0) throw new std::exception(); m_Current = p; }

@@ -11,6 +11,7 @@
 #include "d3dx12.hpp"
 
 class CommandQueue;
+class CommandList;
 
 class Window {
 public:
@@ -28,8 +29,8 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
 	_WRL::ComPtr<ID3D12Resource> GetBackBuffer();
 
-	void PrepareRenderTargets(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
-	void Present(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, std::shared_ptr<CommandQueue> commandQueue);
+	void PrepareRenderTargets(std::shared_ptr<CommandList> commandList);
+	void Present(std::shared_ptr<CommandList> commandList, std::shared_ptr<CommandQueue> commandQueue);
 	bool LastFrameCompleted(std::shared_ptr<CommandQueue> commandQueue);
 
 	int GetWidth() const { return m_ClientWidth; }

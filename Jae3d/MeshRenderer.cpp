@@ -3,13 +3,17 @@
 #include "Graphics.hpp"
 #include "Util.hpp"
 
+#include "CommandList.hpp"
+#include "Mesh.hpp"
+#include "Material.hpp"
+
 using namespace Microsoft::WRL;
 using namespace std;
 
-MeshRenderer::MeshRenderer(string name) : Object(name) { Create(); }
+MeshRenderer::MeshRenderer(string name) : Object(name) { Upload(); }
 MeshRenderer::~MeshRenderer() { Release();  }
 
-void MeshRenderer::Create() {
+void MeshRenderer::Upload() {
 	Release();
 
 	auto device = Graphics::GetDevice();
@@ -45,11 +49,10 @@ bool MeshRenderer::UpdateTransform() {
 
 	return true;
 }
-void MeshRenderer::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	if (!m_Mesh) return;
+void MeshRenderer::Draw(shared_ptr<CommandList> commandList) {
+	if (!m_Mesh || !m_Material) return;
 	UpdateTransform();
-
-	commandList->SetGraphicsRootConstantBufferView(0, GetCBuffer());
-
-	m_Mesh->Draw(commandList);
+	commandList->SetMaterial(m_Material);
+	commandList->D3DCommandList()->SetGraphicsRootConstantBufferView(0, GetCBuffer());
+	commandList->DrawMesh(*m_Mesh);
 }

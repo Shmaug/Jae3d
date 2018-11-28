@@ -1,77 +1,84 @@
 #include "Shader.hpp"
 
-#include <winbase.h>
-#include <locale>
-#include <codecvt>
-#include <iostream>
-#include <fstream>
-
 #include <d3d12.h>
-#include <d3dcompiler.h>
 #include <DirectXMath.h>
 
 #include "Graphics.hpp"
 #include "Util.hpp"
 #include "Mesh.hpp"
 #include "RootSignature.hpp"
-#include "AssetDatabase.hpp"
 
 using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Shader::Shader(string name) : ShaderAsset(name) {
-	m_RootSignature = new RootSignature();
-}
-Shader::Shader(string name, MemoryStream &ms) : ShaderAsset(name, ms) {
-	m_RootSignature = new RootSignature();
-}
+Shader::Shader(string name) : ShaderAsset(name) {}
+Shader::Shader(string name, MemoryStream &ms) : ShaderAsset(name, ms) {}
 Shader::~Shader() {
-	delete m_RootSignature;
+	m_States.clear();
 }
 
 bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	if (!m_Created) Create();
-	commandList->SetPipelineState(m_PipelineState.Get());
-	commandList->SetGraphicsRootSignature(m_RootSignature->GetRootSignature().Get());
+	if (!m_Created) Upload();
+	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 	return true;
 }
 
-void Shader::Create(){
-	if (m_Created) return;
-	m_Created = true;
+void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, MeshAsset::SEMANTIC input) {
+	if (m_States.count(input) == 0)
+		m_States.emplace(input, CreatePSO(input));
+	commandList->SetPipelineState(m_States[input].Get());
+}
+ComPtr<ID3D12PipelineState> Shader::CreatePSO(MeshAsset::SEMANTIC input){
 	auto device = Graphics::GetDevice();
 
-	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
-		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	UINT inputElementCount = 0;
+	inputElementCount++; // position
+	if (input & Mesh::SEMANTIC_NORMAL) inputElementCount++;
+	if (input & Mesh::SEMANTIC_TANGENT) inputElementCount++;
+	if (input & Mesh::SEMANTIC_BINORMAL) inputElementCount++;
+	if (input & Mesh::SEMANTIC_COLOR0) inputElementCount++;
+	if (input & Mesh::SEMANTIC_COLOR1) inputElementCount++;
+	if (input & Mesh::SEMANTIC_BLENDINDICES) inputElementCount++;
+	if (input & Mesh::SEMANTIC_BLENDWEIGHT) inputElementCount++;
+	if (input & Mesh::SEMANTIC_TEXCOORD0) inputElementCount++;
+	if (input & Mesh::SEMANTIC_TEXCOORD1) inputElementCount++;
+	if (input & Mesh::SEMANTIC_TEXCOORD2) inputElementCount++;
+	if (input & Mesh::SEMANTIC_TEXCOORD3) inputElementCount++;
 
-	CD3DX12_ROOT_PARAMETER1 rootParams[2];
-	rootParams[0].InitAsConstantBufferView(0, 0);
-	rootParams[1].InitAsConstantBufferView(1, 0);
-
-	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
-		| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
-		| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
-	rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 0, nullptr, rootSignatureFlags);
-
-	ComPtr<ID3DBlob> sigBlob;
-	ComPtr<ID3DBlob> errBlob;
-	ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, sigBlob.GetAddressOf(), errBlob.GetAddressOf()));
-	m_RootSignature->SetRootSignatureDesc(rootSigDesc.Desc_1_1, featureData.HighestVersion);
+	D3D12_INPUT_ELEMENT_DESC* inputElements = new D3D12_INPUT_ELEMENT_DESC[inputElementCount];
+	int i = 0;
+	inputElements[i++] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_NORMAL)
+		inputElements[i++] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_TANGENT)
+		inputElements[i++] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_BINORMAL)
+		inputElements[i++] = { "BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_COLOR0)
+		inputElements[i++] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_COLOR1)
+		inputElements[i++] = { "COLOR", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_BLENDINDICES)
+		inputElements[i++] = { "BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_BLENDWEIGHT) 
+		inputElements[i++] = { "BLENDWEIGHT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_TEXCOORD0)
+		inputElements[i++] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_TEXCOORD1)
+		inputElements[i++] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_TEXCOORD2)
+		inputElements[i++] = { "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (input & Mesh::SEMANTIC_TEXCOORD3)
+		inputElements[i++] = { "TEXCOORD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	DXGI_SAMPLE_DESC sampDesc = {};
 	sampDesc.Count = Graphics::GetMSAASamples();
 	sampDesc.Quality = 0;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
-	state.InputLayout = { Vertex::InputElements, Vertex::InputElementCount };
-	state.pRootSignature = m_RootSignature->GetRootSignature().Get();
+	state.InputLayout = { inputElements, inputElementCount };
+	state.pRootSignature = m_RootSignature.Get();// ->GetRootSignature().Get();
 	if (GetBlob(SHADERSTAGE_VERTEX))	state.VS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_VERTEX));
 	if (GetBlob(SHADERSTAGE_HULL))		state.HS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_HULL));
 	if (GetBlob(SHADERSTAGE_DOMAIN))	state.DS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_DOMAIN));
@@ -87,12 +94,19 @@ void Shader::Create(){
 	state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	state.SampleDesc = sampDesc;
 
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_PipelineState)));
+	ComPtr<ID3D12PipelineState> pso;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&pso)));
 
-	if (GetBlob(SHADERSTAGE_VERTEX))	OutputDebugString("VERTEX  ");
-	if (GetBlob(SHADERSTAGE_HULL))		OutputDebugString("HULL  ");
-	if (GetBlob(SHADERSTAGE_DOMAIN))	OutputDebugString("DOMAIN  ");
-	if (GetBlob(SHADERSTAGE_GEOMETRY))	OutputDebugString("GEOMETRY  ");
-	if (GetBlob(SHADERSTAGE_PIXEL))		OutputDebugString("PIXEL  ");
-	OutputDebugString("\n");
+	delete[] inputElements;
+	return pso;
+}
+
+void Shader::Upload() {
+	if (m_Created) return;
+	
+	ID3DBlob* rsblob = GetBlob(SHADERSTAGE_ROOTSIG);
+	if (rsblob)
+		ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
+	
+	m_Created = true;
 }

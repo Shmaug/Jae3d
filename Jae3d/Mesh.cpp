@@ -5,128 +5,178 @@
 #include "Camera.hpp"
 #include "Util.hpp"
 
+#include "CommandList.hpp"
+
 #include "../Common/MeshAsset.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace std;
 
-
-const D3D12_INPUT_ELEMENT_DESC Vertex::InputElements[] = {
-	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-};
-
-Mesh::Mesh(string name) : MeshAsset(name) {}
-Mesh::Mesh(string name, MemoryStream &ms) : MeshAsset(name, ms) {}
+Mesh::Mesh(string name) : MeshAsset(name), m_DataUploaded(false) {}
+Mesh::Mesh(string name, MemoryStream &ms) : MeshAsset(name, ms), m_DataUploaded(false) {}
 Mesh::~Mesh() { ReleaseGpu(); }
 
-void Mesh::UploadData(ComPtr<ID3D12GraphicsCommandList2> commandList,
-	ID3D12Resource** dst, ID3D12Resource** intermediate,
-	size_t count, size_t stride, const void* data) {
-
-	auto device = Graphics::GetDevice();
-
-	ThrowIfFailed(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(stride * count),
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(dst)));
-
-	ThrowIfFailed(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(count * stride),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(intermediate)));
-
-	D3D12_SUBRESOURCE_DATA subresourceData = {};
-	subresourceData.pData = data;
-	subresourceData.RowPitch = count * stride;
-	subresourceData.SlicePitch = subresourceData.RowPitch;
-
-	UpdateSubresources(commandList.Get(), *dst, *intermediate, 0, 0, 1, &subresourceData);
-}
-
 void Mesh::LoadCube(float s) {
-	vertices = {
-		// top
-		{ XMFLOAT3( s, s,  s), XMFLOAT3(0, 1.0f, 0), XMFLOAT2(1, 1) }, // 0
-		{ XMFLOAT3(-s, s,  s), XMFLOAT3(0, 1.0f, 0), XMFLOAT2(0, 1) }, // 1
-		{ XMFLOAT3( s, s, -s), XMFLOAT3(0, 1.0f, 0), XMFLOAT2(1, 0) }, // 2
-		{ XMFLOAT3(-s, s, -s), XMFLOAT3(0, 1.0f, 0), XMFLOAT2(0, 0) }, // 3
+	HasSemantic(SEMANTIC_NORMAL, true);
+	HasSemantic(SEMANTIC_TEXCOORD0, true);
+	VertexCount(24);
+
+	XMFLOAT3* v = GetVertices();
+	XMFLOAT3* n = GetNormals();
+	XMFLOAT4* t = GetTexcoords(0);
+
+	int i = 0;
+	// top
+	v[i] = XMFLOAT3( s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 0
+	v[i] = XMFLOAT3(-s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 1
+	v[i] = XMFLOAT3( s, s, -s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 2
+	v[i] = XMFLOAT3(-s, s, -s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 3
 		
-		// bottom
-		{ XMFLOAT3( s, -s,  s), XMFLOAT3(0, -1.0f, 0), XMFLOAT2(1, 1) }, // 4
-		{ XMFLOAT3( s, -s, -s), XMFLOAT3(0, -1.0f, 0), XMFLOAT2(1, 0) }, // 5
-		{ XMFLOAT3(-s, -s,  s), XMFLOAT3(0, -1.0f, 0), XMFLOAT2(0, 1) }, // 6
-		{ XMFLOAT3(-s, -s, -s), XMFLOAT3(0, -1.0f, 0), XMFLOAT2(0, 0) }, // 7
+	// bottom
+	v[i] = XMFLOAT3( s, -s,  s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 4
+	v[i] = XMFLOAT3( s, -s, -s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 5
+	v[i] = XMFLOAT3(-s, -s,  s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 6
+	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 7
 		
-		// right
-		{ XMFLOAT3(s,  s,  s), XMFLOAT3(1.0f, 0, 0), XMFLOAT2(1, 1) }, // 8
-		{ XMFLOAT3(s, -s,  s), XMFLOAT3(1.0f, 0, 0), XMFLOAT2(1, 0) }, // 9
-		{ XMFLOAT3(s,  s, -s), XMFLOAT3(1.0f, 0, 0), XMFLOAT2(0, 1) }, // 10
-		{ XMFLOAT3(s, -s, -s), XMFLOAT3(1.0f, 0, 0), XMFLOAT2(0, 0) }, // 11
+	// right
+	v[i] = XMFLOAT3(s,  s,  s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 8
+	v[i] = XMFLOAT3(s, -s,  s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 9
+	v[i] = XMFLOAT3(s,  s, -s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 10
+	v[i] = XMFLOAT3(s, -s, -s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 11
 
-		// left
-		{ XMFLOAT3(-s,  s,  s), XMFLOAT3(-1.0f, 0, 0), XMFLOAT2(1, 1) }, // 12
-		{ XMFLOAT3(-s, -s,  s), XMFLOAT3(-1.0f, 0, 0), XMFLOAT2(1, 0) }, // 13
-		{ XMFLOAT3(-s,  s, -s), XMFLOAT3(-1.0f, 0, 0), XMFLOAT2(0, 1) }, // 14
-		{ XMFLOAT3(-s, -s, -s), XMFLOAT3(-1.0f, 0, 0), XMFLOAT2(0, 0) }, // 15
+	// left
+	v[i] = XMFLOAT3(-s,  s,  s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 12
+	v[i] = XMFLOAT3(-s, -s,  s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 13
+	v[i] = XMFLOAT3(-s,  s, -s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 14
+	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 15
 
-		// forward
-		{ XMFLOAT3( s,  s, -s), XMFLOAT3(0, 0, -1.0f), XMFLOAT2(1, 1) }, // 16
-		{ XMFLOAT3(-s,  s, -s), XMFLOAT3(0, 0, -1.0f), XMFLOAT2(1, 0) }, // 17
-		{ XMFLOAT3( s, -s, -s), XMFLOAT3(0, 0, -1.0f), XMFLOAT2(0, 1) }, // 18
-		{ XMFLOAT3(-s, -s, -s), XMFLOAT3(0, 0, -1.0f), XMFLOAT2(0, 0) }, // 19
+	// forward
+	v[i] = XMFLOAT3( s,  s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(1, 1, 0, 0); // 16
+	v[i] = XMFLOAT3(-s,  s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(1, 0, 0, 0); // 17
+	v[i] = XMFLOAT3( s, -s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(0, 1, 0, 0); // 18
+	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(0, 0, 0, 0); // 19
 
-		// back
-		{ XMFLOAT3( s,  s, s), XMFLOAT3(0, 0, 1.0f), XMFLOAT2(1, 1) }, // 20
-		{ XMFLOAT3( s, -s, s), XMFLOAT3(0, 0, 1.0f), XMFLOAT2(0, 1) }, // 21
-		{ XMFLOAT3(-s,  s, s), XMFLOAT3(0, 0, 1.0f), XMFLOAT2(1, 0) }, // 22
-		{ XMFLOAT3(-s, -s, s), XMFLOAT3(0, 0, 1.0f), XMFLOAT2(0, 0) }, // 23
-	};
+	// back
+	v[i] = XMFLOAT3( s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(1, 1, 0, 0); // 20
+	v[i] = XMFLOAT3( s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(0, 1, 0, 0); // 21
+	v[i] = XMFLOAT3(-s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(1, 0, 0, 0); // 22
+	v[i] = XMFLOAT3(-s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(0, 0, 0, 0); // 23
 
-	AddTriangle(0, 1, 2);
-	AddTriangle(2, 1, 3);
-	AddTriangle(4, 5, 6);
-	AddTriangle(6, 5, 7);
-	AddTriangle(8, 10, 9);
-	AddTriangle(9, 10, 11);
-	AddTriangle(12, 13, 14);
-	AddTriangle(14, 13, 15);
-	AddTriangle(16, 17, 18);
-	AddTriangle(18, 17, 19);
-	AddTriangle(20, 21, 22);
-	AddTriangle(22, 21, 23);
+	AddTriangle(1,  0,  2);
+	AddTriangle(1,  2,  3);
+	AddTriangle(5,  4,  6);
+	AddTriangle(5,  6,  7);
+	AddTriangle(10, 8,  9);
+	AddTriangle(10, 9,  11);
+	AddTriangle(13, 12, 14);
+	AddTriangle(13, 14, 15);
+	AddTriangle(17, 16, 18);
+	AddTriangle(17, 18, 19);
+	AddTriangle(21, 20, 22);
+	AddTriangle(21, 22, 23);
 }
 
-void Mesh::Create() {
-	if (m_Created) return;
-	m_Created = true;
-	if (vertices.size() < 3 || IndexCount() < 3) return;
+inline size_t Write(char* buffer, uint32_t* v) {
+	char* t = (char*)v;
+	for (int i = 0; i < sizeof(uint32_t); i++)
+		buffer[i] = t[i];
+	return sizeof(uint32_t);
+}
+inline size_t Write(char* buffer, float* v) {
+	char* t = (char*)v;
+	for (int i = 0; i < sizeof(float); i++)
+		buffer[i] = t[i];
+	return sizeof(float);
+}
+inline size_t Write(char* buffer, XMFLOAT3* v) {
+	size_t l = 0;
+	l += Write(buffer + l, &v->x);
+	l += Write(buffer + l, &v->y);
+	l += Write(buffer + l, &v->z);
+	return l;
+}
+inline size_t Write(char* buffer, XMFLOAT4* v) {
+	size_t l = 0;
+	l += Write(buffer + l, &v->x);
+	l += Write(buffer + l, &v->y);
+	l += Write(buffer + l, &v->z);
+	l += Write(buffer + l, &v->w);
+	return l;
+}
+inline size_t Write(char* buffer, XMUINT4* v) {
+	size_t l = 0;
+	l += Write(buffer + l, &v->x);
+	l += Write(buffer + l, &v->y);
+	l += Write(buffer + l, &v->z);
+	l += Write(buffer + l, &v->w);
+	return l;
+}
 
-	auto device = Graphics::GetDevice();
-	auto commandList = Graphics::GetCommandQueue()->GetCommandList();
+char* Mesh::CreateVertexArray(size_t &vertexSize) {
+	vertexSize = 0;
+	vertexSize += sizeof(float) * 3;
+	if (HasSemantic(SEMANTIC_NORMAL)) vertexSize += sizeof(float) * 3;
+	if (HasSemantic(SEMANTIC_TANGENT)) vertexSize += sizeof(float) * 3;
+	if (HasSemantic(SEMANTIC_BINORMAL)) vertexSize += sizeof(float) * 3;
+	if (HasSemantic(SEMANTIC_COLOR0)) vertexSize += sizeof(float) * 4;
+	if (HasSemantic(SEMANTIC_COLOR1)) vertexSize += sizeof(float) * 4;
+	if (HasSemantic(SEMANTIC_BLENDINDICES)) vertexSize += sizeof(uint32_t) * 4;
+	if (HasSemantic(SEMANTIC_BLENDWEIGHT)) vertexSize += sizeof(float) * 4;
+	if (HasSemantic(SEMANTIC_TEXCOORD0)) vertexSize += sizeof(float) * 4;
+	if (HasSemantic(SEMANTIC_TEXCOORD1)) vertexSize += sizeof(float) * 4;
+	if (HasSemantic(SEMANTIC_TEXCOORD2)) vertexSize += sizeof(float) * 4;
+	if (HasSemantic(SEMANTIC_TEXCOORD3)) vertexSize += sizeof(float) * 4;
 
-	m_IndexCount = (UINT)IndexCount();
+	char* buffer = new char[VertexCount() * vertexSize];
+
+	for (unsigned int i = 0; i < VertexCount(); i++) {
+		char* j = buffer + vertexSize * i;
+
+		j += Write(j, &GetVertices()[i]);
+		if (HasSemantic(SEMANTIC_NORMAL)) j += Write(j, &GetNormals()[i]);
+		if (HasSemantic(SEMANTIC_TANGENT)) j += Write(j, &GetTangents()[i]);
+		if (HasSemantic(SEMANTIC_BINORMAL)) j += Write(j, &GetBinormals()[i]);
+		if (HasSemantic(SEMANTIC_COLOR0)) j += Write(j, &GetColors(0)[i]);
+		if (HasSemantic(SEMANTIC_COLOR1)) j += Write(j, &GetColors(1)[i]);
+		if (HasSemantic(SEMANTIC_BLENDINDICES)) j += Write(j, &GetBlendIndices()[i]);
+		if (HasSemantic(SEMANTIC_BLENDWEIGHT)) j += Write(j, &GetBlendWeights()[i]);
+		if (HasSemantic(SEMANTIC_TEXCOORD0)) j += Write(j, &GetTexcoords(0)[i]);
+		if (HasSemantic(SEMANTIC_TEXCOORD1)) j += Write(j, &GetTexcoords(1)[i]);
+		if (HasSemantic(SEMANTIC_TEXCOORD2)) j += Write(j, &GetTexcoords(2)[i]);
+		if (HasSemantic(SEMANTIC_TEXCOORD3)) j += Write(j, &GetTexcoords(3)[i]);
+	}
+
+	return buffer;
+}
+
+void Mesh::Upload() {
+	if (VertexCount() < 3 || IndexCount() < 3) return;
+	ReleaseGpu();
+
+	// Create vertex array
+	size_t vsize;
+	char* varray = CreateVertexArray(vsize);
+
+	auto commandQueue = Graphics::GetCommandQueue();
+	auto commandList = commandQueue->GetCommandList();
 
 	ComPtr<ID3D12Resource> ivb;
-	UploadData(commandList, &m_VertexBuffer, &ivb, vertices.size(), sizeof(Vertex), vertices.data());
-	ComPtr<ID3D12Resource> iib;
-	if (Use32BitIndices())
-		UploadData(commandList, &m_IndexBuffer, &iib, IndexCount(), sizeof(uint32_t), reinterpret_cast<uint32_t*>(GetIndices32()));
-	else
-		UploadData(commandList, &m_IndexBuffer, &iib, IndexCount(), sizeof(uint32_t), reinterpret_cast<uint16_t*>(GetIndices16()));
+	Graphics::UploadData(commandList, &m_VertexBuffer, &ivb, VertexCount(), vsize, varray);
+	ivb->SetName(L"Vertex Buffer Upload");
 
 	m_VertexBufferView.BufferLocation = m_VertexBuffer->GetGPUVirtualAddress();
-	m_VertexBufferView.SizeInBytes = (UINT)vertices.size() * sizeof(Vertex);
-	m_VertexBufferView.StrideInBytes = sizeof(Vertex);
-	
+	m_VertexBufferView.SizeInBytes = VertexCount() * (UINT)vsize;
+	m_VertexBufferView.StrideInBytes = (UINT)vsize;
+
+	ComPtr<ID3D12Resource> iib;
+	if (Use32BitIndices())
+		Graphics::UploadData(commandList, &m_IndexBuffer, &iib, IndexCount(), sizeof(uint32_t), GetIndices32());
+	else
+		Graphics::UploadData(commandList, &m_IndexBuffer, &iib, IndexCount(), sizeof(uint32_t), GetIndices16());
+	iib->SetName(L"Index Buffer Upload");
+
+	m_IndexCount = (UINT)IndexCount();
 	m_IndexBufferView.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress();
 	if (Use32BitIndices()) {
 		m_IndexBufferView.SizeInBytes = m_IndexCount * sizeof(uint32_t);
@@ -136,24 +186,25 @@ void Mesh::Create() {
 		m_IndexBufferView.Format = DXGI_FORMAT_R16_UINT;
 	}
 
-	Graphics::TransitionResource(commandList, m_VertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	Graphics::TransitionResource(commandList, m_IndexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+	commandList->TransitionResource(m_VertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	commandList->TransitionResource(m_IndexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
-	ivb->SetName(L"Vertex Buffer Upload");
 	m_VertexBuffer->SetName(L"Vertex Buffer");
-	iib->SetName(L"Index Buffer Upload");
 	m_IndexBuffer->SetName(L"Index Buffer");
 
-	auto commandQueue = Graphics::GetCommandQueue();
-	auto fenceValue = commandQueue->Execute(commandList);
-	commandQueue->WaitForFenceValue(fenceValue);
+	commandQueue->WaitForFenceValue(commandQueue->Execute(commandList));
+
+	delete[] varray;
+	m_DataUploaded = true;
 }
 
 void Mesh::ReleaseGpu() {
 	m_VertexBuffer.Reset();
 	m_IndexBuffer.Reset();
+	m_DataUploaded = false;
 }
 void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+	if (!m_DataUploaded) return;
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
 	commandList->IASetIndexBuffer(&m_IndexBufferView);

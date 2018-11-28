@@ -12,20 +12,29 @@ using namespace std;
 ShaderAsset::ShaderAsset(string name) : Asset(name) {}
 ShaderAsset::ShaderAsset(string name, MemoryStream &ms) : Asset(name) {
 	uint8_t mask = ms.Read<uint8_t>();
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 7; i++) {
 		if (mask & (1 << i)) {
 			uint64_t size = ms.Read<uint64_t>();
 			if (FAILED(D3DCreateBlob(size, &m_Blobs[i]))) throw exception();
 			ms.Read(reinterpret_cast<char*>(m_Blobs[i]->GetBufferPointer()), size);
 		}
 	}
+
+	uint32_t pcount = ms.Read<uint32_t>();
+	for (unsigned int i = 0; i < pcount; i++) {
+		string name = ms.ReadString();
+		PARAM_TYPE type = (PARAM_TYPE)ms.Read<uint32_t>();
+		uint32_t index = ms.Read<uint32_t>();
+		AddParameter(name, Parameter(type, index));
+	}
 }
 ShaderAsset::~ShaderAsset() {
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < 7; i++)
 		if (m_Blobs[i]) {
 			m_Blobs[i]->Release();
 			m_Blobs[i] = nullptr;
 		}
+	m_Params.clear();
 }
 uint64_t ShaderAsset::TypeId() { return (uint64_t)AssetFile::TYPEID_SHADER; }
 
@@ -44,6 +53,10 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, SHADERS
 
 	switch (stage) {
 	default:
+	case SHADERSTAGE_ROOTSIG:
+		profile = "rootsig_1_1";
+		defines.push_back({ "" });
+		break;
 	case SHADERSTAGE_VERTEX:
 		profile = "vs_5_1";
 		defines.push_back({ "SHADER_STAGE_VERTEX", "" });
@@ -79,12 +92,12 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, SHADERS
 	//			n = i + 1;
 	//	printf("%S: Compiling %s with %s\n", file.substr(n, file.length() - n).c_str(), entryPoint.c_str(), profile);
 	//}
+
 	ID3DBlob *errorBlob = nullptr;
 	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), profile, flags, 0, &m_Blobs[stage], &errorBlob);
 	
 	if (errorBlob) {
-		const char *msg = reinterpret_cast<const char*>(errorBlob->GetBufferPointer());
-		perror(msg);
+		perror(reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
 		errorBlob->Release();
 	}
 	return hr;
@@ -93,14 +106,21 @@ HRESULT ShaderAsset::CompileShaderStage(wstring file, string entryPoint, SHADERS
 void ShaderAsset::WriteData(MemoryStream &ms) {
 	Asset::WriteData(ms);
 	uint8_t mask = 0;
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < 7; i++)
 		if (m_Blobs[i])
 			mask |= 1 << i;
 	ms.Write(mask);
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 7; i++) {
 		if (m_Blobs[i]) {
 			ms.Write((uint64_t)m_Blobs[i]->GetBufferSize());
 			ms.Write(reinterpret_cast<const char*>(m_Blobs[i]->GetBufferPointer()), m_Blobs[i]->GetBufferSize());
 		}
+	}
+
+	ms.Write((uint32_t)m_Params.size());
+	for (auto const&[name, p] : m_Params) {
+		ms.WriteString(name);
+		ms.Write((uint32_t)p.Type());
+		ms.Write(p.Index());
 	}
 }

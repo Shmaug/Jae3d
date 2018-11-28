@@ -35,10 +35,6 @@ public:
 	void LocalScale(DirectX::XMVECTOR s) { m_LocalScale = s; SetTransformsDirty(); }
 	void LocalPosition(float x, float y, float z) { LocalPosition(DX::XMVectorSet(x, y, z, 0)); }
 	void LocalScale(float x, float y, float z) { LocalScale(DX::XMVectorSet(x, y, z, 0)); }
-	// World-space setters
-	void WorldRotation(DX::XMVECTOR r);
-	void WorldPosition(DX::XMVECTOR p) { m_WorldPosition = p; LocalPosition(DX::XMVector3Transform(p, WorldToObject())); }
-	void WorldPosition(float x, float y, float z) { WorldPosition(DX::XMVectorSet(x, y, z, 0)); }
 
 	void Parent(std::shared_ptr<Object> p);
 	std::shared_ptr<Object> Parent() { return m_Parent; }

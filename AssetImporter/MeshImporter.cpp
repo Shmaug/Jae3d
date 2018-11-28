@@ -64,7 +64,7 @@ float XMGET(XMFLOAT4 v, int i) {
 		return 0;
 	}
 }
-void XMSET(XMINT4 &v, int i, int val) {
+void XMSET(XMUINT4 &v, int i, unsigned int val) {
 	switch (i) {
 	case 0:
 		v.x = val;
@@ -84,29 +84,34 @@ void XMSET(XMINT4 &v, int i, int val) {
 MeshAsset* Convert(aiMesh *aimesh){
 	MeshAsset *mesh = new MeshAsset(string(aimesh->mName.C_Str()));
 
-	mesh->HasNormals(aimesh->HasNormals());
-	mesh->HasTangents(aimesh->HasTangentsAndBitangents());
-	mesh->HasBitangents(aimesh->HasTangentsAndBitangents());
-	mesh->HasColors(aimesh->HasVertexColors(0));
-	mesh->HasBones(aimesh->HasBones());
-	for (int k = 0; k < 8; k++)
-		mesh->HasTexcoords(k, aimesh->HasTextureCoords(k));
+	mesh->HasSemantic(MeshAsset::SEMANTIC_NORMAL, aimesh->HasNormals());
+	mesh->HasSemantic(MeshAsset::SEMANTIC_TANGENT, aimesh->HasTangentsAndBitangents());
+	mesh->HasSemantic(MeshAsset::SEMANTIC_BINORMAL, aimesh->HasTangentsAndBitangents());
+	mesh->HasSemantic(MeshAsset::SEMANTIC_COLOR0, aimesh->HasVertexColors(0));
+	mesh->HasSemantic(MeshAsset::SEMANTIC_COLOR1, aimesh->HasVertexColors(1));
+	mesh->HasSemantic(MeshAsset::SEMANTIC_BLENDINDICES, aimesh->HasBones());
+	mesh->HasSemantic(MeshAsset::SEMANTIC_BLENDWEIGHT, aimesh->HasBones());
+	mesh->HasSemantic(MeshAsset::SEMANTIC_TEXCOORD0, aimesh->HasTextureCoords(0));
+	mesh->HasSemantic(MeshAsset::SEMANTIC_TEXCOORD1, aimesh->HasTextureCoords(1));
+	mesh->HasSemantic(MeshAsset::SEMANTIC_TEXCOORD2, aimesh->HasTextureCoords(2));
+	mesh->HasSemantic(MeshAsset::SEMANTIC_TEXCOORD3, aimesh->HasTextureCoords(3));
 
 	mesh->VertexCount(aimesh->mNumVertices);
 
-	for (uint32_t i = 0; i < aimesh->mNumVertices; i++) {
+	for (unsigned int i = 0; i < aimesh->mNumVertices; i++) {
 		mesh->GetVertices()[i] = ai2dx(aimesh->mVertices[i]);
 		if (aimesh->HasNormals())
 			mesh->GetNormals()[i] = ai2dx(aimesh->mNormals[i]);
 		if (aimesh->HasTangentsAndBitangents()) {
 			mesh->GetTangents()[i] = ai2dx(aimesh->mTangents[i]);
-			mesh->GetBitangents()[i] = ai2dx(aimesh->mBitangents[i]);
+			mesh->GetBinormals()[i] = ai2dx(aimesh->mBitangents[i]);
 		}
 
-		if (aimesh->HasVertexColors(0))
-			mesh->GetColors()[i] = ai2dx(aimesh->mColors[0][i]);
+		for (int k = 0; k < 2; k++)
+			if (aimesh->HasVertexColors(k))
+				mesh->GetColors(k)[i] = ai2dx(aimesh->mColors[k][i]);
 
-		for (int k = 0; k < 8; k++)
+		for (int k = 0; k < 4; k++)
 			if (aimesh->HasTextureCoords(k)) {
 				XMFLOAT3 v = ai2dx(aimesh->mTextureCoords[k][i]);
 				mesh->GetTexcoords(k)[i].x = v.x;
@@ -116,14 +121,14 @@ MeshAsset* Convert(aiMesh *aimesh){
 			}
 	}
 
-	for (uint32_t i = 0; i < aimesh->mNumFaces; i++) {
+	for (unsigned int i = 0; i < aimesh->mNumFaces; i++) {
 		const struct aiFace *face = &aimesh->mFaces[i];
-		for (uint32_t j = 2; j < face->mNumIndices; j++)
+		for (unsigned int j = 2; j < face->mNumIndices; j++)
 			mesh->AddTriangle(face->mIndices[j], face->mIndices[j - 1], face->mIndices[j - 2]);
 	}
 
 	if (aimesh->HasBones()) {
-		XMINT4*   bi = mesh->GetBlendIndices();
+		XMUINT4*   bi = mesh->GetBlendIndices();
 		XMFLOAT4* bw = mesh->GetBlendWeights();
 
 		for (uint32_t j = 0; j < aimesh->mNumBones; j++) {
@@ -158,7 +163,8 @@ MeshAsset* Convert(aiMesh *aimesh){
 }
 
 Asset** MeshImporter::Import(string path, int &count) {
-	const aiScene *scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = aiImportFile(path.c_str(), 
+		aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_MakeLeftHanded | aiProcess_FlipUVs);
 	string fname = GetNameExt(path);
 
 	count = 0;

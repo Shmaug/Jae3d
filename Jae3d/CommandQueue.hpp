@@ -1,11 +1,15 @@
 #pragma once
 
+#include <memory>
+
 #include <wrl.h>
 #define _WRL Microsoft::WRL
 
 #include <d3d12.h>
 #include <cstdint>
 #include <queue>
+
+class CommandList;
 
 class CommandQueue {
 public:
@@ -18,13 +22,13 @@ public:
 	void Flush();
 
 	_WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const;
-	_WRL::ComPtr<ID3D12GraphicsCommandList2> GetCommandList();
+	std::shared_ptr<CommandList> GetCommandList();
 
-	uint64_t Execute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	uint64_t Execute(std::shared_ptr<CommandList> commandList);
 
 private:
 	_WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
-	_WRL::ComPtr<ID3D12GraphicsCommandList2> CreateCommandList(_WRL::ComPtr<ID3D12CommandAllocator> allocator);
+	std::shared_ptr<CommandList> CreateCommandList(_WRL::ComPtr<ID3D12CommandAllocator> allocator);
 	
 	struct CommandAllocatorEntry {
 		uint64_t fenceValue;
@@ -39,6 +43,6 @@ private:
 	uint64_t m_FenceValue;
 
 	std::queue<CommandAllocatorEntry> m_CommandAllocatorQueue;
-	std::queue<_WRL::ComPtr<ID3D12GraphicsCommandList2>> m_CommandListQueue;
+	std::queue<std::shared_ptr<CommandList>> m_CommandListQueue;
 };
 

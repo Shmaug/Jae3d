@@ -7,15 +7,6 @@ using namespace std;
 Object::Object(std::string name) : m_Name(name) {}
 Object::~Object() {}
 
-// TODO World space setters/getters don't really work
-void Object::WorldRotation(XMVECTOR r) {
-	m_WorldRotation = r;
-	if (m_Parent)
-		LocalRotation(XMQuaternionInverse(m_Parent->WorldRotation()) * r);
-	else
-		LocalRotation(r);
-}
-
 bool Object::UpdateTransform() {
 	if (!m_TransformDirty) return false;
 

@@ -236,15 +236,18 @@
   <ItemGroup>
     <ClCompile Include="AssetDatabase.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CommandList.cpp" />
     <ClCompile Include="CommandQueue.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="jae.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Profiler.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="RootSignature.cpp" />
     <ClCompile Include="Shader.cpp" />
@@ -253,16 +256,20 @@
   <ItemGroup>
     <ClInclude Include="AssetDatabase.hpp" />
     <ClInclude Include="Camera.hpp" />
+    <ClInclude Include="CommandList.hpp" />
     <ClInclude Include="CommandQueue.hpp" />
     <ClInclude Include="Graphics.hpp" />
     <ClInclude Include="Input.hpp" />
+    <ClInclude Include="jae.hpp" />
     <ClInclude Include="KeyCode.hpp" />
     <ClInclude Include="d3dx12.hpp" />
     <ClInclude Include="Game.hpp" />
+    <ClInclude Include="Material.hpp" />
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="MeshRenderer.hpp" />
     <ClInclude Include="Object.hpp" />
     <ClInclude Include="Profiler.hpp" />
+    <ClInclude Include="Texture.hpp" />
     <ClInclude Include="Window.hpp" />
     <ClInclude Include="RootSignature.hpp" />
     <ClInclude Include="Shader.hpp" />

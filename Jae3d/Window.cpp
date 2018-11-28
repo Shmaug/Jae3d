@@ -4,6 +4,8 @@
 #include "CommandQueue.hpp"
 #include "Util.hpp"
 
+#include "CommandList.hpp"
+
 using namespace Microsoft::WRL;
 using namespace std;
 
@@ -294,18 +296,20 @@ ComPtr<ID3D12Resource> Window::GetBackBuffer() {
 	return m_RenderBuffers[m_CurrentBackBufferIndex];
 }
 
-void Window::PrepareRenderTargets(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	Graphics::TransitionResource(commandList, m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+void Window::PrepareRenderTargets(std::shared_ptr<CommandList> commandList) {
+	commandList->TransitionResource(m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
-void Window::Present(ComPtr<ID3D12GraphicsCommandList2> commandList, shared_ptr<CommandQueue> commandQueue){
+void Window::Present(std::shared_ptr<CommandList> commandList, shared_ptr<CommandQueue> commandQueue){
 	auto backBuffer = GetBackBuffer();
 
+	auto d3dCommmandList = commandList->D3DCommandList();
+
 	// Resolve msaa buffers
-	Graphics::TransitionResource(commandList, m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
-	Graphics::TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RESOLVE_DEST);
-	commandList->ResolveSubresource(backBuffer.Get(), 0, m_msaaRenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-	Graphics::TransitionResource(commandList, backBuffer.Get(), D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT);
+	commandList->TransitionResource(m_msaaRenderTarget.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+	commandList->TransitionResource(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+	d3dCommmandList->ResolveSubresource(backBuffer.Get(), 0, m_msaaRenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	commandList->TransitionResource(backBuffer.Get(), D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT);
 
 	// Execute the command list
 	m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Execute(commandList);

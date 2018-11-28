@@ -17,6 +17,21 @@ MemoryStream::~MemoryStream() {
 	if (m_Buffer) delete[] m_Buffer;
 }
 
+void MemoryStream::WriteString(string string) {
+	Write(string.c_str(), string.length() + 1);
+}
+string MemoryStream::ReadString() {
+	size_t start = m_Current;
+	while (m_Current < m_Size) {
+		if (m_Buffer[m_Current] == '\0') {
+			m_Current++;
+			return string(m_Buffer + start, m_Buffer + m_Current - 1);
+		}
+		m_Current++;
+	}
+	return string(m_Buffer + start, m_Buffer + m_Current);
+}
+
 void MemoryStream::Write(const char* ptr, size_t sz) {
 	if (m_Current + sz > m_Size) {
 		if (!m_Expand) throw new std::exception();

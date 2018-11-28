@@ -1,15 +1,12 @@
 #include "Graphics.hpp"
-#include <process.h>
 
 #include "Profiler.hpp"
 #include "Util.hpp"
-#include "RootSignature.hpp"
 #include "CommandQueue.hpp"
-#include "Camera.hpp"
-#include "Mesh.hpp"
-#include "Shader.hpp"
 #include "Window.hpp"
 #include "Game.hpp"
+
+#include "CommandList.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -21,6 +18,7 @@ D3D12_RECT Graphics::m_ScissorRect;
 bool Graphics::m_Initialized = false;
 
 shared_ptr<Window> Graphics::m_Window;
+
 shared_ptr<CommandQueue> Graphics::m_DirectCommandQueue;
 shared_ptr<CommandQueue> Graphics::m_ComputeCommandQueue;
 shared_ptr<CommandQueue> Graphics::m_CopyCommandQueue;
@@ -81,12 +79,13 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice() {
 	
 	return d3d12Device2;
 }
-ComPtr<ID3D12DescriptorHeap> Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors) {
+ComPtr<ID3D12DescriptorHeap> Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags) {
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = type;
+	desc.Flags = flags;
 
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
 
@@ -169,10 +168,6 @@ UINT Graphics::GetMSAASamples() {
 #pragma endregion
 
 #pragma region runtime
-void Graphics::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to) {
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), from, to);
-	commandList->ResourceBarrier(1, &barrier);
-}
 
 void Graphics::Initialize(HWND hWnd) {
 #if defined(_DEBUG)
@@ -199,17 +194,19 @@ void Graphics::Initialize(HWND hWnd) {
 void Graphics::Render(Game *game) {
 	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList();
+	auto d3dCommandList = commandList->D3DCommandList();
 
 	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)m_Window->GetWidth(), (float)m_Window->GetHeight());
-	commandList->RSSetViewports(1, &vp);
-	commandList->RSSetScissorRects(1, &m_ScissorRect);
+	d3dCommandList->RSSetViewports(1, &vp);
+	d3dCommandList->RSSetScissorRects(1, &m_ScissorRect);
 
 	// Draw scene
+
 	m_Window->PrepareRenderTargets(commandList);
 
 	auto rtv = m_Window->GetCurrentRenderTargetView();
 	auto dsv = m_Window->GetDepthStencilView();
-	commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+	d3dCommandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
 	game->Render(commandList);
 
@@ -254,3 +251,33 @@ void Graphics::Destroy(){
 	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->Flush();
 }
 #pragma endregion
+
+void Graphics::UploadData(shared_ptr<CommandList> commandList,
+	ID3D12Resource** dst, ID3D12Resource** intermediate,
+	size_t count, size_t stride, const void* data) {
+
+	auto device = Graphics::GetDevice();
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(stride * count),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(dst)));
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(count * stride),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(intermediate)));
+
+	D3D12_SUBRESOURCE_DATA subresourceData = {};
+	subresourceData.pData = data;
+	subresourceData.RowPitch = count * stride;
+	subresourceData.SlicePitch = subresourceData.RowPitch;
+
+	UpdateSubresources(commandList->D3DCommandList().Get(), *dst, *intermediate, 0, 0, 1, &subresourceData);
+}

@@ -10,22 +10,7 @@
 
 #include "../Common/MeshAsset.hpp"
 
-struct Vertex {
-	static const int InputElementCount = 3;
-	static const D3D12_INPUT_ELEMENT_DESC InputElements[InputElementCount];
-
-	DirectX::XMFLOAT3 position;
-	DirectX::XMFLOAT3 normal;
-	DirectX::XMFLOAT2 uv;
-
-	Vertex() { }
-	Vertex(const DirectX::XMFLOAT3 &position, const DirectX::XMFLOAT3 &normal, const DirectX::XMFLOAT2 &uv) : position(position), normal(normal), uv(uv) {}
-	Vertex(DirectX::FXMVECTOR position, DirectX::FXMVECTOR normal, DirectX::FXMVECTOR uv) {
-		XMStoreFloat3(&this->position, position);
-		XMStoreFloat3(&this->normal, normal);
-		XMStoreFloat2(&this->uv, uv);
-	}
-};
+class CommandList;
 
 class Mesh : public MeshAsset {
 public:
@@ -34,19 +19,16 @@ public:
 	~Mesh();
 
 	void LoadCube(float size);
-	void Create();
+	void Upload();
 	void ReleaseGpu();
 
+private:
+	friend class CommandList;
 	void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
-private:
-	bool m_Created = false;
-	std::vector<Vertex> vertices;
+	char* CreateVertexArray(size_t &vsize);
 
-	void UploadData(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
-		ID3D12Resource** dst,
-		ID3D12Resource** intermediate,
-		size_t count, size_t stride, const void* data);
+	bool m_DataUploaded = false;
 
 	_WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
 	_WRL::ComPtr<ID3D12Resource> m_IndexBuffer;

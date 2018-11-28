@@ -11,9 +11,7 @@
 #include "CommandQueue.hpp"
 #include "Window.hpp"
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <Windowsx.h>
+#include "jae.hpp"
 
 // In order to define a function called CreateWindow, the Windows macro needs to
 // be undefined.
@@ -188,7 +186,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			int height = clientRect.bottom - clientRect.top;
 
 			window->Resize();
-			g_Game->OnResize();
+			if (g_Game) g_Game->OnResize();
 		}
 		break;
 		case WM_DESTROY:
@@ -260,11 +258,10 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		OutputDebugString("Failed to register raw input device(s)\n");
 
 	Graphics::Initialize(hWnd);
-	AssetDatabase::LoadAssets("common.asset");
-	g_Game = new Game();
-	g_Game->Initialize(Graphics::GetCommandQueue()->GetCommandList());
-
 	ShowWindow(hWnd, SW_SHOW);
+
+	g_Game = new Game();
+	g_Game->Initialize();
 
 	// Main loop
 	bool run = true;

@@ -17,11 +17,9 @@
 #include "d3dx12.hpp"
 
 class CommandQueue;
+class CommandList;
 class Game;
-class Mesh;
-class Shader;
 class Window;
-class Camera;
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -48,15 +46,13 @@ public:
 	static void Render(Game *game);
 	static bool FrameReady();
 
-	static void TransitionResource(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, _WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
-	static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+	static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 	
 	static bool CheckTearingSupport();
 	static DXGI_SAMPLE_DESC GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags);
-
-	static void Graphics::SetShader(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, Shader* shader);
-	static void Graphics::SetCamera(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, std::shared_ptr<Camera> camera);
-
+	
+	static void UploadData(std::shared_ptr<CommandList> commandList, ID3D12Resource** dst, ID3D12Resource** intermediate,
+		size_t count, size_t stride, const void* data);
 private:
 	// Set to true once the DX12 objects have been initialized.
 	static bool m_Initialized;

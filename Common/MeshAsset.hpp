@@ -8,13 +8,19 @@
 
 class MeshAsset : public Asset {
 public:
-	enum MESHFLAGS {
-		MESHFLAG_NONE = 0,
-		MESHFLAG_HASNORMALS = 1,
-		MESHFLAG_HASTANGENTS = 2,
-		MESHFLAG_HASBITANGENTS = 4,
-		MESHFLAG_HASCOLORS = 8,
-		MESHFLAG_HASBONES = 16,
+	enum SEMANTIC {
+		SEMANTIC_POSITION = 0, // always have position
+		SEMANTIC_NORMAL = 1,
+		SEMANTIC_TANGENT = 2,
+		SEMANTIC_BINORMAL = 4,
+		SEMANTIC_COLOR0 = 8,
+		SEMANTIC_COLOR1 = 16,
+		SEMANTIC_BLENDINDICES = 32,
+		SEMANTIC_BLENDWEIGHT = 64,
+		SEMANTIC_TEXCOORD0 = 128,
+		SEMANTIC_TEXCOORD1 = 256,
+		SEMANTIC_TEXCOORD2 = 512,
+		SEMANTIC_TEXCOORD3 = 1024,
 	};
 
 	struct Bone {
@@ -50,88 +56,167 @@ public:
 	}
 
 	unsigned int VertexCount() const { return (unsigned int)m_Vertices.size(); }
-	unsigned int IndexCount() const { if (m_32BitIndices) return (unsigned int)m_Indices32.size(); else return (unsigned int)m_Indices16.size(); }
+	unsigned int IndexCount() const { return(unsigned int)(m_32BitIndices ? m_Indices32.size() : m_Indices16.size()); }
 	void VertexCount(unsigned int size, bool shrink = true);
 	
 	unsigned int AddVertex(DirectX::XMFLOAT3 &v);
 
-	void HasNormals(bool v) {
-		if (HasNormals() == v) return;
+	void HasSemantic(SEMANTIC s, bool v) {
+		if (s == SEMANTIC_POSITION || HasSemantic(s) == v) return;
 		if (v) {
-			m_Flags = (MESHFLAGS)(m_Flags | MESHFLAG_HASNORMALS);
-			m_Normals.resize(VertexCount());
+			m_Semantics = (SEMANTIC)(m_Semantics | s);
+			switch (s) {
+			case SEMANTIC_NORMAL:
+				m_Normals.resize(VertexCount());
+				break;
+			case SEMANTIC_TANGENT:
+				m_Tangents.resize(VertexCount());
+				break;
+			case SEMANTIC_BINORMAL:
+				m_Binormals.resize(VertexCount());
+				break;
+			case SEMANTIC_COLOR0:
+				m_Color0.resize(VertexCount());
+				break;
+			case SEMANTIC_COLOR1:
+				m_Color1.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_BLENDINDICES:
+				m_BlendIndices.resize(VertexCount());
+				break;
+			case SEMANTIC_BLENDWEIGHT:
+				m_BlendWeights.resize(VertexCount());
+				break;
+			case SEMANTIC_TEXCOORD0:
+				m_Texcoord0.resize(VertexCount());
+				break;
+			case SEMANTIC_TEXCOORD1:
+				m_Texcoord1.resize(VertexCount());
+				break;
+			case SEMANTIC_TEXCOORD2:
+				m_Texcoord2.resize(VertexCount());
+				break;
+			case SEMANTIC_TEXCOORD3:
+				m_Texcoord3.resize(VertexCount());
+				break;
+			}
 		} else {
-			m_Flags = (MESHFLAGS)(m_Flags & ~MESHFLAG_HASNORMALS);
-			m_Normals.swap(std::vector<DirectX::XMFLOAT3>());
+			m_Semantics = (SEMANTIC)(m_Semantics & ~s);
+			switch (s) {
+			case SEMANTIC_NORMAL:
+				m_Normals.swap(std::vector<DirectX::XMFLOAT3>());
+				break;
+			case SEMANTIC_TANGENT:
+				m_Tangents.swap(std::vector<DirectX::XMFLOAT3>(VertexCount()));
+				break;
+			case SEMANTIC_BINORMAL:
+				m_Binormals.swap(std::vector<DirectX::XMFLOAT3>(VertexCount()));
+				break;
+			case SEMANTIC_COLOR0:
+				m_Color0.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_COLOR1:
+				m_Color1.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_BLENDINDICES:
+				m_BlendIndices.swap(std::vector<DirectX::XMUINT4>(VertexCount()));
+				break;
+			case SEMANTIC_BLENDWEIGHT:
+				m_BlendWeights.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_TEXCOORD0:
+				m_Texcoord0.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_TEXCOORD1:
+				m_Texcoord1.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_TEXCOORD2:
+				m_Texcoord2.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			case SEMANTIC_TEXCOORD3:
+				m_Texcoord3.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				break;
+			}
 		}
 	}
-	void HasTangents(bool v) {
-		if (HasTangents() == v) return;
-		if (v) {
-			m_Flags = (MESHFLAGS)(m_Flags | MESHFLAG_HASTANGENTS);
-			m_Tangents.resize(VertexCount());
-		} else {
-			m_Flags = (MESHFLAGS)(m_Flags & ~MESHFLAG_HASTANGENTS);
-			m_Tangents.swap(std::vector<DirectX::XMFLOAT3>());
-		}
-	}
-	void HasBitangents(bool v) {
-		if (HasBitangents() == v) return;
-		if (v) {
-			m_Flags = (MESHFLAGS)(m_Flags | MESHFLAG_HASBITANGENTS);
-			m_Bitangents.resize(VertexCount());
-		} else {
-			m_Flags = (MESHFLAGS)(m_Flags & ~MESHFLAG_HASBITANGENTS);
-			m_Bitangents.swap(std::vector<DirectX::XMFLOAT3>());
-		}
-	}
-	void HasTexcoords(int i, bool v) {
-		if (HasTexcoords(i) == v) return;
-		if (v) {
-			m_TexMask |= 1 << i;
-			m_Texcoords[i].resize(VertexCount());
-		} else {
-			m_TexMask &= ~(1 << i);
-			m_Texcoords[i].swap(std::vector<DirectX::XMFLOAT4>());
-		}
-	}
-	void HasColors(bool v) {
-		if (HasColors() == v) return;
-		if (v) {
-			m_Flags = (MESHFLAGS)(m_Flags | MESHFLAG_HASCOLORS);
-			m_Colors.resize(VertexCount());
-		} else {
-			m_Flags = (MESHFLAGS)(m_Flags & ~MESHFLAG_HASCOLORS);
-			m_Colors.swap(std::vector<DirectX::XMFLOAT4>());
-		}
-	}
-	void HasBones(bool v) {
-		if (HasBones() == v) return;
-		if (v) {
-			m_Flags = (MESHFLAGS)(m_Flags | MESHFLAG_HASBONES);
-			m_BlendIndices.resize(VertexCount());
-			m_BlendWeights.resize(VertexCount());
-		} else {
-			m_Flags = (MESHFLAGS)(m_Flags & ~MESHFLAG_HASBONES);
-			m_BlendIndices.swap(std::vector<DirectX::XMINT4>());
-			m_BlendWeights.swap(std::vector<DirectX::XMFLOAT4>());
-		}
-	}
+	bool HasSemantic(SEMANTIC s) const { if (s == SEMANTIC_POSITION) return true; return m_Semantics & s; }
+	SEMANTIC Semantics() const { return m_Semantics; }
 
-	bool HasNormals() const { return m_Flags & MESHFLAG_HASNORMALS; }
-	bool HasTangents() const { return m_Flags & MESHFLAG_HASTANGENTS; }
-	bool HasBitangents() const { return m_Flags & MESHFLAG_HASBITANGENTS; }
-	bool HasTexcoords(const int channel) const { return m_TexMask & (1 << channel); }
-	bool HasColors() const { return m_Flags & MESHFLAG_HASCOLORS; }
-	bool HasBones() const { return m_Flags & MESHFLAG_HASBONES; }
+	template<typename T>
+	T* GetSemantic(SEMANTIC s) {
+		switch (s) {
+		case SEMANTIC_POSITION:
+			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
+			return m_Vertices.data();
+			break;
+		case SEMANTIC_NORMAL:
+			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
+			return m_Normals.data();
+			break;
+		case SEMANTIC_TANGENT:
+			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
+			return m_Tangents.data();
+			break;
+		case SEMANTIC_BINORMAL:
+			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
+			return m_Binormals.data();
+			break;
+		case SEMANTIC_COLOR0:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_Color0.data();
+			break;
+		case SEMANTIC_COLOR1:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_Color1.data();
+			break;
+		case SEMANTIC_BLENDINDICES:
+			static_assert(std::is_same(T, DirectX::XMUINT4), "T must be XMUINT4");
+			return m_BlendIndices.data();
+			break;
+		case SEMANTIC_BLENDWEIGHT:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_BlendWeights.data();
+			break;
+		case SEMANTIC_TEXCOORD0:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_Texcoord0.data();
+			break;
+		case SEMANTIC_TEXCOORD1:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_Texcoord1.data();
+			break;
+		case SEMANTIC_TEXCOORD2:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_Texcoord2.data();
+			break;
+		case SEMANTIC_TEXCOORD3:
+			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
+			return m_Texcoord3.data();
+			break;
+		}
+	}
 
 	DirectX::XMFLOAT3* GetVertices() { return m_Vertices.data(); }
 	DirectX::XMFLOAT3* GetNormals() { return m_Normals.data(); }
 	DirectX::XMFLOAT3* GetTangents() { return m_Tangents.data(); }
-	DirectX::XMFLOAT3* GetBitangents() { return m_Bitangents.data(); }
-	DirectX::XMFLOAT4* GetTexcoords(const int channel) { return m_Texcoords[channel].data(); }
-	DirectX::XMFLOAT4* GetColors() { return m_Colors.data(); }
-	DirectX::XMINT4*   GetBlendIndices() { return m_BlendIndices.data(); }
+	DirectX::XMFLOAT3* GetBinormals() { return m_Binormals.data(); }
+	DirectX::XMFLOAT4* GetTexcoords(const int channel) {
+		switch (channel) {
+		default:
+		case 0: return m_Texcoord0.data();
+		case 1: return m_Texcoord1.data();
+		case 2: return m_Texcoord2.data();
+		case 3: return m_Texcoord3.data();
+		}
+	}
+	DirectX::XMFLOAT4* GetColors(const int channel) {
+		switch (channel) {
+		default:
+		case 0: return m_Color0.data();
+		case 1: return m_Color1.data();
+		}
+	}
+	DirectX::XMUINT4*  GetBlendIndices() { return m_BlendIndices.data(); }
 	DirectX::XMFLOAT4* GetBlendWeights() { return m_BlendWeights.data(); }
 
 	uint16_t* GetIndices16() { return m_Indices16.data(); }
@@ -141,17 +226,20 @@ public:
 private:
 	bool m_32BitIndices = false;
 
-	MESHFLAGS m_Flags;
-	uint8_t m_TexMask;
+	SEMANTIC m_Semantics = SEMANTIC_POSITION;
 
 	std::vector<Bone> bones;
 	std::vector<DirectX::XMFLOAT3> m_Vertices;
 	std::vector<DirectX::XMFLOAT3> m_Normals;
 	std::vector<DirectX::XMFLOAT3> m_Tangents;
-	std::vector<DirectX::XMFLOAT3> m_Bitangents;
-	std::vector<DirectX::XMFLOAT4> m_Texcoords[8];
-	std::vector<DirectX::XMFLOAT4> m_Colors;
-	std::vector<DirectX::XMINT4>   m_BlendIndices;
+	std::vector<DirectX::XMFLOAT3> m_Binormals;
+	std::vector<DirectX::XMFLOAT4> m_Texcoord0;
+	std::vector<DirectX::XMFLOAT4> m_Texcoord1;
+	std::vector<DirectX::XMFLOAT4> m_Texcoord2;
+	std::vector<DirectX::XMFLOAT4> m_Texcoord3;
+	std::vector<DirectX::XMFLOAT4> m_Color0;
+	std::vector<DirectX::XMFLOAT4> m_Color1;
+	std::vector<DirectX::XMUINT4>  m_BlendIndices;
 	std::vector<DirectX::XMFLOAT4> m_BlendWeights;
 	std::vector<uint16_t> m_Indices16;
 	std::vector<uint32_t> m_Indices32;

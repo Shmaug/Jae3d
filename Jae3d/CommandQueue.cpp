@@ -2,6 +2,9 @@
 #include "Util.hpp"
 #include <assert.h>
 
+#include "CommandList.hpp"
+
+using namespace std;
 using namespace Microsoft::WRL;
 
 CommandQueue::CommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type) : m_FenceValue(0), m_CommandListType(type), m_d3d12Device(device) {
@@ -42,9 +45,9 @@ void CommandQueue::Flush() {
 ComPtr<ID3D12CommandQueue> CommandQueue::GetCommandQueue() const {
 	return m_d3d12CommandQueue;
 }
-ComPtr<ID3D12GraphicsCommandList2> CommandQueue::GetCommandList() {
+shared_ptr<CommandList> CommandQueue::GetCommandList() {
 	ComPtr<ID3D12CommandAllocator> commandAllocator;
-	ComPtr<ID3D12GraphicsCommandList2> commandList;
+	shared_ptr<CommandList> commandList;
 
 	if (!m_CommandAllocatorQueue.empty() && IsFenceComplete(m_CommandAllocatorQueue.front().fenceValue)) {
 		commandAllocator = m_CommandAllocatorQueue.front().commandAllocator;
@@ -56,13 +59,13 @@ ComPtr<ID3D12GraphicsCommandList2> CommandQueue::GetCommandList() {
 	if (!m_CommandListQueue.empty()) {
 		commandList = m_CommandListQueue.front();
 		m_CommandListQueue.pop();
-		ThrowIfFailed(commandList->Reset(commandAllocator.Get(), nullptr));
+		commandList->Reset(commandAllocator);
 	} else
 		commandList = CreateCommandList(commandAllocator);
 
 	// Associate the command allocator with the command list so that it can be
 	// retrieved when the command list is executed.
-	ThrowIfFailed(commandList->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), commandAllocator.Get()));
+	ThrowIfFailed(commandList->D3DCommandList()->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), commandAllocator.Get()));
 
 	return commandList;
 }
@@ -73,20 +76,18 @@ ComPtr<ID3D12CommandAllocator> CommandQueue::CreateCommandAllocator() {
 	ThrowIfFailed(m_d3d12Device->CreateCommandAllocator(m_CommandListType, IID_PPV_ARGS(&commandAllocator)));
 	return commandAllocator;
 }
-ComPtr<ID3D12GraphicsCommandList2> CommandQueue::CreateCommandList(ComPtr<ID3D12CommandAllocator> allocator) {
-	ComPtr<ID3D12GraphicsCommandList2> commandList;
-	ThrowIfFailed(m_d3d12Device->CreateCommandList(0, m_CommandListType, allocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
-	return commandList;
+shared_ptr<CommandList> CommandQueue::CreateCommandList(ComPtr<ID3D12CommandAllocator> allocator) {
+	return make_shared<CommandList>(m_d3d12Device, m_CommandListType, allocator);
 }
 
-uint64_t CommandQueue::Execute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	commandList->Close();
+uint64_t CommandQueue::Execute(shared_ptr<CommandList> commandList) {
+	commandList->D3DCommandList()->Close();
 
 	ID3D12CommandAllocator* commandAllocator;
 	UINT dataSize = sizeof(commandAllocator);
-	ThrowIfFailed(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
+	ThrowIfFailed(commandList->D3DCommandList()->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
 
-	ID3D12CommandList* const ppCommandLists[] = { commandList.Get() };
+	ID3D12CommandList* const ppCommandLists[] = { commandList->D3DCommandList().Get() };
 
 	m_d3d12CommandQueue->ExecuteCommandLists(1, ppCommandLists);
 	uint64_t fenceValue = Signal();

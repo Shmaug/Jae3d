@@ -8,7 +8,10 @@
 #include <d3d12.h>
 
 #include "Object.hpp"
-#include "Mesh.hpp"
+
+class CommandList;
+class Mesh;
+class Material;
 
 class MeshRenderer : public Object {
 protected:
@@ -18,16 +21,15 @@ public:
 	MeshRenderer(std::string name);
 	~MeshRenderer();
 
-	void SetMesh(std::shared_ptr<Mesh> m) { if (m) m->Create(); m_Mesh = m; }
-	std::shared_ptr<Mesh> GetMesh() const { return m_Mesh; }
-
-	void Create();
+	void Upload();
 	void Release();
 	D3D12_GPU_VIRTUAL_ADDRESS GetCBuffer() { if (m_TransformDirty) UpdateTransform(); return m_CBuffer->GetGPUVirtualAddress(); }
-	void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	void Draw(std::shared_ptr<CommandList> commandList);
+
+	std::shared_ptr<Material> m_Material;
+	std::shared_ptr<Mesh> m_Mesh;
 
 private:
-	std::shared_ptr<Mesh> m_Mesh;
 	struct ObjectBuffer {
 	public:
 		DirectX::XMFLOAT4X4 ObjectToWorld;

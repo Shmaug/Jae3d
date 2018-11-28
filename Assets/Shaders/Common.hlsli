@@ -11,3 +11,10 @@ struct ObjectBuffer {
 
 ConstantBuffer<ObjectBuffer> Object : register(b0);
 ConstantBuffer<CameraBuffer> Camera : register(b1);
+
+#pragma Parameter cbv CameraBuffer
+#pragma Parameter cbv ObjectBuffer
+
+#define RootSigCommon \
+	"CBV(b0, space = 0)," \
+	"CBV(b1, space = 0),"

@@ -14,8 +14,6 @@ public:
 	Camera(std::string name);
 	~Camera();
 
-	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
-
 	float FieldOfView() const { return m_FieldOfView; }
 	float Aspect() const { return m_Aspect; }
 	float Near() const { return m_Near; }
@@ -34,6 +32,9 @@ public:
 	void ReleaseCB();
 
 private:
+	friend class CommandList;
+	bool SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+
 	float m_FieldOfView = 70.0f;
 	float m_Aspect = 1.0f;
 	float m_Near = .01f;

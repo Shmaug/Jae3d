@@ -4,6 +4,7 @@
 
 #include "Mesh.hpp"
 #include "Shader.hpp"
+#include "Texture.hpp"
 
 #include <d3d12.h>
 
@@ -25,7 +26,7 @@ void AssetDatabase::LoadAssets(string file) {
 			t = new Shader(a[i].name, *a[i].buffer);
 			break;
 		case AssetFile::TYPEID_TEXTURE:
-			//assets[i] = new Texture(name, mems);
+			t = new Texture(a[i].name, *a[i].buffer);
 			break;
 		}
 

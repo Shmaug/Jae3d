@@ -10,8 +10,9 @@ using namespace Microsoft::WRL;
 Camera::Camera(std::string name) : Object(name) {}
 Camera::~Camera() { ReleaseCB(); }
 
-void Camera::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList){
+bool Camera::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList){
 	commandList->SetGraphicsRootConstantBufferView(1, GetCBuffer());
+	return true;
 }
 
 bool Camera::UpdateTransform(){
@@ -19,8 +20,8 @@ bool Camera::UpdateTransform(){
 
 	XMVECTOR fwd = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), WorldRotation());
 	XMVECTOR up = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), WorldRotation());
-	m_View = XMMatrixLookAtRH(WorldPosition(), WorldPosition() + fwd, up);
-	m_Projection = XMMatrixPerspectiveFovRH(XMConvertToRadians(m_FieldOfView), m_Aspect, m_Near, m_Far);
+	m_View = XMMatrixLookToLH(WorldPosition(), fwd, up);
+	m_Projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FieldOfView), m_Aspect, m_Near, m_Far);
 	m_ViewProjection = m_View * m_Projection;
 
 	XMStoreFloat4x4(&m_CameraBufferData.View, m_View);
