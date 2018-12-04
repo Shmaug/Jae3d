@@ -1,6 +1,7 @@
 #include "AssetDatabase.hpp"
 #include "../Common/Asset.hpp"
 #include "../Common/AssetFile.hpp"
+#include "../Common/TextureAsset.hpp"
 
 #include "Mesh.hpp"
 #include "Shader.hpp"
@@ -10,9 +11,9 @@
 
 using namespace std;
 
-unordered_map<string, shared_ptr<Asset>> AssetDatabase::assets;
+jmap<jstring, shared_ptr<Asset>> AssetDatabase::assets;
 
-void AssetDatabase::LoadAssets(string file) {
+void AssetDatabase::LoadAssets(jstring file) {
 	int count;
 	AssetFile::AssetData* a = AssetFile::Read(file, count);
 	for (int i = 0; i < count; i++) {
@@ -30,7 +31,10 @@ void AssetDatabase::LoadAssets(string file) {
 			break;
 		}
 
-		if (t) assets.emplace(t->m_Name, shared_ptr<Asset>(t));
+		if (t) {
+			t->mGroup = file;
+			assets.emplace(t->mName, shared_ptr<Asset>(t));
+		}
 	}
 	delete[] a;
 }
@@ -38,6 +42,6 @@ void AssetDatabase::UnloadAssets() {
 	assets.clear();
 }
 
-shared_ptr<Asset> AssetDatabase::GetAsset(string name) {
-	return assets[name];
+shared_ptr<Asset> AssetDatabase::GetAsset(jstring name) {
+	return assets.at(name);
 }

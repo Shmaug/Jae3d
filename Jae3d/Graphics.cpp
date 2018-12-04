@@ -1,10 +1,8 @@
 #include "Graphics.hpp"
 
 #include "Profiler.hpp"
-#include "Util.hpp"
 #include "CommandQueue.hpp"
 #include "Window.hpp"
-#include "Game.hpp"
 
 #include "CommandList.hpp"
 
@@ -13,18 +11,16 @@ using namespace DirectX;
 using namespace std;
 
 #pragma region static variable initialization
-D3D12_RECT Graphics::m_ScissorRect;
+bool Graphics::mInitialized = false;
 
-bool Graphics::m_Initialized = false;
+shared_ptr<Window> Graphics::mWindow;
 
-shared_ptr<Window> Graphics::m_Window;
-
-shared_ptr<CommandQueue> Graphics::m_DirectCommandQueue;
-shared_ptr<CommandQueue> Graphics::m_ComputeCommandQueue;
-shared_ptr<CommandQueue> Graphics::m_CopyCommandQueue;
+shared_ptr<CommandQueue> Graphics::mDirectCommandQueue;
+shared_ptr<CommandQueue> Graphics::mComputeCommandQueue;
+shared_ptr<CommandQueue> Graphics::mCopyCommandQueue;
 
 // DirectX 12 Objects
-ComPtr<ID3D12Device2> Graphics::m_Device;
+ComPtr<ID3D12Device2> Graphics::mDevice;
 #pragma endregion
 
 #pragma region resource creation
@@ -87,7 +83,7 @@ ComPtr<ID3D12DescriptorHeap> Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEA
 	desc.Type = type;
 	desc.Flags = flags;
 
-	ThrowIfFailed(m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+	ThrowIfFailed(mDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
 
 	return descriptorHeap;
 }
@@ -97,11 +93,11 @@ ComPtr<ID3D12DescriptorHeap> Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEA
 shared_ptr<CommandQueue> Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
 	switch (type) {
 	case D3D12_COMMAND_LIST_TYPE_DIRECT:
-		return m_DirectCommandQueue;
+		return mDirectCommandQueue;
 	case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-		return m_ComputeCommandQueue;
+		return mComputeCommandQueue;
 	case D3D12_COMMAND_LIST_TYPE_COPY:
-		return m_CopyCommandQueue;
+		return mCopyCommandQueue;
 	default:
 		assert(false && "Invalide command queue type.");
 	}
@@ -162,8 +158,11 @@ bool Graphics::CheckTearingSupport() {
 	return allowTearing == TRUE;
 }
 
+DXGI_FORMAT Graphics::GetDisplayFormat() { return mWindow->GetDisplayFormat(); }
+DXGI_FORMAT Graphics::GetDepthFormat() { return mWindow->GetDepthFormat(); }
+
 UINT Graphics::GetMSAASamples() {
-	return m_Window->GetMSAASamples();
+	return mWindow->GetMSAASamples();
 }
 #pragma endregion
 
@@ -179,49 +178,19 @@ void Graphics::Initialize(HWND hWnd) {
 	debugInterface->EnableDebugLayer();
 #endif
 
-	m_Device = CreateDevice();
+	mDevice = CreateDevice();
 
-	m_DirectCommandQueue = std::make_shared<CommandQueue>(m_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-	m_ComputeCommandQueue = std::make_shared<CommandQueue>(m_Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-	m_CopyCommandQueue = std::make_shared<CommandQueue>(m_Device, D3D12_COMMAND_LIST_TYPE_COPY);
+	mDirectCommandQueue = std::make_shared<CommandQueue>(mDevice, D3D12_COMMAND_LIST_TYPE_DIRECT);
+	mComputeCommandQueue = std::make_shared<CommandQueue>(mDevice, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+	mCopyCommandQueue = std::make_shared<CommandQueue>(mDevice, D3D12_COMMAND_LIST_TYPE_COPY);
 
-	m_Window = std::make_shared<Window>(hWnd, 3);
+	mWindow = std::make_shared<Window>(hWnd, 3);
 
-	m_ScissorRect = CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX);
-
-	m_Initialized = true;
+	mInitialized = true;
 }
-void Graphics::Render(Game *game) {
-	Profiler::BeginSample("Draw");
-	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = commandQueue->GetCommandList();
-	auto d3dCommandList = commandList->D3DCommandList();
 
-	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)m_Window->GetWidth(), (float)m_Window->GetHeight());
-	d3dCommandList->RSSetViewports(1, &vp);
-	d3dCommandList->RSSetScissorRects(1, &m_ScissorRect);
-
-	// Draw scene
-
-	m_Window->PrepareRenderTargets(commandList);
-
-	auto rtv = m_Window->GetCurrentRenderTargetView();
-	auto dsv = m_Window->GetDepthStencilView();
-	d3dCommandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-
-	game->Render(commandList);
-	Profiler::EndSample();
-
-	Profiler::BeginSample("Present");
-	m_Window->Present(commandList, commandQueue);
-
-	// TODO actually handle preparing the next frame while the GPU renders the last frame
-	// instead of just waiting for the GPU to finish here
-	commandQueue->Flush();
-	Profiler::EndSample();
-}
 bool Graphics::FrameReady() {
-	return m_Window->LastFrameCompleted(GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT));
+	return mWindow->LastFrameCompleted(GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT));
 }
 
 DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) {
@@ -235,7 +204,7 @@ DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UIN
 
 	/*
 	while (qualityLevels.SampleCount <= numSamples &&
-		SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) &&
+		SUCCEEDED(mDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) &&
 		qualityLevels.NumQualityLevels > 0) {
 
 		sampleDesc.Count = qualityLevels.SampleCount;

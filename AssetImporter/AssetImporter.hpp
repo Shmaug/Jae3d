@@ -1,8 +1,6 @@
 #pragma once
 
-#include <iostream>
-#include <string>
-#include <vector>
+#include "../Common/jstring.hpp"
 
 class Asset;
 class TextureAsset;
@@ -12,19 +10,19 @@ class AssetImporter {
 public:
 	static bool verbose;
 
-	static Asset** ImportObj(std::string file, int &count);
-	static Asset** ImportFbx(std::string file, int &count);
-	static Asset** ImportBlend(std::string file, int &count);
+	static Asset** ImportObj(jstring file, int &count);
+	static Asset** ImportFbx(jstring file, int &count);
+	static Asset** ImportBlend(jstring file, int &count);
 	
-	static TextureAsset* ImportPng(std::string file);
-	static TextureAsset* ImportGif(std::string file);
-	static TextureAsset* ImportBmp(std::string file);
-	static TextureAsset* ImportTif(std::string file);
-	static TextureAsset* ImportJpg(std::string file);
-	static TextureAsset* ImportDDS(std::string file);
-	static TextureAsset* ImportTga(std::string file);
+	static TextureAsset* ImportPng(jstring file);
+	static TextureAsset* ImportGif(jstring file);
+	static TextureAsset* ImportBmp(jstring file);
+	static TextureAsset* ImportTif(jstring file);
+	static TextureAsset* ImportJpg(jstring file);
+	static TextureAsset* ImportDDS(jstring file);
+	static TextureAsset* ImportTga(jstring file);
 		
-	static ShaderAsset* ImportShader(std::string file);
-	static ShaderAsset* CompileShader(std::string file);
+	static ShaderAsset* ImportShader(jstring file);
+	static ShaderAsset* CompileShader(jstring file);
 };
 

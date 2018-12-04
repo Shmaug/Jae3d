@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Util.hpp"
+
 #include "KeyCode.hpp"
 #include <DirectXMath.h>
 
 class Input {
 public:
-	static bool m_LockMouse;
+	static bool mLockMouse;
 
 	static void OnKeyDownEvent(KeyCode::Key key, bool state);
 	static void OnMouseMoveEvent(int x, int y);

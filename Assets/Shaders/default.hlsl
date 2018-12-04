@@ -1,16 +1,18 @@
-#pragma warning(disable : 3568)
+#pragma warning(disable : 3568) // unrecognized pragma
 #pragma rootsig RootSig
 #pragma vertex vsmain
 #pragma pixel psmain
 
 #include "Common.hlsli"
+#include "PBR.hlsli"
 
 #define RootSig \
 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |" \
 	      "DENY_DOMAIN_SHADER_ROOT_ACCESS |" \
           "DENY_GEOMETRY_SHADER_ROOT_ACCESS |" \
           "DENY_HULL_SHADER_ROOT_ACCESS )," \
-RootSigCommon
+RootSigCommon \
+RootSigPBR
 
 struct appdata {
 	float3 vertex : POSITION;
@@ -19,6 +21,7 @@ struct appdata {
 struct v2f {
 	float4 pos : SV_Position;
 	float3 normal : NORMAL;
+	float3 worldPos : TEXCOORD0;
 };
 
 v2f vsmain(appdata v) {
@@ -29,16 +32,14 @@ v2f vsmain(appdata v) {
 
 	o.pos = mul(Camera.ViewProjection, wp);
 	o.normal = wn;
+	o.worldPos = wp.xyz;
 
 	return o;
 }
 
 float4 psmain(v2f i) : SV_Target{
-	float3 LightCol = float3(1.0, 1.0, 1.0);
-	float3 LightDir = normalize(float3(.25, -.5, -1.0));
+	float3 view = normalize(i.worldPos - Camera.CameraPosition.xyz);
 
-	float3 color = 1.0;
-	color *= .025 + LightCol * saturate(dot(normalize(i.normal.xyz), -LightDir));
-
-	return float4(color, 1.0);
+	float3 light = UnityBRDF(1.0, .5, 0, normalize(i.normal), -view, -Light.LightDir0.xyz, Light.LightCol0.rgb);
+	return float4(light, 1.0);
 }

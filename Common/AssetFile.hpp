@@ -1,6 +1,9 @@
 #pragma once
 
-#include <vector>
+#include "../Jae3d/Util.hpp"
+#include "jstring.hpp"
+#include "jvector.hpp"
+
 #include <fstream>
 
 class Asset;
@@ -15,20 +18,20 @@ public:
 		TYPEID_TEXTURE = 3,
 	};
 	struct AssetData {
-		std::string name;
+		jstring name;
 		TYPEID type;
 		MemoryStream* buffer;
 
 		AssetData() : name(""), type(TYPEID_UNSPECIFIED), buffer(nullptr) {}
-		AssetData(std::string n, TYPEID t, MemoryStream* buf) : name(n), type(t), buffer(buf) {}
+		AssetData(jstring n, TYPEID t, MemoryStream* buf) : name(n), type(t), buffer(buf) {}
 		~AssetData();
 	};
 
-	static AssetData* Read(const std::string file, int &count);
-	static void Write(const std::string file, std::vector<Asset*> &assets, bool compress, uint64_t version = (uint64_t)0001);
+	static AssetData* Read(jstring file, int &count);
+	static void Write(jstring file, Asset** assets, size_t count, bool compress, uint64_t version = (uint64_t)0001);
 
 private:
 	static AssetData* AssetFile::Read_V1(std::istream &fs, int &count);
-	static void AssetFile::Write_V1(std::ostream &os, std::vector<Asset*> &assets, bool compress);
+	static void AssetFile::Write_V1(std::ostream &os, Asset** assets, size_t count, bool compress);
 };
 

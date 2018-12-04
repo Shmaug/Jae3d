@@ -1,11 +1,11 @@
 #pragma once
 
-#include <memory>
+#include "Util.hpp"
 
 #include <wrl.h>
-#define _WRL Microsoft::WRL
-
 #include <d3d12.h>
+
+#include <memory>
 #include <cstdint>
 #include <queue>
 
@@ -35,14 +35,14 @@ private:
 		_WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 	};
 
-	D3D12_COMMAND_LIST_TYPE m_CommandListType;
-	_WRL::ComPtr<ID3D12Device2> m_d3d12Device;
-	_WRL::ComPtr<ID3D12CommandQueue> m_d3d12CommandQueue;
-	_WRL::ComPtr<ID3D12Fence> m_d3d12Fence;
-	HANDLE m_FenceEvent;
-	uint64_t m_FenceValue;
+	D3D12_COMMAND_LIST_TYPE mCommandListType;
+	_WRL::ComPtr<ID3D12Device2> md3d12Device;
+	_WRL::ComPtr<ID3D12CommandQueue> md3d12CommandQueue;
+	_WRL::ComPtr<ID3D12Fence> md3d12Fence;
+	HANDLE mFenceEvent;
+	uint64_t mFenceValue;
 
-	std::queue<CommandAllocatorEntry> m_CommandAllocatorQueue;
-	std::queue<std::shared_ptr<CommandList>> m_CommandListQueue;
+	std::queue<CommandAllocatorEntry> mCommandAllocatorQueue;
+	std::queue<std::shared_ptr<CommandList>> mCommandListQueue;
 };
 

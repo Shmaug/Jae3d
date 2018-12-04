@@ -9,36 +9,36 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="Header Files\Importers">
-      <UniqueIdentifier>{c4dadd25-6288-4242-9ae6-597f54b65683}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Importers">
-      <UniqueIdentifier>{1363fd42-a31d-4800-9427-a4978f2fa8da}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TextureImporter.cpp">
-      <Filter>Source Files\Importers</Filter>
+    <ClCompile Include="AssetImporter.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MeshImporter.cpp">
-      <Filter>Source Files\Importers</Filter>
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AssetImporter.cpp">
-      <Filter>Source Files\Importers</Filter>
+    <ClCompile Include="TextureImporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderImporter.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="TextureImporter.hpp">
-      <Filter>Header Files\Importers</Filter>
+    <ClInclude Include="AssetImporter.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MeshImporter.hpp">
-      <Filter>Header Files\Importers</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AssetImporter.hpp">
-      <Filter>Header Files\Importers</Filter>
+    <ClInclude Include="TextureImporter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderImporter.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

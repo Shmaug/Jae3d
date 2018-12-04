@@ -1,48 +1,47 @@
 #pragma once
 
-#include "Object.hpp"
-#include "d3dx12.hpp"
-
+#include <DirectXMath.h>
 #include <wrl.h>
-#define _WRL Microsoft::WRL
+
+#include "Util.hpp"
+
+#include "Object.hpp"
+
+class ConstantBuffer;
 
 class Camera : public Object {
 protected:
 	bool UpdateTransform();
 
 public:
-	Camera(std::string name);
+	Camera(jstring name);
 	~Camera();
 
-	float FieldOfView() const { return m_FieldOfView; }
-	float Aspect() const { return m_Aspect; }
-	float Near() const { return m_Near; }
-	float Far() const { return m_Far; }
-	void FieldOfView(float f) { m_FieldOfView = f; m_TransformDirty = true; }
-	void Aspect(float a) { m_Aspect = a; m_TransformDirty = true; }
-	void Near(float n) { m_Near = n; m_TransformDirty = true; }
-	void Far(float f) { m_Far = f; m_TransformDirty = true; }
-	D3D12_GPU_VIRTUAL_ADDRESS GetCBuffer() { if (m_TransformDirty) UpdateTransform(); return m_CBuffer->GetGPUVirtualAddress(); }
+	float FieldOfView() const { return mFieldOfView; }
+	float Aspect() const { return mAspect; }
+	float Near() const { return mNear; }
+	float Far() const { return mFar; }
+	void FieldOfView(float f) { mFieldOfView = f; mTransformDirty = true; }
+	void Aspect(float a) { mAspect = a; mTransformDirty = true; }
+	void Near(float n) { mNear = n; mTransformDirty = true; }
+	void Far(float f) { mFar = f; mTransformDirty = true; }
 
-	DirectX::XMMATRIX View() { if (m_TransformDirty) UpdateTransform(); return m_View; }
-	DirectX::XMMATRIX Projection() { if (m_TransformDirty) UpdateTransform(); return m_Projection; }
-	DirectX::XMMATRIX ViewProjection() { if (m_TransformDirty) UpdateTransform(); return m_ViewProjection; }
-
-	void CreateCB();
-	void ReleaseCB();
+	DirectX::XMMATRIX View() { if (mTransformDirty) UpdateTransform(); return mView; }
+	DirectX::XMMATRIX Projection() { if (mTransformDirty) UpdateTransform(); return mProjection; }
+	DirectX::XMMATRIX ViewProjection() { if (mTransformDirty) UpdateTransform(); return mViewProjection; }
 
 private:
 	friend class CommandList;
 	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
-	float m_FieldOfView = 70.0f;
-	float m_Aspect = 1.0f;
-	float m_Near = .01f;
-	float m_Far = 1000.0f;
+	float mFieldOfView = 70.0f;
+	float mAspect = 1.0f;
+	float mNear = .01f;
+	float mFar = 1000.0f;
 
-	DirectX::XMMATRIX m_View;
-	DirectX::XMMATRIX m_Projection;
-	DirectX::XMMATRIX m_ViewProjection;
+	DirectX::XMMATRIX mView;
+	DirectX::XMMATRIX mProjection;
+	DirectX::XMMATRIX mViewProjection;
 
 	struct CameraBuffer {
 	public:
@@ -50,8 +49,7 @@ private:
 		DirectX::XMFLOAT4X4 Projection;
 		DirectX::XMFLOAT4X4 ViewProjection;
 		DirectX::XMFLOAT3 CameraPosition;
-	} m_CameraBufferData;
-	_WRL::ComPtr<ID3D12Resource> m_CBuffer;
-	UINT8* m_MappedCBuffer;
+	} mCameraBufferData;
+	std::shared_ptr<ConstantBuffer> mCBuffer;
 };
 

@@ -1,20 +1,29 @@
-#pragma once
+#pragma warning(disable:4251)
+#ifndef UTIL_HPP
+#define UTIL_HPP
 
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h> // For HRESULT
-#include <shellapi.h> // For CommandLineToArgvW
-#include <algorithm>
+#include <Windows.h>
 
-// From DXSampleHelper.h 
-// Source: https://github.com/Microsoft/DirectX-Graphics-Samples
+#include <exception>
+#include <intrin.h>
+
+#define _WRL Microsoft::WRL
+
 inline void ThrowIfFailed(HRESULT hr) {
 	if (FAILED(hr)) {
 		throw std::exception();
 	}
 }
 
-int PrintFormattedf(char *buf, int size, const char* format, float number);
-int PrintFormattedl(char *buf, int size, unsigned long number);
+inline void WINAPIV OutputDebugf(LPCSTR fmt, ...) {
+	TCHAR s[1025];
+	va_list args;
+	va_start(args, fmt);
+	wvsprintf(s, fmt, args);
+	va_end(args);
+	OutputDebugString(s);
+}
 
 template <typename T>
 inline T AlignUpWithMask(T value, size_t mask) {
@@ -32,3 +41,27 @@ template <typename T>
 inline T AlignDown(T value, size_t alignment) {
 	return AlignDownWithMask(value, alignment - 1);
 }
+
+template <typename T>
+inline T DivideByMultiple(T value, size_t alignment) {
+	return (T)((value + alignment - 1) / alignment);
+}
+
+template <typename T>
+inline bool IsPowerOfTwo(T value) {
+	return 0 == (value & (value - 1));
+}
+
+inline unsigned char Log2(size_t value) {
+	unsigned long mssb; // most significant set bit
+	unsigned long lssb; // least significant set bit
+
+	// If perfect power of two (only one set bit), return index of bit.  Otherwise round up
+	// fractional log by adding 1 to most signicant set bit's index.
+	if (_BitScanReverse64(&mssb, value) > 0 && _BitScanForward64(&lssb, value) > 0)
+		return unsigned char(mssb + (mssb == lssb ? 0 : 1));
+	else
+		return 0;
+}
+
+#endif

@@ -4,50 +4,48 @@
 #include <vector>
 #include <zlib.h>
 
-using namespace std;
-
-MemoryStream::MemoryStream(size_t size, bool expand) : m_Expand(expand), m_Size(size), m_Current(0) {
-	m_Buffer = new char[size];
+MemoryStream::MemoryStream(size_t size, bool expand) : mExpand(expand), mSize(size), mCurrent(0) {
+	mBuffer = new char[size];
 }
-MemoryStream::MemoryStream(const char* buf, size_t size, bool expand) : m_Expand(expand), m_Size(size), m_Current(0) {
-	m_Buffer = new char[size];
-	memcpy(m_Buffer, buf, size);
+MemoryStream::MemoryStream(const char* buf, size_t size, bool expand) : mExpand(expand), mSize(size), mCurrent(0) {
+	mBuffer = new char[size];
+	memcpy(mBuffer, buf, size);
 }
 MemoryStream::~MemoryStream() {
-	if (m_Buffer) delete[] m_Buffer;
+	if (mBuffer) delete[] mBuffer;
 }
 
-void MemoryStream::WriteString(string string) {
-	Write(string.c_str(), string.length() + 1);
+void MemoryStream::WriteString(jstring jstring) {
+	Write(jstring.c_str(), jstring.length() + 1);
 }
-string MemoryStream::ReadString() {
-	size_t start = m_Current;
-	while (m_Current < m_Size) {
-		if (m_Buffer[m_Current] == '\0') {
-			m_Current++;
-			return string(m_Buffer + start, m_Buffer + m_Current - 1);
+jstring MemoryStream::ReadString() {
+	size_t start = mCurrent;
+	while (mCurrent < mSize) {
+		if (mBuffer[mCurrent] == '\0') {
+			mCurrent++;
+			return jstring(mBuffer + start, mCurrent - start - 1);
 		}
-		m_Current++;
+		mCurrent++;
 	}
-	return string(m_Buffer + start, m_Buffer + m_Current);
+	return jstring(mBuffer + start, mCurrent - start);
 }
 
 void MemoryStream::Write(const char* ptr, size_t sz) {
-	if (m_Current + sz > m_Size) {
-		if (!m_Expand) throw new std::exception();
-		Fit(m_Current + sz);
+	if (mCurrent + sz > mSize) {
+		if (!mExpand) throw std::out_of_range("Write out of bounds!");
+		Fit(mCurrent + sz);
 	}
-	memcpy(m_Buffer + m_Current, ptr, sz);
-	m_Current += sz;
+	memcpy(mBuffer + mCurrent, ptr, sz);
+	mCurrent += sz;
 }
 void MemoryStream::Read(char* ptr, size_t sz) {
-	if (m_Current + sz > m_Size) throw new std::exception();
-	memcpy(ptr, m_Buffer + m_Current, sz);
-	m_Current += sz;
+	if (mCurrent + sz > mSize) throw std::out_of_range("Read out of bounds!");
+	memcpy(ptr, mBuffer + mCurrent, sz);
+	mCurrent += sz;
 }
 
 void MemoryStream::Fit(size_t sz) {
-	if (sz > m_Size && m_Expand) {
+	if (sz > mSize && mExpand) {
 		size_t ns = 1;
 		while (sz > ns) ns <<= 1;
 		Expand(ns);
@@ -55,10 +53,10 @@ void MemoryStream::Fit(size_t sz) {
 }
 void MemoryStream::Expand(size_t sz) {
 	char* newbuf = new char[sz];
-	memcpy(newbuf, m_Buffer, m_Size);
-	delete[] m_Buffer;
-	m_Buffer = newbuf;
-	m_Size = sz;
+	memcpy(newbuf, mBuffer, mSize);
+	delete[] mBuffer;
+	mBuffer = newbuf;
+	mSize = sz;
 }
 
 void MemoryStream::Compress(MemoryStream &ms) {
@@ -68,8 +66,8 @@ void MemoryStream::Compress(MemoryStream &ms) {
 	z_stream strm;
 	strm.zalloc = 0;
 	strm.zfree = 0;
-	strm.next_in = reinterpret_cast<uint8_t*>(m_Buffer);
-	strm.avail_in = (uInt)m_Current;
+	strm.next_in = reinterpret_cast<uint8_t*>(mBuffer);
+	strm.avail_in = (uInt)mCurrent;
 	strm.next_out = (Bytef*)temp_buffer;
 	strm.avail_out = BUFSIZE;
 
@@ -101,10 +99,10 @@ void MemoryStream::Compress(MemoryStream &ms) {
 }
 void MemoryStream::Decompress(MemoryStream &ms, size_t len) {
 	z_stream zInfo = { 0 };
-	zInfo.next_in = (Bytef*)(m_Buffer + m_Current);
+	zInfo.next_in = (Bytef*)(mBuffer + mCurrent);
 	zInfo.total_in = zInfo.avail_in = (uInt)len;
-	zInfo.next_out = (Bytef*)(ms.m_Buffer + ms.m_Current);
-	zInfo.total_out = zInfo.avail_out = (uInt)(ms.m_Size - ms.m_Current);
+	zInfo.next_out = (Bytef*)(ms.mBuffer + ms.mCurrent);
+	zInfo.total_out = zInfo.avail_out = (uInt)(ms.mSize - ms.mCurrent);
 
 	int nErr = -1;
 	nErr = inflateInit(&zInfo);

@@ -4,33 +4,53 @@
 #include <DirectXMath.h>
 
 #include "Graphics.hpp"
-#include "Util.hpp"
 #include "Mesh.hpp"
-#include "RootSignature.hpp"
+#include "Window.hpp"
 
-using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Shader::Shader(string name) : ShaderAsset(name) {}
-Shader::Shader(string name, MemoryStream &ms) : ShaderAsset(name, ms) {}
+Shader::Shader(jstring name) : ShaderAsset(name) {}
+Shader::Shader(jstring name, MemoryStream &ms) : ShaderAsset(name, ms) {}
 Shader::~Shader() {
-	m_States.clear();
+	mStates.clear();
 }
 
+// Set the root signature on the GPU
 bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	if (!m_Created) Upload();
-	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
-	return true;
+	if (!mCreated) Upload();
+	if (mRootSignature) {
+		commandList->SetGraphicsRootSignature(mRootSignature.Get());
+		return true;
+	}
+	return false;
 }
 
 void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, MeshAsset::SEMANTIC input) {
-	if (m_States.count(input) == 0)
-		m_States.emplace(input, CreatePSO(input));
-	commandList->SetPipelineState(m_States[input].Get());
+	if (!mStates.has(input))
+		mStates.emplace(input, CreatePSO(input));
+	commandList->SetPipelineState(mStates.at(input).Get());
 }
-ComPtr<ID3D12PipelineState> Shader::CreatePSO(MeshAsset::SEMANTIC input){
+
+void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+	if (!mCreated) Upload();
+
+	if (mRootSignature) {
+		commandList->SetComputeRootSignature(mRootSignature.Get());
+
+		if (!mComputePSO) CreateComputePSO();
+		commandList->SetPipelineState(mComputePSO.Get());
+	}
+}
+
+ComPtr<ID3D12PipelineState> Shader::CreatePSO(MeshAsset::SEMANTIC input) {
 	auto device = Graphics::GetDevice();
+
+	if (!GetBlob(SHADERSTAGE_VERTEX) && !GetBlob(SHADERSTAGE_HULL) &&
+		!GetBlob(SHADERSTAGE_DOMAIN) && !GetBlob(SHADERSTAGE_GEOMETRY) && !GetBlob(SHADERSTAGE_PIXEL)){
+		// no applicable blobs!
+		return nullptr;
+	}
 
 	UINT inputElementCount = 0;
 	inputElementCount++; // position
@@ -78,7 +98,7 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(MeshAsset::SEMANTIC input){
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
 	state.InputLayout = { inputElements, inputElementCount };
-	state.pRootSignature = m_RootSignature.Get();// ->GetRootSignature().Get();
+	state.pRootSignature = mRootSignature.Get();
 	if (GetBlob(SHADERSTAGE_VERTEX))	state.VS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_VERTEX));
 	if (GetBlob(SHADERSTAGE_HULL))		state.HS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_HULL));
 	if (GetBlob(SHADERSTAGE_DOMAIN))	state.DS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_DOMAIN));
@@ -90,8 +110,8 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(MeshAsset::SEMANTIC input){
 	state.SampleMask = UINT_MAX;
 	state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	state.NumRenderTargets = 1;
-	state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	state.RTVFormats[0] = Graphics::GetDisplayFormat();
+	state.DSVFormat = Graphics::GetDepthFormat();
 	state.SampleDesc = sampDesc;
 
 	ComPtr<ID3D12PipelineState> pso;
@@ -100,13 +120,19 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(MeshAsset::SEMANTIC input){
 	delete[] inputElements;
 	return pso;
 }
+void Shader::CreateComputePSO() {
+	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = mRootSignature.Get();
+	psoDesc.CS = CD3DX12_SHADER_BYTECODE(GetBlob(SHADERSTAGE_COMPUTE));
+	Graphics::GetDevice()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&mComputePSO));
+}
 
 void Shader::Upload() {
-	if (m_Created) return;
+	if (mCreated) return;
 	
 	ID3DBlob* rsblob = GetBlob(SHADERSTAGE_ROOTSIG);
 	if (rsblob)
-		ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
+		ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)));
 	
-	m_Created = true;
+	mCreated = true;
 }

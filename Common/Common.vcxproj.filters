@@ -15,12 +15,15 @@
     <Filter Include="Source Files\Assets">
       <UniqueIdentifier>{f723c211-8beb-4f76-abb8-55efea80290f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\dds">
+      <UniqueIdentifier>{7e237aad-73a4-4b29-94c4-7f63a3cc3d15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\dds">
+      <UniqueIdentifier>{55c89712-494a-4549-847b-1e4abd75046c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AssetFile.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IOUtil.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MemoryStream.hpp">
@@ -37,6 +40,36 @@
     </ClInclude>
     <ClInclude Include="TextureAsset.hpp">
       <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="jvector.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="jstring.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="jmap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IOUtil.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\pch.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\PlatformHelpers.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\dds.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\DDSTextureLoader.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\LoaderHelpers.hpp">
+      <Filter>Header Files\dds</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -60,6 +93,15 @@
     </ClCompile>
     <ClCompile Include="MeshAsset.cpp">
       <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="jstring.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jwstring.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dds\DDSTextureLoader.cpp">
+      <Filter>Source Files\dds</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

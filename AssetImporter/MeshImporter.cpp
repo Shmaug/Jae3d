@@ -1,8 +1,5 @@
 #include "MeshImporter.hpp"
 
-#include <stack>
-#include <vector>
-
 #define ASSIMP_OBJ
 
 #ifdef min
@@ -11,6 +8,7 @@
 #ifdef max
 #undef max
 #endif
+
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -22,7 +20,6 @@
 #include <d3d12.h>
 #include <DirectXMath.h>
 
-using namespace std;
 using namespace DirectX;
 
 XMFLOAT3 ai2dx(aiVector3D v) {
@@ -82,7 +79,7 @@ void XMSET(XMUINT4 &v, int i, unsigned int val) {
 }
 
 MeshAsset* Convert(aiMesh *aimesh){
-	MeshAsset *mesh = new MeshAsset(string(aimesh->mName.C_Str()));
+	MeshAsset *mesh = new MeshAsset(jstring(aimesh->mName.C_Str()));
 
 	mesh->HasSemantic(MeshAsset::SEMANTIC_NORMAL, aimesh->HasNormals());
 	mesh->HasSemantic(MeshAsset::SEMANTIC_TANGENT, aimesh->HasTangentsAndBitangents());
@@ -134,7 +131,7 @@ MeshAsset* Convert(aiMesh *aimesh){
 		for (uint32_t j = 0; j < aimesh->mNumBones; j++) {
 			aiBone *bone = aimesh->mBones[j];
 
-			MeshAsset::Bone b(string(bone->mName.C_Str()), ai2dx(bone->mOffsetMatrix));
+			MeshAsset::Bone b(jstring(bone->mName.C_Str()), ai2dx(bone->mOffsetMatrix));
 			for (uint32_t k = 0; k < bone->mNumWeights; k++) {
 				aiVertexWeight vweight = bone->mWeights[k];
 
@@ -162,10 +159,10 @@ MeshAsset* Convert(aiMesh *aimesh){
 	return mesh;
 }
 
-Asset** MeshImporter::Import(string path, int &count) {
+Asset** MeshImporter::Import(jstring path, int &count) {
 	const aiScene *scene = aiImportFile(path.c_str(), 
 		aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_MakeLeftHanded | aiProcess_FlipUVs);
-	string fname = GetNameExt(path);
+	jstring fname = GetNameExt(path);
 
 	count = 0;
 	if (scene->HasMeshes()) count += scene->mNumMeshes;

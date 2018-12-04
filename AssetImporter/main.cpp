@@ -1,5 +1,3 @@
-#include <string>
-#include <vector>
 #include <iostream>
 #include <iostream>
 #include <fstream>
@@ -12,6 +10,9 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "runtimeobject.lib")
 
+#include "../Common/jstring.hpp"
+#include "../Common/jvector.hpp"
+
 #include "..\Common\IOUtil.hpp"
 #include "..\Common\AssetFile.hpp"
 #include "..\Common\Asset.hpp"
@@ -22,13 +23,13 @@
 
 using namespace std;
 
-void LoadFile(string file, vector<Asset*> &assets) {
+void LoadFile(jstring file, jvector<Asset*> &assets) {
 	if (PathFileExists(file.c_str()) != 1) {
 		printf("Could not find %s\n", file.c_str());
 		return;
 	}
 
-	string ext = GetExt(file);
+	jstring ext = GetExt(file);
 
 	if (ext == "obj") {
 		int count;
@@ -70,8 +71,8 @@ void LoadFile(string file, vector<Asset*> &assets) {
 		assets.push_back((Asset*)AssetImporter::CompileShader(file));
 }
 
-void LoadDirectory(string dir, vector<string>* files) {
-	string d = dir + "\\*";
+void LoadDirectory(jstring dir, jvector<jstring>* files) {
+	jstring d = dir + "\\*";
 
 	WIN32_FIND_DATA ffd;
 	HANDLE hFind = FindFirstFile(d.c_str(), &ffd);
@@ -83,7 +84,9 @@ void LoadDirectory(string dir, vector<string>* files) {
 	do {
 		if (ffd.cFileName[0] == '.') continue;
 
-		string c = dir + "\\" + string(ffd.cFileName);
+		jstring c = dir + "\\" + jstring(ffd.cFileName);
+		if (GetExt(c) == "meta") continue;
+
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			LoadDirectory(c.c_str(), files);
 		else
@@ -106,15 +109,15 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	vector<string> files;
-	vector<string> directories;
-	string output;
-	string input;
+	jvector<jstring> files;
+	jvector<jstring> directories;
+	jstring output;
+	jstring input;
 	bool compress = true;
 
 	int mode = 0;
 	for (int i = 1; i < argc; i++) {
-		string str = string(argv[i]);
+		jstring str = jstring(argv[i]);
 		if (argv[i][0] == '-') {
 			if (str == "-f") {
 				mode = 0;
@@ -162,7 +165,7 @@ int main(int argc, char **argv) {
 			case AssetFile::TYPEID_SHADER:
 				f = new ShaderAsset(a[i].name, *a[i].buffer);
 				if (AssetImporter::verbose)
-					printf("%s\n", f->m_Name.c_str());
+					printf("%s\n", f->mName.c_str());
 				break;
 			case AssetFile::TYPEID_TEXTURE:
 				f = new TextureAsset(a[i].name, *a[i].buffer);
@@ -184,7 +187,7 @@ int main(int argc, char **argv) {
 		LoadDirectory(directories[i], &files);
 
 	// print file names
-	vector<Asset*> assets;
+	jvector<Asset*> assets;
 	printf("Loading %d files\n", (int)files.size());
 	if (AssetImporter::verbose) {
 		for (int i = 0; i < files.size(); i++)
@@ -196,7 +199,7 @@ int main(int argc, char **argv) {
 
 	printf("\n");
 
-	AssetFile::Write(output.c_str(), assets, compress);
+	AssetFile::Write(output.c_str(), assets.data(), assets.size(), compress);
 
 	for (int i = 0; i < assets.size(); i++)
 		delete assets[i];

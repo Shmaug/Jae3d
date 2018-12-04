@@ -3,7 +3,6 @@
 #include "Graphics.hpp"
 #include "CommandQueue.hpp"
 #include "Camera.hpp"
-#include "Util.hpp"
 
 #include "CommandList.hpp"
 
@@ -13,8 +12,8 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace std;
 
-Mesh::Mesh(string name) : MeshAsset(name), m_DataUploaded(false) {}
-Mesh::Mesh(string name, MemoryStream &ms) : MeshAsset(name, ms), m_DataUploaded(false) {}
+Mesh::Mesh(jstring name) : MeshAsset(name), mDataUploaded(false) {}
+Mesh::Mesh(jstring name, MemoryStream &ms) : MeshAsset(name, ms), mDataUploaded(false) {}
 Mesh::~Mesh() { ReleaseGpu(); }
 
 void Mesh::LoadCube(float s) {
@@ -162,51 +161,51 @@ void Mesh::Upload() {
 	auto commandList = commandQueue->GetCommandList();
 
 	ComPtr<ID3D12Resource> ivb;
-	Graphics::UploadData(commandList, &m_VertexBuffer, &ivb, VertexCount(), vsize, varray);
+	Graphics::UploadData(commandList, &mVertexBuffer, &ivb, VertexCount(), vsize, varray);
 	ivb->SetName(L"Vertex Buffer Upload");
 
-	m_VertexBufferView.BufferLocation = m_VertexBuffer->GetGPUVirtualAddress();
-	m_VertexBufferView.SizeInBytes = VertexCount() * (UINT)vsize;
-	m_VertexBufferView.StrideInBytes = (UINT)vsize;
+	mVertexBufferView.BufferLocation = mVertexBuffer->GetGPUVirtualAddress();
+	mVertexBufferView.SizeInBytes = VertexCount() * (UINT)vsize;
+	mVertexBufferView.StrideInBytes = (UINT)vsize;
 
 	ComPtr<ID3D12Resource> iib;
 	if (Use32BitIndices())
-		Graphics::UploadData(commandList, &m_IndexBuffer, &iib, IndexCount(), sizeof(uint32_t), GetIndices32());
+		Graphics::UploadData(commandList, &mIndexBuffer, &iib, IndexCount(), sizeof(uint32_t), GetIndices32());
 	else
-		Graphics::UploadData(commandList, &m_IndexBuffer, &iib, IndexCount(), sizeof(uint32_t), GetIndices16());
+		Graphics::UploadData(commandList, &mIndexBuffer, &iib, IndexCount(), sizeof(uint32_t), GetIndices16());
 	iib->SetName(L"Index Buffer Upload");
 
-	m_IndexCount = (UINT)IndexCount();
-	m_IndexBufferView.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress();
+	mIndexCount = (UINT)IndexCount();
+	mIndexBufferView.BufferLocation = mIndexBuffer->GetGPUVirtualAddress();
 	if (Use32BitIndices()) {
-		m_IndexBufferView.SizeInBytes = m_IndexCount * sizeof(uint32_t);
-		m_IndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		mIndexBufferView.SizeInBytes = mIndexCount * sizeof(uint32_t);
+		mIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
 	} else {
-		m_IndexBufferView.SizeInBytes = m_IndexCount * sizeof(uint16_t);
-		m_IndexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		mIndexBufferView.SizeInBytes = mIndexCount * sizeof(uint16_t);
+		mIndexBufferView.Format = DXGI_FORMAT_R16_UINT;
 	}
 
-	commandList->TransitionResource(m_VertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	commandList->TransitionResource(m_IndexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+	commandList->TransitionResource(mVertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	commandList->TransitionResource(mIndexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
-	m_VertexBuffer->SetName(L"Vertex Buffer");
-	m_IndexBuffer->SetName(L"Index Buffer");
+	mVertexBuffer->SetName(L"Vertex Buffer");
+	mIndexBuffer->SetName(L"Index Buffer");
 
 	commandQueue->WaitForFenceValue(commandQueue->Execute(commandList));
 
 	delete[] varray;
-	m_DataUploaded = true;
+	mDataUploaded = true;
 }
 
 void Mesh::ReleaseGpu() {
-	m_VertexBuffer.Reset();
-	m_IndexBuffer.Reset();
-	m_DataUploaded = false;
+	mVertexBuffer.Reset();
+	mIndexBuffer.Reset();
+	mDataUploaded = false;
 }
 void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	if (!m_DataUploaded) return;
+	if (!mDataUploaded) return;
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
-	commandList->IASetIndexBuffer(&m_IndexBufferView);
-	commandList->DrawIndexedInstanced(m_IndexCount, 1, 0, 0, 0);
+	commandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
+	commandList->IASetIndexBuffer(&mIndexBufferView);
+	commandList->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);
 }

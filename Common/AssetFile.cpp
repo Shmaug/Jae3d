@@ -1,5 +1,6 @@
 #include "AssetFile.hpp"
 
+#include "../Jae3d/Util.hpp"
 #include "IOUtil.hpp"
 
 #include "Asset.hpp"
@@ -25,7 +26,7 @@ AssetFile::AssetData* AssetFile::Read_V1(istream &is, int &count) {
 	for (uint32_t i = 0; i < assetCount; i++) {
 		uint8_t id = ReadStream<uint8_t>(is);
 		uint64_t type = ReadStream<uint64_t>(is);
-		string name = ReadStream<string>(is);
+		jstring name = ReadStream<jstring>(is);
 
 		bool compressed = ReadStream<uint8_t>(is);
 		uint64_t size = ReadStream<uint64_t>(is);
@@ -58,16 +59,16 @@ AssetFile::AssetData* AssetFile::Read_V1(istream &is, int &count) {
 	count = assetCount;
 	return assets;
 }
-void AssetFile::Write_V1(ostream &os, vector<Asset*> &assets, bool compress) {
-	WriteStream(os, (uint32_t)assets.size());
+void AssetFile::Write_V1(ostream &os, Asset** assets, size_t count, bool compress) {
+	WriteStream(os, (uint32_t)count);
 
 	MemoryStream mems(1024);
 	MemoryStream cmem(1024);
 
-	for (int i = 0; i < assets.size(); i++) {
+	for (int i = 0; i < count; i++) {
 		WriteStream(os, (uint8_t)0x01); // "item" identifier
 		WriteStream(os, assets[i]->TypeId());
-		WriteStream(os, assets[i]->m_Name);
+		WriteStream(os, assets[i]->mName);
 
 		WriteStream(os, (uint8_t)compress);
 
@@ -90,13 +91,16 @@ void AssetFile::Write_V1(ostream &os, vector<Asset*> &assets, bool compress) {
 	}
 }
 
-AssetFile::AssetData* AssetFile::Read(const string file, int &count) {
+AssetFile::AssetData* AssetFile::Read(jstring file, int &count) {
 	count = 0;
 
+	jstring fullpath = GetFullPath(file);
+
 	ifstream is;
-	is.open(file, ios::in | ios::binary);
+	is.open(string(fullpath.c_str()), ios::in | ios::binary);
 	if (!is.is_open()) {
-		perror("Failed to open file for reading!");
+		OutputDebugf("Failed to open file %s for reading!\n", fullpath.c_str());
+		cerr << "Failed to open file " << fullpath.c_str() << " for reading!\n";
 		return nullptr;
 	}
 
@@ -122,15 +126,15 @@ AssetFile::AssetData* AssetFile::Read(const string file, int &count) {
 
 	return nullptr;
 }
-void AssetFile::Write(const string file, vector<Asset*> &assets, bool compress, uint64_t version) {
+void AssetFile::Write(jstring file, Asset** assets, size_t count, bool compress, uint64_t version) {
 	ofstream os;
-	os.open(file, ios::out | ios::binary);
+	os.open(string(file.c_str()), ios::out | ios::binary);
 	if (!os.is_open()) {
-		perror("Failed to open file for writing!");
+		cerr << "Failed to open file for writing!\n";
 		return;
 	}
 
-	printf("Writing %d assets to %s\n", (int)assets.size(), file.c_str());
+	printf("Writing %d assets to %s\n", (int)count, file.c_str());
 
 	WriteStream(os, (uint64_t)14242); // 'magic' number
 	os.write("ASSET", 5);
@@ -139,7 +143,7 @@ void AssetFile::Write(const string file, vector<Asset*> &assets, bool compress, 
 	switch (version) {
 	default:
 	case (uint64_t)0001:
-		Write_V1(os, assets, compress);
+		Write_V1(os, assets, count, compress);
 		break;
 	}
 }

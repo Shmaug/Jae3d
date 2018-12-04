@@ -1,13 +1,13 @@
 #pragma once
 
-#include <string>
+#include "../Common/jstring.hpp"
 
 class TextureAsset;
 
 class TextureImporter {
 public:
-	static TextureAsset* Import(std::string file);
-	static TextureAsset* ImportTGA(std::string file);
-	static TextureAsset* ImportDDS(std::string file);
+	static TextureAsset* Import(jstring file);
+	static TextureAsset* ImportTGA(jstring file);
+	static TextureAsset* ImportDDS(jstring file);
 };
 

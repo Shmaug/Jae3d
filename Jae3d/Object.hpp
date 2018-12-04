@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Util.hpp"
+#include "../Common/jstring.hpp"
+#include "../Common/jvector.hpp"
+
 #include <DirectXMath.h>
 #include <d3d12.h>
-#include <string>
-#include <vector>
 #include <memory>
 
 #define DX DirectX
@@ -11,47 +13,47 @@
 class Object : public std::enable_shared_from_this<Object> {
 protected:
 	virtual bool UpdateTransform();
-	bool m_TransformDirty = true;
+	bool mTransformDirty = true;
 
 public:
-	Object(std::string name);
+	Object(jstring name);
 	~Object();
 
-	std::string m_Name;
+	jstring mName;
 
 	// Getters
-	DX::XMMATRIX ObjectToWorld() { UpdateTransform(); return m_ObjectToWorld; }
-	DX::XMMATRIX WorldToObject() { UpdateTransform(); return m_WorldToObject; }
-	DX::XMVECTOR LocalPosition() { UpdateTransform(); return m_LocalPosition; }
-	DX::XMVECTOR LocalRotation() { UpdateTransform(); return m_LocalRotation; }
-	DX::XMVECTOR LocalScale() const { return m_LocalScale; }
+	DX::XMMATRIX ObjectToWorld() { UpdateTransform(); return mObjectToWorld; }
+	DX::XMMATRIX WorldToObject() { UpdateTransform(); return mWorldToObject; }
+	DX::XMVECTOR LocalPosition() { UpdateTransform(); return mLocalPosition; }
+	DX::XMVECTOR LocalRotation() { UpdateTransform(); return mLocalRotation; }
+	DX::XMVECTOR LocalScale() const { return mLocalScale; }
 	// World-space getters
-	DX::XMVECTOR WorldRotation() { UpdateTransform(); return m_WorldRotation; }
-	DX::XMVECTOR WorldPosition() { UpdateTransform(); return m_WorldPosition; }
+	DX::XMVECTOR WorldRotation() { UpdateTransform(); return mWorldRotation; }
+	DX::XMVECTOR WorldPosition() { UpdateTransform(); return mWorldPosition; }
 
 	// Setters
-	void LocalPosition(DX::XMVECTOR p) { m_LocalPosition = p; SetTransformsDirty(); }
-	void LocalRotation(DX::XMVECTOR r) { m_LocalRotation = r; SetTransformsDirty(); }
-	void LocalScale(DirectX::XMVECTOR s) { m_LocalScale = s; SetTransformsDirty(); }
+	void LocalPosition(DX::XMVECTOR p) { mLocalPosition = p; SetTransformsDirty(); }
+	void LocalRotation(DX::XMVECTOR r) { mLocalRotation = r; SetTransformsDirty(); }
+	void LocalScale(DirectX::XMVECTOR s) { mLocalScale = s; SetTransformsDirty(); }
 	void LocalPosition(float x, float y, float z) { LocalPosition(DX::XMVectorSet(x, y, z, 0)); }
 	void LocalScale(float x, float y, float z) { LocalScale(DX::XMVectorSet(x, y, z, 0)); }
 
 	void Parent(std::shared_ptr<Object> p);
-	std::shared_ptr<Object> Parent() { return m_Parent; }
+	std::shared_ptr<Object> Parent() { return mParent; }
 
 private:
-	DX::XMVECTOR m_WorldPosition = DX::XMVectorSet(0, 0, 0, 0);
-	DX::XMVECTOR m_WorldRotation = DX::XMVectorSet(0, 0, 0, 1);
+	DX::XMVECTOR mWorldPosition = DX::XMVectorSet(0, 0, 0, 0);
+	DX::XMVECTOR mWorldRotation = DX::XMVectorSet(0, 0, 0, 1);
 
-	DX::XMVECTOR m_LocalPosition = DX::XMVectorSet(0, 0, 0, 0);
-	DX::XMVECTOR m_LocalRotation = DX::XMVectorSet(0, 0, 0, 1);
-	DX::XMVECTOR m_LocalScale    = DX::XMVectorSet(1, 1, 1, 1);
+	DX::XMVECTOR mLocalPosition = DX::XMVectorSet(0, 0, 0, 0);
+	DX::XMVECTOR mLocalRotation = DX::XMVectorSet(0, 0, 0, 1);
+	DX::XMVECTOR mLocalScale    = DX::XMVectorSet(1, 1, 1, 1);
 
-	DX::XMMATRIX m_ObjectToWorld;
-	DX::XMMATRIX m_WorldToObject;
+	DX::XMMATRIX mObjectToWorld;
+	DX::XMMATRIX mWorldToObject;
 
-	std::shared_ptr<Object> m_Parent;
-	std::vector<std::weak_ptr<Object>> m_Children;
+	std::shared_ptr<Object> mParent;
+	jvector<std::weak_ptr<Object>> mChildren;
 
 	void SetTransformsDirty();
 };

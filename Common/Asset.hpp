@@ -1,23 +1,29 @@
 #pragma once
 
-#include <string>
+#include "../Jae3d/Util.hpp"
+#include "jstring.hpp"
+#include "IOUtil.hpp"
+
 #include <iostream>
 #include <fstream>
-
-#include "IOUtil.hpp"
 
 class AssetImporter;
 class MemoryStream;
 
+#pragma warning(push)
+#pragma warning(disable: 4251) // needs to have dll-interface
+
 class Asset {
 public:
-	std::string m_Name;
+	jstring mName;
+	jstring mGroup;
 
-	Asset(std::string name);
-	Asset(std::string name, MemoryStream &ms);
+	Asset(jstring name);
+	Asset(jstring name, MemoryStream &ms);
 	~Asset();
 	
 	virtual void WriteData(MemoryStream &ms);
 	virtual uint64_t TypeId();
 };
 
+#pragma warning(pop)

@@ -4,46 +4,46 @@
 using namespace DirectX;
 using namespace std;
 
-Object::Object(std::string name) : m_Name(name) {}
+Object::Object(jstring name) : mName(name) {}
 Object::~Object() {}
 
 bool Object::UpdateTransform() {
-	if (!m_TransformDirty) return false;
+	if (!mTransformDirty) return false;
 
-	m_ObjectToWorld = XMMatrixAffineTransformation(m_LocalScale, XMVectorZero(), m_LocalRotation, m_LocalPosition);
-	if (m_Parent) {
-		m_ObjectToWorld = m_ObjectToWorld * m_Parent->ObjectToWorld();
+	mObjectToWorld = XMMatrixAffineTransformation(mLocalScale, XMVectorZero(), mLocalRotation, mLocalPosition);
+	if (mParent) {
+		mObjectToWorld = mObjectToWorld * mParent->ObjectToWorld();
 
-		m_WorldPosition = XMVector3Transform(m_LocalPosition, m_WorldToObject);
-		m_WorldRotation = m_Parent->WorldRotation() * m_LocalRotation;
+		mWorldPosition = XMVector3Transform(mLocalPosition, mWorldToObject);
+		mWorldRotation = mParent->WorldRotation() * mLocalRotation;
 	}else{
-		m_WorldPosition = m_LocalPosition;
-		m_WorldRotation = m_LocalRotation;
+		mWorldPosition = mLocalPosition;
+		mWorldRotation = mLocalRotation;
 	}
 
-	DirectX::XMVECTOR det = XMMatrixDeterminant(m_ObjectToWorld);
-	m_WorldToObject = XMMatrixInverse(&det, m_ObjectToWorld);
+	DirectX::XMVECTOR det = XMMatrixDeterminant(mObjectToWorld);
+	mWorldToObject = XMMatrixInverse(&det, mObjectToWorld);
 
-	m_TransformDirty = false;
+	mTransformDirty = false;
 	return true;
 }
 void Object::Parent(shared_ptr<Object> p){
-	if (m_Parent) {
+	if (mParent) {
 		shared_ptr<Object> t = shared_from_this();
-		for (int i = 0; i < m_Parent->m_Children.size(); i++) {
-			shared_ptr<Object> c = m_Parent->m_Children[i].lock();
+		for (int i = 0; i < mParent->mChildren.size(); i++) {
+			shared_ptr<Object> c = mParent->mChildren[i].lock();
 			if (c && c == t)
-				m_Parent->m_Children.erase(m_Parent->m_Children.begin() + i);
+				mParent->mChildren.remove(i);
 		}
 	}
-	m_Parent = p;
-	if (p) p->m_Children.push_back(weak_from_this());
+	mParent = p;
+	if (p) p->mChildren.push_back(weak_from_this());
 	SetTransformsDirty();
 }
 void Object::SetTransformsDirty(){
-	m_TransformDirty = true;
-	for (size_t i = 0; i < m_Children.size(); i++) {
-		shared_ptr<Object> o = m_Children[i].lock();
+	mTransformDirty = true;
+	for (size_t i = 0; i < mChildren.size(); i++) {
+		shared_ptr<Object> o = mChildren[i].lock();
 		if (o) o->SetTransformsDirty();
 	}
 }

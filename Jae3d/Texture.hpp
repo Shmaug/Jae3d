@@ -1,30 +1,33 @@
 #pragma once
 
+#include "Util.hpp"
+
 #include <wrl.h>
-#define _WRL Microsoft::WRL
 
 #include <d3d12.h>
 #include <DirectXMath.h>
-#include "d3dx12.hpp"
 
-#include "../Common/TextureAsset.hpp"
+#include "../Common/jvector.hpp"
 #include "../Common/TextureAsset.hpp"
 
 class CommandList;
+class Shader;
 
 class Texture : public TextureAsset {
 public:
-	Texture(std::string name, int width, int height, int dimension, DXGI_FORMAT format, int mipLevels=0);
-	Texture(std::string name, MemoryStream &ms);
+	Texture(jstring name, int width, int height, int dimension, DXGI_FORMAT format, int mipLevels, void* ddsData, size_t ddsSize);
+	Texture(jstring name, MemoryStream &ms);
 	~Texture();
 
 	void Upload();
 
-	_WRL::ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_srvHeap; }
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor() const { return m_srvHeap->GetGPUDescriptorHandleForHeapStart(); }
+	_WRL::ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return msrvHeap; }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor() const { return msrvHeap->GetGPUDescriptorHandleForHeapStart(); }
+	_WRL::ComPtr<ID3D12Resource> GetTexture() const { return mTexture; }
 
 private:
-	_WRL::ComPtr<ID3D12Resource> m_Texture;
-	_WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	jvector<D3D12_SUBRESOURCE_DATA> mSubresources;
+	_WRL::ComPtr<ID3D12Resource> mTexture;
+	_WRL::ComPtr<ID3D12DescriptorHeap> msrvHeap;
 };
 

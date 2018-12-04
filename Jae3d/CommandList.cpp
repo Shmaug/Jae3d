@@ -5,55 +5,57 @@
 #include "Mesh.hpp"
 #include "Material.hpp"
 
-#include "Util.hpp"
-
 using namespace std;
 using namespace Microsoft::WRL;
 
 CommandList::CommandList(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type, ComPtr<ID3D12CommandAllocator> allocator) {
-	ThrowIfFailed(device->CreateCommandList(0, type, allocator.Get(), nullptr, IID_PPV_ARGS(&m_CommandList)));
+	ThrowIfFailed(device->CreateCommandList(0, type, allocator.Get(), nullptr, IID_PPV_ARGS(&mCommandList)));
 }
 CommandList::~CommandList() {}
 
 void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator) {
-	ThrowIfFailed(m_CommandList->Reset(allocator.Get(), nullptr));
-	m_ActiveShader = nullptr;
-	m_ActiveCamera = nullptr;
+	ThrowIfFailed(mCommandList->Reset(allocator.Get(), nullptr));
+	mActiveShader = nullptr;
+	mActiveCamera = nullptr;
 }
 
 void CommandList::TransitionResource(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to) {
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), from, to);
-	m_CommandList->ResourceBarrier(1, &barrier);
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), from, to));
 }
 
+void CommandList::SetCompute(shared_ptr<Shader> shader) {
+	if (mActiveShader == shader) return;
+	if (shader) shader->SetCompute(mCommandList);
+	mActiveShader = shader;
+}
 void CommandList::SetShader(shared_ptr<Shader> shader) {
-	if (m_ActiveShader == shader) return;
+	if (mActiveShader == shader) return;
 	if (shader) {
-		shader->SetActive(m_CommandList);
-		if (m_ActiveCamera)
-			m_ActiveCamera->SetActive(m_CommandList); // set camera data again since root signature changed
+		shader->SetActive(mCommandList);
+		if (mActiveCamera)
+			mActiveCamera->SetActive(mCommandList); // set camera data again since root signature changed
 	}
-	m_ActiveShader = shader;
+	mActiveShader = shader;
 }
 void CommandList::SetMaterial(shared_ptr<Material> material) {
-	if (m_ActiveMaterial == material) return;
+	if (mActiveMaterial == material) return;
 	if (material) {
-		if (material->m_Shader)
-			SetShader(material->m_Shader);
-		material->SetActive(m_CommandList);
+		if (material->mShader)
+			SetShader(material->mShader);
+		material->SetActive(mCommandList);
 	}
-	m_ActiveMaterial = material;
+	mActiveMaterial = material;
 }
 void CommandList::SetCamera(shared_ptr<Camera> camera) {
-	if (m_ActiveCamera == camera) return;
+	if (mActiveCamera == camera) return;
 
-	if (camera && m_ActiveShader) camera->SetActive(m_CommandList);
-	m_ActiveCamera = camera;
+	if (camera && mActiveShader) camera->SetActive(mCommandList);
+	mActiveCamera = camera;
 }
 void CommandList::DrawMesh(Mesh &mesh) {
 	// set PSO
-	assert(m_ActiveShader && m_ActiveCamera);
+	assert(mActiveShader && mActiveCamera);
 
-	m_ActiveShader->SetPSO(m_CommandList, mesh.Semantics());
-	mesh.Draw(m_CommandList);
+	mActiveShader->SetPSO(mCommandList, mesh.Semantics());
+	mesh.Draw(mCommandList);
 }

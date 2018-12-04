@@ -79,6 +79,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -87,6 +95,10 @@
       <ConformanceMode>false</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FunctionLevelLinking>
+      </FunctionLevelLinking>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <AdditionalDependencies>assimp-vc140-mt.lib;DirectXTex.lib;d3dcompiler.lib;Common.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -133,6 +145,7 @@
     <ClCompile Include="AssetImporter.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshImporter.cpp" />
+    <ClCompile Include="ShaderImporter.cpp" />
     <ClCompile Include="TextureImporter.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +156,7 @@
   <ItemGroup>
     <ClInclude Include="AssetImporter.hpp" />
     <ClInclude Include="MeshImporter.hpp" />
+    <ClInclude Include="ShaderImporter.hpp" />
     <ClInclude Include="TextureImporter.hpp" />
   </ItemGroup>
   <ItemGroup>

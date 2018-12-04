@@ -1,10 +1,14 @@
 #pragma once
 
-#include <vector>
-#include <string>
+#include "../Jae3d/Util.hpp"
+#include "jvector.hpp"
+
 #include <DirectXMath.h>
 
 #include "Asset.hpp"
+
+#pragma warning(push)
+#pragma warning(disable: 4251) // needs to have dll-interface
 
 class MeshAsset : public Asset {
 public:
@@ -24,13 +28,23 @@ public:
 	};
 
 	struct Bone {
-		std::string m_Name;
-		DirectX::XMFLOAT4X4 m_BoneToMesh;
-		Bone(std::string name, DirectX::XMFLOAT4X4 m) : m_Name(name), m_BoneToMesh(m) {}
+		jstring mName;
+		DirectX::XMFLOAT4X4 mBoneToMesh;
+
+		Bone() : mName(""), mBoneToMesh(DirectX::XMFLOAT4X4()) {}
+		Bone(const Bone &b) : mName(b.mName), mBoneToMesh(b.mBoneToMesh) {}
+		Bone(jstring name, DirectX::XMFLOAT4X4 m) : mName(name), mBoneToMesh(m) {}
+
+		Bone& operator=(const Bone &rhs) {
+			if (&rhs == this) return *this;
+			mName = rhs.mName;
+			mBoneToMesh = rhs.mBoneToMesh;
+			return *this;
+		}
 	};
 
-	MeshAsset(std::string name);
-	MeshAsset(std::string name, MemoryStream &ms);
+	MeshAsset(jstring name);
+	MeshAsset(jstring name, MemoryStream &ms);
 	~MeshAsset();
 
 #pragma region IO
@@ -42,21 +56,21 @@ public:
 	void Clear();
 
 	void Use32BitIndices(bool v);
-	bool Use32BitIndices() const { return m_32BitIndices; }
+	bool Use32BitIndices() const { return m32BitIndices; }
 	void AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2) {
-		if (m_32BitIndices) {
-			m_Indices32.push_back(i0);
-			m_Indices32.push_back(i1);
-			m_Indices32.push_back(i2);
+		if (m32BitIndices) {
+			mIndices32.push_back(i0);
+			mIndices32.push_back(i1);
+			mIndices32.push_back(i2);
 		} else {
-			m_Indices16.push_back((uint16_t)i0);
-			m_Indices16.push_back((uint16_t)i1);
-			m_Indices16.push_back((uint16_t)i2);
+			mIndices16.push_back((uint16_t)i0);
+			mIndices16.push_back((uint16_t)i1);
+			mIndices16.push_back((uint16_t)i2);
 		}
 	}
 
-	unsigned int VertexCount() const { return (unsigned int)m_Vertices.size(); }
-	unsigned int IndexCount() const { return(unsigned int)(m_32BitIndices ? m_Indices32.size() : m_Indices16.size()); }
+	unsigned int VertexCount() const { return (unsigned int)mVertices.size(); }
+	unsigned int IndexCount() const { return(unsigned int)(m32BitIndices ? mIndices32.size() : mIndices16.size()); }
 	void VertexCount(unsigned int size, bool shrink = true);
 	
 	unsigned int AddVertex(DirectX::XMFLOAT3 &v);
@@ -64,184 +78,185 @@ public:
 	void HasSemantic(SEMANTIC s, bool v) {
 		if (s == SEMANTIC_POSITION || HasSemantic(s) == v) return;
 		if (v) {
-			m_Semantics = (SEMANTIC)(m_Semantics | s);
+			mSemantics = (SEMANTIC)(mSemantics | s);
 			switch (s) {
 			case SEMANTIC_NORMAL:
-				m_Normals.resize(VertexCount());
+				mNormals.resize(VertexCount());
 				break;
 			case SEMANTIC_TANGENT:
-				m_Tangents.resize(VertexCount());
+				mTangents.resize(VertexCount());
 				break;
 			case SEMANTIC_BINORMAL:
-				m_Binormals.resize(VertexCount());
+				mBinormals.resize(VertexCount());
 				break;
 			case SEMANTIC_COLOR0:
-				m_Color0.resize(VertexCount());
+				mColor0.resize(VertexCount());
 				break;
 			case SEMANTIC_COLOR1:
-				m_Color1.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mColor1.resize(VertexCount());
 				break;
 			case SEMANTIC_BLENDINDICES:
-				m_BlendIndices.resize(VertexCount());
+				mBlendIndices.resize(VertexCount());
 				break;
 			case SEMANTIC_BLENDWEIGHT:
-				m_BlendWeights.resize(VertexCount());
+				mBlendWeights.resize(VertexCount());
 				break;
 			case SEMANTIC_TEXCOORD0:
-				m_Texcoord0.resize(VertexCount());
+				mTexcoord0.resize(VertexCount());
 				break;
 			case SEMANTIC_TEXCOORD1:
-				m_Texcoord1.resize(VertexCount());
+				mTexcoord1.resize(VertexCount());
 				break;
 			case SEMANTIC_TEXCOORD2:
-				m_Texcoord2.resize(VertexCount());
+				mTexcoord2.resize(VertexCount());
 				break;
 			case SEMANTIC_TEXCOORD3:
-				m_Texcoord3.resize(VertexCount());
+				mTexcoord3.resize(VertexCount());
 				break;
 			}
 		} else {
-			m_Semantics = (SEMANTIC)(m_Semantics & ~s);
+			mSemantics = (SEMANTIC)(mSemantics & ~s);
 			switch (s) {
 			case SEMANTIC_NORMAL:
-				m_Normals.swap(std::vector<DirectX::XMFLOAT3>());
+				mNormals.free();
 				break;
 			case SEMANTIC_TANGENT:
-				m_Tangents.swap(std::vector<DirectX::XMFLOAT3>(VertexCount()));
+				mTangents.free();
 				break;
 			case SEMANTIC_BINORMAL:
-				m_Binormals.swap(std::vector<DirectX::XMFLOAT3>(VertexCount()));
+				mBinormals.free();
 				break;
 			case SEMANTIC_COLOR0:
-				m_Color0.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mColor0.free();
 				break;
 			case SEMANTIC_COLOR1:
-				m_Color1.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mColor1.free();
 				break;
 			case SEMANTIC_BLENDINDICES:
-				m_BlendIndices.swap(std::vector<DirectX::XMUINT4>(VertexCount()));
+				mBlendIndices.free();
 				break;
 			case SEMANTIC_BLENDWEIGHT:
-				m_BlendWeights.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mBlendWeights.free();
 				break;
 			case SEMANTIC_TEXCOORD0:
-				m_Texcoord0.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mTexcoord0.free();
 				break;
 			case SEMANTIC_TEXCOORD1:
-				m_Texcoord1.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mTexcoord1.free();
 				break;
 			case SEMANTIC_TEXCOORD2:
-				m_Texcoord2.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mTexcoord2.free();
 				break;
 			case SEMANTIC_TEXCOORD3:
-				m_Texcoord3.swap(std::vector<DirectX::XMFLOAT4>(VertexCount()));
+				mTexcoord3.free();
 				break;
 			}
 		}
 	}
-	bool HasSemantic(SEMANTIC s) const { if (s == SEMANTIC_POSITION) return true; return m_Semantics & s; }
-	SEMANTIC Semantics() const { return m_Semantics; }
+	bool HasSemantic(SEMANTIC s) const { if (s == SEMANTIC_POSITION) return true; return mSemantics & s; }
+	SEMANTIC Semantics() const { return mSemantics; }
 
 	template<typename T>
 	T* GetSemantic(SEMANTIC s) {
 		switch (s) {
 		case SEMANTIC_POSITION:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
-			return m_Vertices.data();
+			return mVertices.data();
 			break;
 		case SEMANTIC_NORMAL:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
-			return m_Normals.data();
+			return mNormals.data();
 			break;
 		case SEMANTIC_TANGENT:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
-			return m_Tangents.data();
+			return mTangents.data();
 			break;
 		case SEMANTIC_BINORMAL:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
-			return m_Binormals.data();
+			return mBinormals.data();
 			break;
 		case SEMANTIC_COLOR0:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_Color0.data();
+			return mColor0.data();
 			break;
 		case SEMANTIC_COLOR1:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_Color1.data();
+			return mColor1.data();
 			break;
 		case SEMANTIC_BLENDINDICES:
 			static_assert(std::is_same(T, DirectX::XMUINT4), "T must be XMUINT4");
-			return m_BlendIndices.data();
+			return mBlendIndices.data();
 			break;
 		case SEMANTIC_BLENDWEIGHT:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_BlendWeights.data();
+			return mBlendWeights.data();
 			break;
 		case SEMANTIC_TEXCOORD0:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_Texcoord0.data();
+			return mTexcoord0.data();
 			break;
 		case SEMANTIC_TEXCOORD1:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_Texcoord1.data();
+			return mTexcoord1.data();
 			break;
 		case SEMANTIC_TEXCOORD2:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_Texcoord2.data();
+			return mTexcoord2.data();
 			break;
 		case SEMANTIC_TEXCOORD3:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
-			return m_Texcoord3.data();
+			return mTexcoord3.data();
 			break;
 		}
 	}
 
-	DirectX::XMFLOAT3* GetVertices() { return m_Vertices.data(); }
-	DirectX::XMFLOAT3* GetNormals() { return m_Normals.data(); }
-	DirectX::XMFLOAT3* GetTangents() { return m_Tangents.data(); }
-	DirectX::XMFLOAT3* GetBinormals() { return m_Binormals.data(); }
-	DirectX::XMFLOAT4* GetTexcoords(const int channel) {
+	DirectX::XMFLOAT3* GetVertices() const { return mVertices.data(); }
+	DirectX::XMFLOAT3* GetNormals() const { return mNormals.data(); }
+	DirectX::XMFLOAT3* GetTangents() const { return mTangents.data(); }
+	DirectX::XMFLOAT3* GetBinormals() const { return mBinormals.data(); }
+	DirectX::XMFLOAT4* GetTexcoords(const int channel) const {
 		switch (channel) {
 		default:
-		case 0: return m_Texcoord0.data();
-		case 1: return m_Texcoord1.data();
-		case 2: return m_Texcoord2.data();
-		case 3: return m_Texcoord3.data();
+		case 0: return mTexcoord0.data();
+		case 1: return mTexcoord1.data();
+		case 2: return mTexcoord2.data();
+		case 3: return mTexcoord3.data();
 		}
 	}
-	DirectX::XMFLOAT4* GetColors(const int channel) {
+	DirectX::XMFLOAT4* GetColors(const int channel) const {
 		switch (channel) {
 		default:
-		case 0: return m_Color0.data();
-		case 1: return m_Color1.data();
+		case 0: return mColor0.data();
+		case 1: return mColor1.data();
 		}
 	}
-	DirectX::XMUINT4*  GetBlendIndices() { return m_BlendIndices.data(); }
-	DirectX::XMFLOAT4* GetBlendWeights() { return m_BlendWeights.data(); }
+	DirectX::XMUINT4*  GetBlendIndices() const{ return mBlendIndices.data(); }
+	DirectX::XMFLOAT4* GetBlendWeights() const{ return mBlendWeights.data(); }
 
-	uint16_t* GetIndices16() { return m_Indices16.data(); }
-	uint32_t* GetIndices32() { return m_Indices32.data(); }
+	uint16_t* GetIndices16() const { return mIndices16.data(); }
+	uint32_t* GetIndices32() const { return mIndices32.data(); }
 #pragma endregion
 
 private:
-	bool m_32BitIndices = false;
+	bool m32BitIndices = false;
 
-	SEMANTIC m_Semantics = SEMANTIC_POSITION;
+	SEMANTIC mSemantics = SEMANTIC_POSITION;
 
-	std::vector<Bone> bones;
-	std::vector<DirectX::XMFLOAT3> m_Vertices;
-	std::vector<DirectX::XMFLOAT3> m_Normals;
-	std::vector<DirectX::XMFLOAT3> m_Tangents;
-	std::vector<DirectX::XMFLOAT3> m_Binormals;
-	std::vector<DirectX::XMFLOAT4> m_Texcoord0;
-	std::vector<DirectX::XMFLOAT4> m_Texcoord1;
-	std::vector<DirectX::XMFLOAT4> m_Texcoord2;
-	std::vector<DirectX::XMFLOAT4> m_Texcoord3;
-	std::vector<DirectX::XMFLOAT4> m_Color0;
-	std::vector<DirectX::XMFLOAT4> m_Color1;
-	std::vector<DirectX::XMUINT4>  m_BlendIndices;
-	std::vector<DirectX::XMFLOAT4> m_BlendWeights;
-	std::vector<uint16_t> m_Indices16;
-	std::vector<uint32_t> m_Indices32;
+	jvector<Bone> bones;
+	jvector<DirectX::XMFLOAT3> mVertices;
+	jvector<DirectX::XMFLOAT3> mNormals;
+	jvector<DirectX::XMFLOAT3> mTangents;
+	jvector<DirectX::XMFLOAT3> mBinormals;
+	jvector<DirectX::XMFLOAT4> mTexcoord0;
+	jvector<DirectX::XMFLOAT4> mTexcoord1;
+	jvector<DirectX::XMFLOAT4> mTexcoord2;
+	jvector<DirectX::XMFLOAT4> mTexcoord3;
+	jvector<DirectX::XMFLOAT4> mColor0;
+	jvector<DirectX::XMFLOAT4> mColor1;
+	jvector<DirectX::XMUINT4>  mBlendIndices;
+	jvector<DirectX::XMFLOAT4> mBlendWeights;
+	jvector<uint16_t> mIndices16;
+	jvector<uint32_t> mIndices32;
 };
 
+#pragma warning(pop)

@@ -1,17 +1,21 @@
-// https://www.3dgep.com/learning-directx12-1/
-
 #include "Util.hpp"
 
 #include "AssetDatabase.hpp"
 #include "Graphics.hpp"
 #include "Input.hpp"
 #include "Profiler.hpp"
-#include "Game.hpp"
+#include "IJaeGame.hpp"
 #include "Shader.hpp"
 #include "CommandQueue.hpp"
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windowsx.h>
 #include "Window.hpp"
+#include <shellapi.h>
 
 #include "jae.hpp"
+
+using namespace std;
 
 // In order to define a function called CreateWindow, the Windows macro needs to
 // be undefined.
@@ -19,26 +23,10 @@
 #undef CreateWindow
 #endif
 
-Game *g_Game;
+IJaeGame* g_Game;
 
 // Window callback function.
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-
-void ParseCommandLineArguments() {
-	int argc;
-	wchar_t** argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-
-	for (size_t i = 0; i < argc; ++i) {
-		//if (wcscmp(argv[i], L"-warp") == 0 || wcscmp(argv[i], L"--warp") == 0) {
-
-		//}
-	}
-
-	// Free memory allocated by CommandLineToArgvW
-	LocalFree(argv);
-}
-
-#define IsKeyDown(key) (GetAsyncKeyState(key) & 0x8000) != 0
+LRESULT CALLBACK JaeWndProc(HWND, UINT, WPARAM, LPARAM);
 
 HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t* windowTitle, uint32_t width, uint32_t height) {
 	int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
@@ -74,39 +62,6 @@ HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t
 	return hWnd;
 }
 
-void DoFrame() {
-	static std::chrono::high_resolution_clock clock;
-	static auto start = clock.now();
-	static auto t0 = clock.now();
-	static int frameCounter;
-	static double elapsedSeconds;
-
-	Profiler::FrameStart();
-
-	auto t1 = clock.now();
-	double delta = (t1 - t0).count() * 1e-9;
-	t0 = t1;
-
-	Profiler::BeginSample("Update");
-	g_Game->Update((t1 - start).count() * 1e-9, delta);
-	Profiler::EndSample();
-
-	Profiler::BeginSample("Render");
-	Graphics::Render(g_Game);
-	Profiler::EndSample();
-
-	// measure fps
-	frameCounter++;
-	elapsedSeconds += delta;
-	if (elapsedSeconds > 1.0) {
-		g_Game->m_fps = frameCounter / elapsedSeconds;
-		frameCounter = 0;
-		elapsedSeconds = 0.0;
-	}
-
-	Input::FrameEnd();
-	Profiler::FrameEnd();
-}
 void ReadInput(MSG msg) {
 	UINT dwSize;
 	GetRawInputData((HRAWINPUT)msg.lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
@@ -121,7 +76,7 @@ void ReadInput(MSG msg) {
 		int y = raw->data.mouse.lLastY;
 		Input::OnMouseMoveEvent(x, y);
 		
-		if (Input::m_LockMouse) {
+		if (Input::mLockMouse) {
 			RECT rect = Graphics::GetWindow()->GetRect();
 			SetCursorPos((rect.right + rect.left) / 2, (rect.bottom + rect.top) / 2);
 		}
@@ -158,13 +113,13 @@ void ReadInput(MSG msg) {
 	delete[] lpb;
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK JaeWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	if (!Graphics::IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
 
 	switch (message) {
 		case WM_PAINT:
-			if (Graphics::FrameReady())
-				DoFrame();
+			if (g_Game && Graphics::FrameReady())
+				g_Game->DoFrame();
 			break;
 
 		case WM_SYSKEYDOWN:
@@ -206,7 +161,7 @@ void RegisterWindowClass(HINSTANCE hInst, const wchar_t* windowClassName) {
 
 	windowClass.cbSize = sizeof(WNDCLASSEXW);
 	windowClass.style = CS_HREDRAW | CS_VREDRAW;
-	windowClass.lpfnWndProc = &WndProc;
+	windowClass.lpfnWndProc = &JaeWndProc;
 	windowClass.cbClsExtra = 0;
 	windowClass.cbWndExtra = 0;
 	windowClass.hInstance = hInst;
@@ -221,26 +176,21 @@ void RegisterWindowClass(HINSTANCE hInst, const wchar_t* windowClassName) {
 	assert(SUCCEEDED(hr));
 }
 
-int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
+HWND JaeCreateWindow(HINSTANCE hInstance, LPCWSTR className, LPCWSTR title, int width, int height) {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// Using this awareness context allows the client area of the window 
 	// to achieve 100% scaling while still allowing non-client window content to 
 	// be rendered in a DPI sensitive fashion.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-	// Window class name. Used for registering / creating the window.
-	const wchar_t* windowClassName = L"Jae3d";
-	ParseCommandLineArguments();
-
 	// Check for DirectX Math library support.
 	if (!DirectX::XMVerifyCPUSupport()) {
 		MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
-		return false;
+		return 0;
 	}
 
-	RegisterWindowClass(hInstance, windowClassName);
-
-	HWND hWnd = CreateWindow(windowClassName, hInstance, L"Jae3d dx12", 1280, 720);
+	RegisterWindowClass(hInstance, className);
+	HWND hWnd = CreateWindow(className, hInstance, title, width, height);
 
 	// register raw input devices
 	RAWINPUTDEVICE rID[2];
@@ -248,21 +198,23 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	rID[0].usUsagePage = 0x01;
 	rID[0].usUsage = 0x02;
 	rID[0].dwFlags = 0;
-	rID[0].hwndTarget = NULL;// Graphics::m_hWnd;
+	rID[0].hwndTarget = NULL;
 	// Keyboard
 	rID[1].usUsagePage = 0x01;
 	rID[1].usUsage = 0x06;
 	rID[1].dwFlags = 0;
-	rID[1].hwndTarget = NULL;// Graphics::m_hWnd;
+	rID[1].hwndTarget = NULL;
 	if (RegisterRawInputDevices(rID, 2, sizeof(RAWINPUTDEVICE)) == FALSE)
 		OutputDebugString("Failed to register raw input device(s)\n");
 
 	Graphics::Initialize(hWnd);
 	ShowWindow(hWnd, SW_SHOW);
 
-	g_Game = new Game();
-	g_Game->Initialize();
+	return hWnd;
+}
 
+void JaeMsgLoop(IJaeGame* game) {
+	g_Game = game;
 	// Main loop
 	bool run = true;
 	MSG msg = {};
@@ -279,11 +231,9 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 				ReadInput(msg);
 		}
 	}
+}
 
+void JaeDestroy() {
 	AssetDatabase::UnloadAssets();
 	Graphics::Destroy();
-
-	delete g_Game;
-
-	return 0;
 }

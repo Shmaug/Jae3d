@@ -1,15 +1,17 @@
 #ifndef UTIL_INC
 #define UTIL_INC
 
-#include <string>
+#include "jstring.hpp"
+
 #include <iostream>
 #include <fstream>
 
-std::string GetFullPath(std::string str);
-std::string GetExt(std::string path);
-std::string GetName(std::string path);
-std::string GetNameExt(std::string path);
-std::wstring utf8toUtf16(const std::string &str);
+jstring GetFullPath(jstring str);
+jstring GetExt(jstring path);
+jstring GetName(jstring path);
+jstring GetNameExt(jstring path);
+jwstring utf8toUtf16(const jstring &str);
+jstring utf16toUtf8(const jwstring &wstr);
 
 #define WriteStreamFunc(type) \
 template<> \
@@ -38,7 +40,7 @@ WriteStreamFunc(int16_t)
 WriteStreamFunc(int32_t)
 WriteStreamFunc(int64_t)
 template<>
-inline void WriteStream<std::string>(std::ostream &stream, std::string var) {
+inline void WriteStream<jstring>(std::ostream &stream, jstring var) {
 	stream.write(var.c_str(), var.length() + 1);
 }
 template<>
@@ -60,8 +62,8 @@ ReadStreamFunc(int16_t)
 ReadStreamFunc(int32_t)
 ReadStreamFunc(int64_t)
 template<>
-inline std::string ReadStream<std::string>(std::istream &stream) {
-	std::string r = "";
+inline jstring ReadStream<jstring>(std::istream &stream) {
+	jstring r = "";
 	char ch;
 	while ((ch = stream.get()) != '\0')
 		r += ch;

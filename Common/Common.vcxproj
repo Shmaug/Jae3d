@@ -26,13 +26,13 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -75,6 +75,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -82,6 +90,11 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FunctionLevelLinking>
+      </FunctionLevelLinking>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -124,16 +137,28 @@
   <ItemGroup>
     <ClInclude Include="Asset.hpp" />
     <ClInclude Include="AssetFile.hpp" />
+    <ClInclude Include="d3dx12.hpp" />
+    <ClInclude Include="dds\dds.hpp" />
+    <ClInclude Include="dds\DDSTextureLoader.hpp" />
+    <ClInclude Include="dds\LoaderHelpers.hpp" />
+    <ClInclude Include="dds\pch.hpp" />
+    <ClInclude Include="dds\PlatformHelpers.hpp" />
     <ClInclude Include="IOUtil.hpp" />
+    <ClInclude Include="jmap.hpp" />
+    <ClInclude Include="jstring.hpp" />
     <ClInclude Include="MemoryStream.hpp" />
     <ClInclude Include="MeshAsset.hpp" />
     <ClInclude Include="ShaderAsset.hpp" />
     <ClInclude Include="TextureAsset.hpp" />
+    <ClInclude Include="jvector.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Asset.cpp" />
     <ClCompile Include="AssetFile.cpp" />
+    <ClCompile Include="dds\DDSTextureLoader.cpp" />
     <ClCompile Include="IOUtil.cpp" />
+    <ClCompile Include="jstring.cpp" />
+    <ClCompile Include="jwstring.cpp" />
     <ClCompile Include="MemoryStream.cpp" />
     <ClCompile Include="MeshAsset.cpp" />
     <ClCompile Include="ShaderAsset.cpp" />

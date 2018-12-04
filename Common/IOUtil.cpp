@@ -1,29 +1,22 @@
 #include "IOUtil.hpp"
 
-#include <vector>
-
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-using namespace std;
-
-string GetFullPath(string str) {
+jstring GetFullPath(jstring str) {
 	char buf[256];
 	if (GetFullPathNameA(str.c_str(), 256, buf, nullptr) == 0) {
 		printf("Failed to get full file path of %s (%d)", str.c_str(), GetLastError());
 		return str;
 	}
-	return string(buf);
+	return jstring(buf);
 }
-string GetExt(string path) {
-	int k = -1;
-	for (int i = 0; i < path.size(); i++)
-		if (path[i] == '.')
-			k = i;
-	if (k == -1) return "";
-	return path.substr(k + 1);
+jstring GetExt(jstring path) {
+	size_t k = path.rfind('.');
+	if (k == jstring::npos) return "";
+	return path.substr((int)k + 1);
 }
-string GetName(string path) {
+jstring GetName(jstring path) {
 	char const *str = path.c_str();
 
 	int f = 0;
@@ -37,28 +30,27 @@ string GetName(string path) {
 
 	return path.substr(f, l - f);
 }
-string GetNameExt(string path) {
-	char const *str = path.c_str();
-
-	int f = 0;
-	for (int i = 0; i < path.length(); i++)
-		if (str[i] == '\\')
-			f = i + 1;
-
-	return path.substr(f, path.length() - f);
+jstring GetNameExt(jstring path) {
+	size_t k = path.rfind('\\');
+	if (k == jstring::npos) return "";
+	return path.substr((int)k + 1);
 }
-wstring utf8toUtf16(const string &str) {
-	if (str.empty())
-		return wstring();
 
-	size_t charsNeeded = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
-	if (charsNeeded == 0)
-		throw runtime_error("Failed converting UTF-8 string to UTF-16");
-
-	vector<wchar_t> buffer(charsNeeded);
-	int charsConverted = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), &buffer[0], (int)buffer.size());
-	if (charsConverted == 0)
-		throw runtime_error("Failed converting UTF-8 string to UTF-16");
-
-	return wstring(&buffer[0], charsConverted);
+jwstring utf8toUtf16(const jstring &str) {
+	if (str.empty()) return jwstring();
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, NULL, 0);
+	wchar_t* wstrTo = new wchar_t[size_needed];
+	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, wstrTo, size_needed);
+	jwstring wstr(wstrTo);
+	delete[] wstrTo;
+	return wstr;
+}
+jstring utf16toUtf8(const jwstring &wstr) {
+	if (wstr.empty()) return jstring();
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
+	char* strTo = new char[size_needed];
+	WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, strTo, size_needed, NULL, NULL);
+	jstring str(strTo);
+	delete[] strTo;
+	return str;
 }

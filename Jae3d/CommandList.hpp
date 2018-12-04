@@ -1,9 +1,10 @@
 #pragma once
 
-#include <memory>
+#include "Util.hpp"
 
 #include <wrl.h>
-#define _WRL Microsoft::WRL
+
+#include <memory>
 
 #include <d3d12.h>
 
@@ -21,19 +22,20 @@ public:
 
 	void TransitionResource(_WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
 
+	void SetCompute(std::shared_ptr<Shader> shader);
 	void SetShader(std::shared_ptr<Shader> shader);
 	void SetMaterial(std::shared_ptr<Material> material);
 	void SetCamera(std::shared_ptr<Camera> camera);
 
 	void DrawMesh(Mesh &mesh);
 
-	_WRL::ComPtr<ID3D12GraphicsCommandList2> D3DCommandList() const { return m_CommandList; }
+	inline _WRL::ComPtr<ID3D12GraphicsCommandList2> D3DCommandList() const { return mCommandList; }
 
 private:
-	std::shared_ptr<Material> m_ActiveMaterial;
-	std::shared_ptr<Shader> m_ActiveShader;
-	std::shared_ptr<Camera> m_ActiveCamera;
+	std::shared_ptr<Material> mActiveMaterial;
+	std::shared_ptr<Shader> mActiveShader;
+	std::shared_ptr<Camera> mActiveCamera;
 
-	_WRL::ComPtr<ID3D12GraphicsCommandList2> m_CommandList;
+	_WRL::ComPtr<ID3D12GraphicsCommandList2> mCommandList;
 };
 
