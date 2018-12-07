@@ -47,18 +47,18 @@ void Profiler::FrameEnd() {
 	curFrame++;
 }
 
-void PrintSample(char *buffer, int size, int &c, ProfilerSample *s, int tabLevel) {
+void PrintSample(wchar_t *buffer, int size, int &c, ProfilerSample *s, int tabLevel) {
 	for (int i = 0; i < tabLevel; i++)
-		c += sprintf_s(buffer + c, size - c, "  ");
-	c += sprintf_s(buffer + c, size - c, "%s: %.2fms\n", s->name, (s->endTime - s->startTime) * 1000);
+		c += swprintf_s(buffer + c, size - c, L"  ");
+	c += swprintf_s(buffer + c, size - c, L"%s: %.2fms\n", s->name, (s->endTime - s->startTime) * 1000);
 	for (auto cs : s->children)
 		PrintSample(buffer, size, c, cs, tabLevel + 1);
 }
 
-void Profiler::PrintLastFrame(char *buffer, int size) {
+void Profiler::PrintLastFrame(wchar_t *buffer, int size) {
 	ProfilerFrame *pf = &frames[(curFrame - 1) % frameCount];
 	int c = 0;
-	c += sprintf_s(buffer, size, "Frame %d: %.2fms\n", curFrame - 1, (pf->endTime - pf->startTime) * 1000);
+	c += swprintf_s(buffer, size, L"Frame %d: %.2fms\n", curFrame - 1, (pf->endTime - pf->startTime) * 1000);
 
 	for (auto s : pf->samples)
 		PrintSample(buffer, size, c, s, 1);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Jae3d/Util.hpp"
+#include "Util.hpp"
 
 #include <functional>
 
@@ -13,45 +13,45 @@ private:
 public:
 	static constexpr auto npos{ static_cast<size_t>(-1) };
 
-	jstring();
-	jstring(const jstring &str);
-	jstring(jstring &&mvstr);
-	jstring(const size_t capacity);
-	jstring(const char* str);
-	jstring(const char* start, size_t length);
-	~jstring();
+	JAE_API jstring();
+	JAE_API jstring(const jstring &str);
+	JAE_API jstring(jstring &&mvstr);
+	JAE_API jstring(const size_t capacity);
+	JAE_API jstring(const char* str);
+	JAE_API jstring(const char* start, size_t length);
+	JAE_API ~jstring();
 
-	void reserve(size_t cap);
+	JAE_API void reserve(size_t cap);
 
 	bool empty() const { return mLength == 0; }
 	const char* c_str() const { return mCStr; }
 	size_t length() const { return mLength; }
 
-	jstring substr(int pos) const;
-	jstring substr(size_t pos, size_t length) const;
-	jstring lower() const;
-	jstring upper() const;
+	JAE_API jstring substr(int pos) const;
+	JAE_API jstring substr(size_t pos, size_t length) const;
+	JAE_API jstring lower() const;
+	JAE_API jstring upper() const;
 
-	size_t find(const char c) const;
-	size_t rfind(const char c) const;
+	JAE_API size_t find(const char c) const;
+	JAE_API size_t rfind(const char c) const;
 
-	char const& operator [](int i) const;
-	char& operator [](int i);
+	JAE_API char const& operator [](int i) const;
+	JAE_API char& operator [](int i);
 
-	jstring& operator =(const jstring& str);
-	jstring& operator =(jstring&& mvstr);
-	jstring& operator =(const char* cstr);
+	JAE_API jstring& operator =(const jstring& str);
+	JAE_API jstring& operator =(jstring&& mvstr);
+	JAE_API jstring& operator =(const char* cstr);
+	
+	JAE_API jstring& operator +=(const char rhs);
+	JAE_API jstring& operator +=(const char* rhs);
+	JAE_API jstring& operator +=(const jstring &rhs);
 
-	jstring& operator +=(const char rhs);
-	jstring& operator +=(const char* rhs);
-	jstring& operator +=(const jstring &rhs);
+	JAE_API jstring operator +(const char rhs);
+	JAE_API jstring operator +(const char* rhs);
+	JAE_API jstring operator +(const jstring &rhs);
 
-	jstring operator +(const char rhs);
-	jstring operator +(const char* rhs);
-	jstring operator +(const jstring &rhs);
-
-	friend jstring operator +(const char lhs, const jstring &rhs);
-	friend jstring operator +(const char* lhs, const jstring &rhs);
+	JAE_API friend jstring operator +(const char lhs, const jstring &rhs);
+	JAE_API friend jstring operator +(const char* lhs, const jstring &rhs);
 
 	friend bool operator >(const jstring &lhs, const jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) > 0; }
 	friend bool operator <(const jstring &lhs, const char* rhs) { return strcmp(lhs.c_str(), rhs) < 0; }
@@ -74,40 +74,45 @@ private:
 public:
 	static constexpr auto npos{ static_cast<size_t>(-1) };
 
-	jwstring();
-	jwstring(const jwstring &str);
-	jwstring(jwstring &&mvstr);
-	jwstring(const size_t capacity);
-	jwstring(const wchar_t* str);
-	jwstring(const wchar_t* start, const size_t length);
-	~jwstring();
+	JAE_API jwstring();
+	JAE_API jwstring(const jwstring &str);
+	JAE_API jwstring(jwstring &&mvstr);
+	JAE_API jwstring(const size_t capacity);
+	JAE_API jwstring(const wchar_t* str);
+	JAE_API jwstring(const wchar_t* start, size_t length);
+	JAE_API ~jwstring();
 
-	void reserve(size_t cap);
+	JAE_API void reserve(size_t cap);
 
-	bool empty() const { return mLength > 0; }
+	bool empty() const { return mLength == 0; }
 	const wchar_t* c_str() const { return mCStr; }
 	size_t length() const { return mLength; }
 
-	jwstring substr(int pos) const;
-	jwstring substr(size_t pos, size_t length) const;
+	JAE_API jwstring substr(int pos) const;
+	JAE_API jwstring substr(size_t pos, size_t length) const;
+	JAE_API jwstring lower() const;
+	JAE_API jwstring upper() const;
 
-	size_t find(const wchar_t c) const;
-	size_t rfind(const wchar_t c) const;
+	JAE_API size_t find(const wchar_t c) const;
+	JAE_API size_t rfind(const wchar_t c) const;
 
-	wchar_t const& operator [](int i) const;
-	wchar_t& operator [](int i);
+	JAE_API wchar_t const& operator [](int i) const;
+	JAE_API wchar_t& operator [](int i);
 
-	jwstring& operator =(const jwstring& str);
-	jwstring& operator =(jwstring&& mvstr);
-	jwstring& operator =(const wchar_t* cstr);
+	JAE_API jwstring& operator =(const jwstring& str);
+	JAE_API jwstring& operator =(jwstring&& mvstr);
+	JAE_API jwstring& operator =(const wchar_t* cstr);
 
-	jwstring& operator +=(const wchar_t rhs);
-	jwstring& operator +=(const wchar_t* rhs);
-	jwstring& operator +=(const jwstring &rhs);
+	JAE_API jwstring& operator +=(const wchar_t rhs);
+	JAE_API jwstring& operator +=(const wchar_t* rhs);
+	JAE_API jwstring& operator +=(const jwstring &rhs);
 
-	jwstring operator +(const wchar_t rhs);
-	jwstring operator +(const wchar_t* rhs);
-	jwstring operator +(const jwstring &rhs);
+	JAE_API jwstring operator +(const wchar_t rhs);
+	JAE_API jwstring operator +(const wchar_t* rhs);
+	JAE_API jwstring operator +(const jwstring &rhs);
+
+	JAE_API friend jwstring operator +(const wchar_t lhs, const jwstring &rhs);
+	JAE_API friend jwstring operator +(const wchar_t* lhs, const jwstring &rhs);
 
 	friend bool operator >(const jwstring &lhs, const jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) > 0; }
 	friend bool operator <(const jwstring &lhs, const wchar_t* rhs) { return wcscmp(lhs.c_str(), rhs) < 0; }
@@ -124,6 +129,10 @@ public:
 template<typename T>
 jstring to_string(T &t) {
 	return "";
+}
+template<typename T>
+jwstring to_wstring(T &t) {
+	return L"";
 }
 
 #pragma warning(push)

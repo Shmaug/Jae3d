@@ -165,13 +165,13 @@ void Window::SetFullscreen(bool fullscreen) {
 	{
 		// Store the current window dimensions so they can be restored 
 		// when switching out of fullscreen state.
-		::GetWindowRect(mhWnd, &mWindowRect);
+		GetWindowRect(mhWnd, &mWindowRect);
 
 		// Set the window style to a borderless window so the client area fills
 		// the entire screen.
 		UINT windowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
 
-		::SetWindowLongW(mhWnd, GWL_STYLE, windowStyle);
+		SetWindowLongW(mhWnd, GWL_STYLE, windowStyle);
 
 		// Query the name of the nearest display device for the window.
 		// This is required to set the fullscreen dimensions of the window
@@ -179,28 +179,28 @@ void Window::SetFullscreen(bool fullscreen) {
 		HMONITOR hMonitor = ::MonitorFromWindow(mhWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFOEX monitorInfo = {};
 		monitorInfo.cbSize = sizeof(MONITORINFOEX);
-		::GetMonitorInfo(hMonitor, &monitorInfo);
+		GetMonitorInfo(hMonitor, &monitorInfo);
 
-		::SetWindowPos(mhWnd, HWND_TOPMOST,
+		SetWindowPos(mhWnd, HWND_TOPMOST,
 			monitorInfo.rcMonitor.left,
 			monitorInfo.rcMonitor.top,
 			monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
 			monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
 			SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
-		::ShowWindow(mhWnd, SW_MAXIMIZE);
+		ShowWindow(mhWnd, SW_MAXIMIZE);
 	} else {
 		// Restore all the window decorators.
-		::SetWindowLong(mhWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+		SetWindowLong(mhWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-		::SetWindowPos(mhWnd, HWND_NOTOPMOST,
+		SetWindowPos(mhWnd, HWND_NOTOPMOST,
 			mWindowRect.left,
 			mWindowRect.top,
 			mWindowRect.right - mWindowRect.left,
 			mWindowRect.bottom - mWindowRect.top,
 			SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
-		::ShowWindow(mhWnd, SW_NORMAL);
+		ShowWindow(mhWnd, SW_NORMAL);
 	}
 }
 

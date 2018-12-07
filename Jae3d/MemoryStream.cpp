@@ -15,19 +15,15 @@ MemoryStream::~MemoryStream() {
 	if (mBuffer) delete[] mBuffer;
 }
 
-void MemoryStream::WriteString(jstring jstring) {
-	Write(jstring.c_str(), jstring.length() + 1);
+void MemoryStream::WriteString(jwstring str) {
+	Write((uint32_t)str.length());
+	Write(reinterpret_cast<const char*>(str.c_str()), (str.length() + 1) * sizeof(wchar_t));
 }
-jstring MemoryStream::ReadString() {
-	size_t start = mCurrent;
-	while (mCurrent < mSize) {
-		if (mBuffer[mCurrent] == '\0') {
-			mCurrent++;
-			return jstring(mBuffer + start, mCurrent - start - 1);
-		}
-		mCurrent++;
-	}
-	return jstring(mBuffer + start, mCurrent - start);
+jwstring MemoryStream::ReadString() {
+	uint32_t sz = Read<uint32_t>();
+	wchar_t* s = new wchar_t[sz + 1];
+	Read(const_cast<char*>(reinterpret_cast<const char*>(s)), (sz + 1) * sizeof(wchar_t));
+	return jwstring(s, sz);
 }
 
 void MemoryStream::Write(const char* ptr, size_t sz) {

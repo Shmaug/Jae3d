@@ -1,141 +1,435 @@
 #include <iostream>
-#include <iostream>
 #include <fstream>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <wrl.h>
 #include <shlwapi.h>
-#pragma comment(lib, "User32.lib")
-#pragma comment(lib, "Shlwapi.lib")
+#include <shlobj.h>
+#include <uxtheme.h>
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "runtimeobject.lib")
+#pragma comment(lib, "propsys.lib")
+#pragma comment(lib, "gdi32.lib")
 
-#include "../Common/jstring.hpp"
-#include "../Common/jvector.hpp"
+#include <algorithm>
+#include <memory>
 
-#include "..\Common\IOUtil.hpp"
-#include "..\Common\AssetFile.hpp"
-#include "..\Common\Asset.hpp"
-#include "..\Common\MeshAsset.hpp"
-#include "..\Common\ShaderAsset.hpp"
-#include "..\Common\TextureAsset.hpp"
-#include "AssetImporter.hpp"
+#include <jstring.hpp>
+#include <jvector.hpp>
+#include <jae.hpp>
 
-using namespace std;
+#include <IOUtil.hpp>
+#include <AssetFile.hpp>
+#include <Asset.hpp>
+#include <Mesh.hpp>
+#include <Shader.hpp>
+#include <Texture.hpp>
 
-void LoadFile(jstring file, jvector<Asset*> &assets) {
-	if (PathFileExists(file.c_str()) != 1) {
-		printf("Could not find %s\n", file.c_str());
+#include "MeshImporter.hpp"
+#include "ShaderImporter.hpp"
+#include "TextureImporter.hpp"
+
+#include "Label.hpp"
+#include "Button.hpp"
+#include "FileTree.hpp"
+#include "Viewport.hpp"
+#include "CDialogEventHandler.hpp"
+
+#pragma warning(disable:4311)
+#pragma warning(disable:4302)
+
+#define ID_FILE_LOADFILE 9001
+#define ID_FILE_LOADFOLDER 9002
+
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST ((HINSTANCE)&__ImageBase)
+
+HFONT boldFont, font;
+
+jvector<std::shared_ptr<UIControl>> controls;
+std::shared_ptr<FileTree> fileTree;
+std::shared_ptr<Viewport> viewport;
+
+std::shared_ptr<Asset> loadedAsset;
+
+void LoadFile(jwstring file, jvector<Asset*> &assets) {
+	if (PathFileExistsW(file.c_str()) != 1) {
+		wprintf(L"Could not find %s\n", file.c_str());
 		return;
 	}
 
-	jstring ext = GetExt(file);
+	jwstring ext = GetExtW(file);
 
-	if (ext == "obj") {
+	if (ext == L"obj") {
 		int count;
-		Asset** arr = AssetImporter::ImportObj(file, count);
+		Asset** arr = MeshImporter::Import(file, count);
 		for (int i = 0; i < count; i++)
 			assets.push_back(arr[i]);
 		delete[] arr;
-	} else if (ext == "fbx") {
+	} else if (ext == L"fbx") {
 		int count;
-		Asset** arr = AssetImporter::ImportFbx(file, count);
+		Asset** arr = MeshImporter::Import(file, count);
 		for (int i = 0; i < count; i++)
 			assets.push_back(arr[i]);
 		delete[] arr;
-	} else if (ext == "blend") {
+	} else if (ext == L"blend") {
 		int count;
-		Asset** arr = AssetImporter::ImportBlend(file, count);
+		Asset** arr = MeshImporter::Import(file, count);
 		for (int i = 0; i < count; i++)
 			assets.push_back(arr[i]);
 		delete[] arr;
 	}
-	else if (ext == "png")
-		assets.push_back((Asset*)AssetImporter::ImportPng(file));
-	else if (ext == "gif")
-		assets.push_back((Asset*)AssetImporter::ImportGif(file));
-	else if (ext == "bmp")
-		assets.push_back((Asset*)AssetImporter::ImportBmp(file));
-	else if (ext == "tif" || ext == "tiff")
-		assets.push_back((Asset*)AssetImporter::ImportTif(file));
-	else if (ext == "jpg" || ext == "jpeg")
-		assets.push_back((Asset*)AssetImporter::ImportJpg(file));
-	else if (ext == "dds")
-		assets.push_back((Asset*)AssetImporter::ImportDDS(file));
-	else if (ext == "tga")
-		assets.push_back((Asset*)AssetImporter::ImportTga(file));
+	else if (ext == L"png")
+		assets.push_back((Asset*)TextureImporter::Import(file));
+	else if (ext == L"gif")
+		assets.push_back((Asset*)TextureImporter::Import(file));
+	else if (ext == L"bmp")
+		assets.push_back((Asset*)TextureImporter::Import(file));
+	else if (ext == L"tif" || ext == L"tiff")
+		assets.push_back((Asset*)TextureImporter::Import(file));
+	else if (ext == L"jpg" || ext == L"jpeg")
+		assets.push_back((Asset*)TextureImporter::Import(file));
+	else if (ext == L"tga")
+		assets.push_back((Asset*)TextureImporter::Import(file));
+	else if (ext == L"dds")
+		assets.push_back((Asset*)TextureImporter::ImportDDS(file));
 
-	else if (ext == "cso")
-		assets.push_back((Asset*)AssetImporter::ImportShader(file));
-	else if (ext == "hlsl")
-		assets.push_back((Asset*)AssetImporter::CompileShader(file));
+	else if (ext == L"cso")
+		assets.push_back((Asset*)ShaderImporter::ReadShader(file));
+	else if (ext == L"hlsl")
+		assets.push_back((Asset*)ShaderImporter::CompileShader(file));
 }
+void LoadDirectory(jwstring dir, jvector<jwstring>* files) {
+	jwstring d = dir + L"\\*";
 
-void LoadDirectory(jstring dir, jvector<jstring>* files) {
-	jstring d = dir + "\\*";
-
-	WIN32_FIND_DATA ffd;
-	HANDLE hFind = FindFirstFile(d.c_str(), &ffd);
+	WIN32_FIND_DATAW ffd;
+	HANDLE hFind = FindFirstFileW(d.c_str(), &ffd);
 	if (hFind == INVALID_HANDLE_VALUE) {
-		printf("Failed to find directory %s\n", dir.c_str());
+		wprintf(L"Failed to find directory %s\n", dir.c_str());
 		return;
 	}
 
 	do {
-		if (ffd.cFileName[0] == '.') continue;
+		if (ffd.cFileName[0] == L'.') continue;
 
-		jstring c = dir + "\\" + jstring(ffd.cFileName);
-		if (GetExt(c) == "meta") continue;
+		jwstring c = dir + L"\\" + jwstring(ffd.cFileName);
+		if (GetExtW(c) == L"meta") continue;
 
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			LoadDirectory(c.c_str(), files);
 		else
-			files->push_back(GetFullPath(c));
-	} while (FindNextFile(hFind, &ffd) != 0);
+			files->push_back(GetFullPathW(c));
+	} while (FindNextFileW(hFind, &ffd) != 0);
 
 	FindClose(hFind);
 }
 
-int main(int argc, char **argv) {
-#if (_WIN32_WINNT >= 0x0A00 /*_WIN32_WINNT_WIN10*/)
-	Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
-	if (FAILED(initialize))
-#else
-	HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
-	if (FAILED(hr))
-#endif
+void UpdateControls(WPARAM wParam, RECT rect, InputState input) {
+	for (int i = 0; i < controls.size(); i++)
+		controls[i]->Update(wParam, rect, input);
+}
+
+void UILoadFile() {
+	jwstring s = BrowseFile();
+	if (!s.empty())
+		fileTree->AddFile(s);
+}
+void UILoadFolder() {
+	jwstring s = BrowseFolder();
+	if (!s.empty())
+		fileTree->AddFolder(s);
+}
+void UIClickFile(jwstring path) {
+	jvector<Asset*> assets;
+	LoadFile(path, assets);
+	if (!assets.empty()) {
+		viewport->Show(std::shared_ptr<Asset>(assets[0]));
+		for (int i = 1; i < assets.size(); i++)
+			delete assets[i];
+	}
+}
+
+LRESULT CALLBACK ViewportProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	RECT r;
+	GetWindowRect(hwnd, &r);
+	RECT c;
+	GetClientRect(hwnd, &c);
+	switch (message) {
+	case WM_NCPAINT:
 	{
-		printf("Failed to initialize COM!\n");
-		return -1;
+		HDC hdc = GetDC(hwnd);
+		FillRect(hdc, &r, Brushes::bgBrush);
+		ReleaseDC(hwnd, hdc);
+		break;
+	}
+	case WM_PAINT:
+	{
+		viewport->DoFrame();
+		break;
 	}
 
-	jvector<jstring> files;
-	jvector<jstring> directories;
-	jstring output;
-	jstring input;
+	case WM_NCHITTEST:
+	{
+		LRESULT ht = DefWindowProcW(hwnd, message, wParam, lParam);
+		switch (ht) {
+		case HTBOTTOMLEFT:  return HTBOTTOM;
+		case HTTOPLEFT:     return HTBORDER;
+		case HTTOP:			return HTBORDER;
+		case HTTOPRIGHT:    return HTRIGHT;
+		case HTLEFT:        return HTBORDER;
+		}
+		return ht;
+	}
+
+	case WM_SIZE:
+	{
+		LONG w = r.right - r.left;
+		LONG h = r.bottom - r.top;
+		LONG s = std::max(std::max(w, h), 128L);
+		if (w < s || h < s)
+			SetWindowPos(hwnd, 0, 0, 0, s, s, SWP_NOMOVE | SWP_NOZORDER);
+		else
+			viewport->Resize();
+		break;
+	}
+
+	default:
+		return DefWindowProcW(hwnd, message, wParam, lParam);
+	}
+	return 0;
+}
+LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	static bool leftButtonDown = false;
+	static bool rightButtonDown = false;
+
+	bool focused = GetFocus() == hwnd;
+
+	POINT cursor;
+	GetCursorPos(&cursor);
+	ScreenToClient(hwnd, &cursor);
+
+	RECT clientRect;
+	GetClientRect(hwnd, &clientRect);
+
+	switch (message) {
+	case WM_CREATE:
+	{
+		controls.push_back(std::shared_ptr<Button>(new Button({ 0, 0, 0, 0 }, { 80, 20, 0, 0 }, L"Load File", UILoadFile)));
+		controls.push_back(std::shared_ptr<Button>(new Button({ 80, 0, 0, 0 }, { 80, 20, 0, 0 }, L"Load Folder", UILoadFolder)));
+		controls.push_back(std::shared_ptr<Label>(new Label({ 0, 20, 0, 0 }, { 100, 40, 0, 0 }, L"File Tree", Fonts::font18)));
+		fileTree = std::shared_ptr<FileTree>(new FileTree({ 20, 60, 0, 0 }, { 350, -80, 0, 1 }, UIClickFile));
+		controls.push_back(fileTree);
+
+		LONG vpx = 375;
+		LONG vpy = clientRect.top + 60;
+		LONG vpw = 256;
+		LONG vph = 256;
+
+		WNDCLASSEXW dlgClass = {};
+		dlgClass.cbSize = sizeof(WNDCLASSEXW);
+		dlgClass.style = CS_HREDRAW | CS_VREDRAW;
+		dlgClass.lpfnWndProc = &ViewportProc;
+		dlgClass.cbClsExtra = 0;
+		dlgClass.cbWndExtra = 0;
+		dlgClass.hInstance = HINST;
+		dlgClass.hIcon = LoadIcon(HINST, NULL);
+		dlgClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+		dlgClass.hbrBackground = Brushes::bgBrush;
+		dlgClass.lpszMenuName = NULL;
+		dlgClass.lpszClassName = L"Jae Asset Packer Viewport";
+		dlgClass.hIconSm = LoadIcon(HINST, NULL);
+		HRESULT hr = RegisterClassExW(&dlgClass);
+		assert(SUCCEEDED(hr));
+		HWND vphwnd = CreateWindowExW(NULL, L"Jae Asset Packer Viewport", L"", WS_CHILD | WS_SIZEBOX, vpx, vpy, vpw, vph, hwnd, NULL, HINST, nullptr);
+		assert(vphwnd);
+
+		viewport = std::shared_ptr<Viewport>(new Viewport());
+		viewport->Init(vphwnd);
+
+		ShowWindow(vphwnd, SW_SHOW);
+
+		break;
+	}
+	case WM_SIZE:
+	{
+		int width = clientRect.right - clientRect.left;
+		int height = clientRect.bottom - clientRect.top;
+
+		// resize
+	}
+	break;
+
+	case WM_MOUSEMOVE:
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		InvalidateRect(hwnd, NULL, false);
+		break;
+	case WM_LBUTTONDOWN:
+		leftButtonDown = true;
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		InvalidateRect(hwnd, NULL, false);
+		break;
+	case WM_LBUTTONUP:
+		leftButtonDown = false;
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		InvalidateRect(hwnd, NULL, false);
+		break;
+	case WM_RBUTTONDOWN:
+		rightButtonDown = true;
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		InvalidateRect(hwnd, NULL, false);
+		break;
+	case WM_RBUTTONUP:
+		rightButtonDown = false;
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		InvalidateRect(hwnd, NULL, false);
+		break;
+	case WM_LBUTTONDBLCLK:
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 2 });
+		InvalidateRect(hwnd, NULL, false);
+		break;
+
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hwnd, &ps);
+
+		HDC hdcm = CreateCompatibleDC(hdc);
+		HBITMAP hbmp = CreateCompatibleBitmap(hdc, clientRect.right, clientRect.bottom);
+		SelectObject(hdcm, hbmp);
+
+		float dpiX = GetDeviceCaps(hdc, LOGPIXELSX) / 96.0f;
+		float dpiY = GetDeviceCaps(hdc, LOGPIXELSY) / 96.0f;
+
+		FillRect(hdcm, &clientRect, Brushes::bgBrush);
+		SetBkMode(hdcm, TRANSPARENT);
+
+		for (int i = 0; i < controls.size(); i++)
+			controls[i]->Draw(hdcm, clientRect, true);
+
+		BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, hdcm, 0, 0, SRCCOPY);
+
+		DeleteObject(hbmp);
+		DeleteDC(hdcm);
+
+		EndPaint(hwnd, &ps);
+		break;
+	}
+	case WM_DESTROY:
+		JaeDestroy();
+		PostQuitMessage(0);
+		break;
+
+	default:
+		return DefWindowProcW(hwnd, message, wParam, lParam);
+	}
+
+	return 0;
+}
+int uiMain() {
+	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	// Check for DirectX Math library support.
+	if (!DirectX::XMVerifyCPUSupport()) {
+		MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
+		return 1;
+	}
+
+	Fonts::Create();
+	Brushes::Create();
+
+	#pragma region register window class
+	WNDCLASSEXW windowClass = {};
+
+	windowClass.cbSize = sizeof(WNDCLASSEXW);
+	windowClass.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	windowClass.lpfnWndProc = &WndProc;
+	windowClass.cbClsExtra = 0;
+	windowClass.cbWndExtra = 0;
+	windowClass.hInstance = HINST;
+	windowClass.hIcon = LoadIcon(HINST, NULL); //  MAKEINTRESOURCE(APPLICATION_ICON));
+	windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+	windowClass.hbrBackground = Brushes::bgBrush;
+	windowClass.lpszMenuName = NULL;
+	windowClass.lpszClassName = L"Jae Asset Packer";
+	windowClass.hIconSm = LoadIcon(HINST, NULL); //  MAKEINTRESOURCE(APPLICATION_ICON));
+
+	HRESULT hr = RegisterClassExW(&windowClass);
+	assert(SUCCEEDED(hr));
+#pragma endregion
+
+	#pragma region create window
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+	RECT windowRect = { 0, 0, 1200L, 675L };
+	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+
+	int windowWidth = windowRect.right - windowRect.left;
+	int windowHeight = windowRect.bottom - windowRect.top;
+
+	// Center the window within the screen. Clamp to 0, 0 for the top-left corner.
+	int windowX = std::max<int>(0, (screenWidth - windowWidth) / 2);
+	int windowY = std::max<int>(0, (screenHeight - windowHeight) / 2);
+
+	HWND hWnd = CreateWindowExW(
+		NULL,
+		L"Jae Asset Packer",
+		L"Jae Asset Packer",
+		WS_OVERLAPPEDWINDOW | CS_DBLCLKS,
+		windowX,
+		windowY,
+		windowWidth,
+		windowHeight,
+		NULL,
+		NULL,
+		HINST,
+		nullptr
+	);
+
+	assert(hWnd); // failed to create the window
+#pragma endregion
+
+	ShowWindow(hWnd, SW_SHOW);
+
+	#pragma region message loop
+	MSG msg = {};
+	while (GetMessage(&msg, NULL, 0, 0) > 0) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	#pragma endregion
+
+	return 0;
+}
+
+int cmdMain(int argc, char** argv) {
+	jvector<jwstring> files;
+	jvector<jwstring> directories;
+	jwstring output;
+	jwstring input;
 	bool compress = true;
 
 	int mode = 0;
 	for (int i = 1; i < argc; i++) {
-		jstring str = jstring(argv[i]);
-		if (argv[i][0] == '-') {
-			if (str == "-f") {
+		jwstring str = utf8toUtf16(jstring(argv[i]));
+		if (argv[i][0] == L'-') {
+			if (str == L"-f") {
 				mode = 0;
-			} else if (str == "-d") {
+			} else if (str == L"-d") {
 				mode = 1;
-			} else if (str == "-o") {
+			} else if (str == L"-o") {
 				mode = 2;
-			} else if (str == "-v") {
-				AssetImporter::verbose = true;
-			} else if (str == "-r") {
+			} else if (str == L"-r") {
 				mode = 3;
-			} else if (str == "-uc") {
+			} else if (str == L"-uc") {
 				compress = false;
 			}
 		} else {
 			switch (mode) {
 			case 0:
-				files.push_back(GetFullPath(str));
+				files.push_back(GetFullPathW(str));
 				break;
 			case 1:
 				directories.push_back(str);
@@ -144,60 +438,51 @@ int main(int argc, char **argv) {
 				output = str;
 				break;
 			case 3:
-				input = GetFullPath(str);
+				input = GetFullPathW(str);
 				break;
 			}
 		}
 	}
 
 	if (!input.empty()) {
-		printf("Reading %s\n", input.c_str());
+		wprintf(L"Reading %s\n", input.c_str());
 		int c;
-		AssetFile::AssetData* a = AssetFile::Read(input, c);
+		Asset** a = AssetFile::Read(input, c);
 		for (int i = 0; i < c; i++) {
-			Asset* f = nullptr;
-			switch (a[i].type) {
+			switch (a[i]->TypeId()) {
 			case AssetFile::TYPEID_MESH:
-				f = new MeshAsset(a[i].name, *a[i].buffer);
-				if (AssetImporter::verbose)
-					printf("%d vertices, %d tris\n", ((MeshAsset*)f)->VertexCount(), ((MeshAsset*)f)->IndexCount() / 3);
+				wprintf(L"%d vertices, %d tris\n", ((Mesh*)a[i])->VertexCount(), ((Mesh*)a[i])->IndexCount() / 3);
 				break;
 			case AssetFile::TYPEID_SHADER:
-				f = new ShaderAsset(a[i].name, *a[i].buffer);
-				if (AssetImporter::verbose)
-					printf("%s\n", f->mName.c_str());
+				wprintf(L"%s\n", a[i]->mName.c_str());
 				break;
 			case AssetFile::TYPEID_TEXTURE:
-				f = new TextureAsset(a[i].name, *a[i].buffer);
-				if (AssetImporter::verbose)
-					printf("%dx%d\n", ((TextureAsset*)f)->Width(), ((TextureAsset*)f)->Height());
+				wprintf(L"%dx%d\n", ((Texture*)a[i])->Width(), ((Texture*)a[i])->Height());
 				break;
 			}
-			if (f) delete f;
+			delete a[i];
 		}
-		printf("Successfully read %s\n", input.c_str());
 		delete[] a;
+		wprintf(L"Successfully read %s\n", input.c_str());
 		return 0;
 	}
 
-	if (output.empty()) printf("Please specify an output file [-o]");
-	if (files.empty() && directories.empty()) printf("Please specify input files [-f] or input directories [-d]");
+	if (output.empty()) wprintf(L"Please specify an output file [-o]");
+	if (files.empty() && directories.empty()) wprintf(L"Please specify input files [-f] or input directories [-d]");
 
 	for (int i = 0; i < directories.size(); i++)
 		LoadDirectory(directories[i], &files);
 
 	// print file names
 	jvector<Asset*> assets;
-	printf("Loading %d files\n", (int)files.size());
-	if (AssetImporter::verbose) {
-		for (int i = 0; i < files.size(); i++)
-			printf("   %s\n", files[i].c_str());
-		printf("\n");
-	}
+	wprintf(L"Loading %d files\n", (int)files.size());
+	for (int i = 0; i < files.size(); i++)
+		wprintf(L"   %s\n", files[i].c_str());
+	wprintf(L"\n");
 	for (int i = 0; i < files.size(); i++)
 		LoadFile(files[i], assets);
 
-	printf("\n");
+	wprintf(L"\n");
 
 	AssetFile::Write(output.c_str(), assets.data(), assets.size(), compress);
 
@@ -206,4 +491,20 @@ int main(int argc, char **argv) {
 	assets.clear();
 
 	return 0;
+}
+
+int main(int argc, char** argv) {
+	Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_SINGLETHREADED);
+	if (FAILED(initialize))
+	{
+		wprintf(L"Failed to initialize COM!\n");
+		return -1;
+	}
+
+	if (argc == 1)
+		// ui mode
+		return uiMain();
+	else
+		// cmd line mode
+		return cmdMain(argc, argv);
 }

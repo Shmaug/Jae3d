@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Jae3d/Util.hpp"
+#include "Util.hpp"
 #include "jstring.hpp"
 
 #include <memory>
@@ -8,9 +8,9 @@
 
 class MemoryStream {
 public:
-	MemoryStream(size_t size = 0, bool mExpand = true);
-	MemoryStream(const char* buf, size_t size, bool expand = true);
-	~MemoryStream();
+	JAE_API MemoryStream(size_t size = 0, bool mExpand = true);
+	JAE_API MemoryStream(const char* buf, size_t size, bool expand = true);
+	JAE_API ~MemoryStream();
 
 	template<typename T>
 	inline void Write(T t) {
@@ -30,21 +30,21 @@ public:
 		return v;
 	}
 
-	void Write(const char* ptr, size_t sz);
-	void Read(char* ptr, size_t sz);
+	JAE_API void Write(const char* ptr, size_t sz);
+	JAE_API void Read(char* ptr, size_t sz);
 
-	void WriteString(jstring jstring);
-	jstring ReadString();
+	JAE_API void WriteString(jwstring jwstring);
+	JAE_API jwstring ReadString();
 
-	void Fit(size_t s);
+	JAE_API void Fit(size_t s);
 	void Seek(size_t p) { if (p >= mSize || p < 0) throw new std::exception("Invalid seek pos."); mCurrent = p; }
 	size_t Tell() const { return mCurrent; }
 	char* Ptr() const { return mBuffer; }
 	
 	// Compress from 0 to current
-	void Compress(MemoryStream &ms);
+	JAE_API void Compress(MemoryStream &ms);
 	// Decompress from current to current + len
-	void Decompress(MemoryStream &ms, size_t len);
+	JAE_API void Decompress(MemoryStream &ms, size_t len);
 
 private:
 	bool mExpand = false;

@@ -13,10 +13,11 @@ CommandList::CommandList(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE t
 }
 CommandList::~CommandList() {}
 
-void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator) {
+void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator, unsigned int frameIndex) {
 	ThrowIfFailed(mCommandList->Reset(allocator.Get(), nullptr));
 	mActiveShader = nullptr;
 	mActiveCamera = nullptr;
+	mFrameIndex = frameIndex;
 }
 
 void CommandList::TransitionResource(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to) {
@@ -33,7 +34,7 @@ void CommandList::SetShader(shared_ptr<Shader> shader) {
 	if (shader) {
 		shader->SetActive(mCommandList);
 		if (mActiveCamera)
-			mActiveCamera->SetActive(mCommandList); // set camera data again since root signature changed
+			mActiveCamera->SetActive(mCommandList, mFrameIndex); // set camera data again since root signature changed
 	}
 	mActiveShader = shader;
 }
@@ -42,19 +43,19 @@ void CommandList::SetMaterial(shared_ptr<Material> material) {
 	if (material) {
 		if (material->mShader)
 			SetShader(material->mShader);
-		material->SetActive(mCommandList);
+		material->SetActive(mCommandList, mFrameIndex);
 	}
 	mActiveMaterial = material;
 }
 void CommandList::SetCamera(shared_ptr<Camera> camera) {
 	if (mActiveCamera == camera) return;
 
-	if (camera && mActiveShader) camera->SetActive(mCommandList);
+	if (camera && mActiveShader) camera->SetActive(mCommandList, mFrameIndex);
 	mActiveCamera = camera;
 }
 void CommandList::DrawMesh(Mesh &mesh) {
 	// set PSO
-	assert(mActiveShader && mActiveCamera);
+	assert(mActiveShader);
 
 	mActiveShader->SetPSO(mCommandList, mesh.Semantics());
 	mesh.Draw(mCommandList);

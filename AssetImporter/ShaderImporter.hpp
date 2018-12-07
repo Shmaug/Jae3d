@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../Common/jstring.hpp"
-
-class ShaderAsset;
+#include <Shader.hpp>
 
 class ShaderImporter {
 public:
-	static ShaderAsset* CompileShader(jstring path);
+	static Shader* CompileShader(jwstring path);
+	// Reads a precompiled shader
+	static Shader* ReadShader(jwstring path);
 };
 

@@ -60,13 +60,6 @@ v2f vsmain(appdata v) {
 	return o;
 }
 
-float srgb(float x) {
-	if (x <= 0.0031308)
-		return x * 12.92;
-	else
-		return 1.055 * pow(x, 1.0 / 2.4) - 0.055;
-}
-
 float4 psmain(v2f i) : SV_Target{
 	float3 normal = normalize(i.tbn0.xyz);
 	float3 tangent = normalize(i.tbn1.xyz);

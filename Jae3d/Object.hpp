@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Util.hpp"
-#include "../Common/jstring.hpp"
-#include "../Common/jvector.hpp"
+#include "jstring.hpp"
+#include "jvector.hpp"
 
 #include <DirectXMath.h>
 #include <d3d12.h>
@@ -12,14 +12,14 @@
 
 class Object : public std::enable_shared_from_this<Object> {
 protected:
-	virtual bool UpdateTransform();
+	JAE_API virtual bool UpdateTransform();
 	bool mTransformDirty = true;
 
 public:
-	Object(jstring name);
-	~Object();
+	JAE_API Object(jwstring name);
+	JAE_API ~Object();
 
-	jstring mName;
+	jwstring mName;
 
 	// Getters
 	DX::XMMATRIX ObjectToWorld() { UpdateTransform(); return mObjectToWorld; }
@@ -38,7 +38,7 @@ public:
 	void LocalPosition(float x, float y, float z) { LocalPosition(DX::XMVectorSet(x, y, z, 0)); }
 	void LocalScale(float x, float y, float z) { LocalScale(DX::XMVectorSet(x, y, z, 0)); }
 
-	void Parent(std::shared_ptr<Object> p);
+	JAE_API void Parent(std::shared_ptr<Object> p);
 	std::shared_ptr<Object> Parent() { return mParent; }
 
 private:
@@ -55,6 +55,6 @@ private:
 	std::shared_ptr<Object> mParent;
 	jvector<std::weak_ptr<Object>> mChildren;
 
-	void SetTransformsDirty();
+	JAE_API void SetTransformsDirty();
 };
 

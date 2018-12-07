@@ -11,7 +11,7 @@
 
 class CommandList;
 
-class CommandQueue {
+class JAE_API CommandQueue {
 public:
 	CommandQueue(_WRL::ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
 	~CommandQueue();
@@ -22,7 +22,7 @@ public:
 	void Flush();
 
 	_WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const;
-	std::shared_ptr<CommandList> GetCommandList();
+	std::shared_ptr<CommandList> GetCommandList(unsigned int frameIndex);
 
 	uint64_t Execute(std::shared_ptr<CommandList> commandList);
 

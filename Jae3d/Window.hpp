@@ -9,31 +9,33 @@
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include "../Common/d3dx12.hpp"
+#include "d3dx12.hpp"
 
 class CommandQueue;
 class CommandList;
 
 class Window {
 public:
-
-	Window(HWND hWnd, UINT bufferCount);
-	~Window();
+	JAE_API Window(HWND hWnd, UINT bufferCount);
+	JAE_API ~Window();
 
 	bool IsFullscreen() const { return mFullscreen; };
 	bool VSyncOn() const { return mVSync; };
 	void SetVSync(bool vsync) { mVSync = vsync; };
-	void SetFullscreen(bool fullscreen);
-	void Resize();
-	void Close();
+	JAE_API void SetFullscreen(bool fullscreen);
+	JAE_API void Resize();
+	JAE_API void Close();
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
-	D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
+	JAE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView();
+	JAE_API D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView();
 
-	void PrepareRenderTargets(std::shared_ptr<CommandList> commandList);
-	void Present(std::shared_ptr<CommandList> commandList, std::shared_ptr<CommandQueue> commandQueue);
-	bool LastFrameCompleted(std::shared_ptr<CommandQueue> commandQueue);
+	JAE_API void PrepareRenderTargets(std::shared_ptr<CommandList> commandList);
+	JAE_API void Present(std::shared_ptr<CommandList> commandList, std::shared_ptr<CommandQueue> commandQueue);
+	JAE_API bool LastFrameCompleted(std::shared_ptr<CommandQueue> commandQueue);
 
+	unsigned int CurrentBuffer() const { return mCurrentBackBufferIndex; }
+	unsigned int BufferCount() const { return mBufferCount; }
+	unsigned int CurrentFrameIndex() const { return mCurrentBackBufferIndex; }
 	DXGI_FORMAT GetDisplayFormat() const { return mDisplayFormat; }
 	DXGI_FORMAT GetDepthFormat() const { return mDepthFormat; }
 	int GetWidth() const { return mClientWidth; }
@@ -74,8 +76,8 @@ private:
 	_WRL::ComPtr<ID3D12Resource> mMSAATarget;
 	_WRL::ComPtr<ID3D12DescriptorHeap> mMSAADescriptorHeap;
 
-	void CreateBuffers();
-	void CreateSwapChain();
+	JAE_API void CreateBuffers();
+	JAE_API void CreateSwapChain();
 
 	DXGI_FORMAT mDisplayFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT mDepthFormat = DXGI_FORMAT_D32_FLOAT;

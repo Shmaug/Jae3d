@@ -5,47 +5,72 @@
 #include <algorithm>
 
 jwstring::jwstring() : mLength(0), mCapacity(1) {
-	mCStr = new wchar_t[sizeof(wchar_t)];
-	mCStr[0] = L'\0';
+	mCStr = new wchar_t[1];
+	mCStr[0] = '\0';
 }
-jwstring::jwstring(const jwstring &str) : mLength(str.mLength), mCapacity(str.mCapacity) {
-	mCStr = new wchar_t[(str.mLength + 1) * sizeof(wchar_t)];
+jwstring::jwstring(const jwstring &str) : mLength(str.mLength), mCapacity(str.mLength + 1) {
+	mCStr = new wchar_t[str.mLength + 1];
 	wcscpy_s(mCStr, str.mLength + 1, str.mCStr);
 }
 jwstring::jwstring(jwstring &&mvstr) {
 	mCStr = mvstr.mCStr;
 	mLength = mvstr.mLength;
 	mCapacity = mvstr.mCapacity;
-	mvstr.mCStr = new wchar_t[sizeof(wchar_t)];
-	mvstr.mCStr[0] = L'\0';
+	mvstr.mCStr = new wchar_t[1];
+	mvstr.mCStr[0] = '\0';
 	mvstr.mLength = 0;
 	mvstr.mCapacity = 1;
 }
-jwstring::jwstring(const size_t length) : mLength(0), mCapacity(length + 1) {
-	mCStr = new wchar_t[(length + 1) * sizeof(wchar_t)];
+jwstring::jwstring(const size_t length) : mLength(0) {
+	if (length < 1024) {
+		mCapacity = length + 1;
+		mCStr = new wchar_t[length + 1];
+		mCStr[0] = '\0';
+	} else {
+		mCStr = new wchar_t[1];
+		mCStr[0] = '\0';
+		mLength = 0;
+		mCapacity = 1;
+	}
 }
 jwstring::jwstring(const wchar_t* str) {
-	mLength = wcslen(str);
-	mCapacity = mLength + 1;
-	mCStr = new wchar_t[mCapacity * sizeof(wchar_t)];
-	wcscpy_s(mCStr, mCapacity, str);
+	if (str) {
+		mLength = wcslen(str);
+		mCapacity = mLength + 1;
+		mCStr = new wchar_t[mCapacity];
+		wcscpy_s(mCStr, mCapacity, str);
+	} else {
+		mCStr = new wchar_t[1];
+		mCStr[0] = '\0';
+		mLength = 0;
+		mCapacity = 1;
+	}
 }
 jwstring::jwstring(const wchar_t* start, const size_t length) {
-	mLength = length;
-	mCapacity = mLength + 1;
-	mCStr = new wchar_t[mCapacity * sizeof(wchar_t)];
-	wcsncpy_s(mCStr, mCapacity, start, mLength);
-	mCStr[mLength] = L'\0';
+	if (start && length < 1024) {
+		mLength = length;
+		mCapacity = mLength + 1;
+		mCStr = new wchar_t[mCapacity];
+		wcsncpy_s(mCStr, mCapacity, start, mLength);
+		mCStr[mLength] = '\0';
+	} else {
+		mCStr = new wchar_t[1];
+		mCStr[0] = '\0';
+		mLength = 0;
+		mCapacity = 1;
+	}
 }
 jwstring::~jwstring() {
-	delete[] mCStr;
+	if (mCStr) delete[] mCStr;
 }
 
 void jwstring::reserve(size_t cap) {
 	if (cap < mCapacity) return;
-	wchar_t* nstr = new wchar_t[cap * sizeof(wchar_t)];
-	wcscpy_s(nstr, cap, mCStr);
-	delete[] mCStr;
+	wchar_t* nstr = new wchar_t[cap];
+	if (mCStr) {
+		wcscpy_s(nstr, cap, mCStr);
+		delete[] mCStr;
+	}
 	mCStr = nstr;
 	mCapacity = cap;
 }
@@ -59,13 +84,26 @@ jwstring jwstring::substr(int pos) const {
 jwstring jwstring::substr(size_t pos, size_t length) const {
 	return jwstring(mCStr + pos, length);
 }
-
+jwstring jwstring::lower() const {
+	jwstring j = *this;
+	_wcslwr_s(j.mCStr, j.mCapacity);
+	return j;
+}
+jwstring jwstring::upper() const {
+	jwstring j = *this;
+	_wcsupr_s(j.mCStr, j.mCapacity);
+	return j;
+}
 
 size_t jwstring::find(const wchar_t c) const {
-	return wcschr(mCStr, c) - mCStr;
+	const wchar_t* i = wcschr(mCStr, c);
+	if (i == nullptr) return npos;
+	return i - mCStr;
 }
 size_t jwstring::rfind(const wchar_t c) const {
-	return wcsrchr(mCStr, c) - mCStr;
+	const wchar_t* i = wcsrchr(mCStr, c);
+	if (i == nullptr) return npos;
+	return i - mCStr;
 }
 
 wchar_t const& jwstring::operator [](int i) const {
@@ -78,8 +116,9 @@ wchar_t& jwstring::operator [](int i) {
 }
 
 jwstring& jwstring::operator +=(const wchar_t rhs) {
-	reserve(mLength + 1);
+	reserve(mLength + 2);
 	mCStr[mLength++] = rhs;
+	mCStr[mLength] = '\0';
 	return *this;
 }
 jwstring& jwstring::operator +=(const wchar_t* rhs) {
@@ -90,7 +129,7 @@ jwstring& jwstring::operator +=(const wchar_t* rhs) {
 	return *this;
 }
 jwstring& jwstring::operator +=(const jwstring &rhs) {
-	reserve(mLength + rhs.mLength + 2);
+	reserve(mLength + rhs.mLength + 1);
 	wcscpy_s(mCStr + mLength, mCapacity - mLength, rhs.mCStr);
 	mLength += rhs.mLength;
 	return *this;
@@ -98,12 +137,13 @@ jwstring& jwstring::operator +=(const jwstring &rhs) {
 
 jwstring& jwstring::operator =(const jwstring& str) {
 	if (this == &str) return *this;
+
 	if (str.mLength + 1 > mCapacity)
 		reserve(str.mLength + 1);
 	else if (str.mLength + 1 < mCapacity) {
-		delete[] mCStr;
+		if (mCStr) delete[] mCStr;
 		mCapacity = str.mLength + 1;
-		mCStr = new wchar_t[mCapacity * sizeof(wchar_t)];
+		mCStr = new wchar_t[mCapacity];
 	}
 
 	wcscpy_s(mCStr, mCapacity, str.mCStr);
@@ -112,12 +152,12 @@ jwstring& jwstring::operator =(const jwstring& str) {
 }
 jwstring& jwstring::operator =(jwstring&& mvstr) {
 	if (this == &mvstr) return *this;
-	delete[] mCStr;
+	if (mCStr) delete[] mCStr;
 	mCStr = mvstr.mCStr;
 	mLength = mvstr.mLength;
 	mCapacity = mvstr.mCapacity;
-	mvstr.mCStr = new wchar_t[sizeof(wchar_t)];
-	mvstr.mCStr[0] = L'\0';
+	mvstr.mCStr = new wchar_t[1];
+	mvstr.mCStr[0] = '\0';
 	mvstr.mLength = 0;
 	mvstr.mCapacity = 1;
 	return *this;
@@ -129,7 +169,7 @@ jwstring& jwstring::operator =(const wchar_t* cstr) {
 		reserve(l + 1);
 	else if (l + 1 < mCapacity) {
 		delete[] mCStr;
-		mCStr = new wchar_t[(l + 1) * sizeof(wchar_t)];
+		mCStr = new wchar_t[l + 1];
 		mCapacity = l + 1;
 	}
 	wcscpy_s(mCStr, mCapacity, cstr);
@@ -146,11 +186,11 @@ jwstring jwstring::operator +(const wchar_t rhs) {
 	return s;
 }
 jwstring jwstring::operator +(const wchar_t* rhs) {
-	size_t l = wcslen(rhs);
-	jwstring s = jwstring(mLength + l + 1);
+	size_t rlen = wcslen(rhs);
+	jwstring s = jwstring(mLength + rlen);
 	wcscpy_s(s.mCStr, s.mCapacity, mCStr);
 	wcscpy_s(s.mCStr + mLength, s.mCapacity - mLength, rhs);
-	s.mLength = mLength + l;
+	s.mLength = mLength + rlen;
 	return s;
 }
 jwstring jwstring::operator +(const jwstring &rhs) {
@@ -158,5 +198,20 @@ jwstring jwstring::operator +(const jwstring &rhs) {
 	wcscpy_s(s.mCStr, s.mCapacity, mCStr);
 	wcscpy_s(s.mCStr + mLength, s.mCapacity - mLength, rhs.mCStr);
 	s.mLength = mLength + rhs.mLength;
+	return s;
+}
+
+jwstring operator +(const wchar_t lhs, const jwstring &rhs) {
+	jwstring s(rhs.mLength + 1);
+	s.mCStr[0] = lhs;
+	wcscpy_s(s.mCStr + 1, s.mCapacity - 1, rhs.mCStr);
+	return s;
+}
+jwstring operator +(const wchar_t* lhs, const jwstring &rhs) {
+	size_t l = wcslen(lhs);
+	jwstring s(rhs.mLength + l + 1);
+	s.mLength = rhs.mLength + l;
+	wcscpy_s(s.mCStr, s.mCapacity, lhs);
+	wcscpy_s(s.mCStr + l, s.mCapacity - l, rhs.mCStr);
 	return s;
 }

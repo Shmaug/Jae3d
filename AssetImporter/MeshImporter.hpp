@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../Common/jstring.hpp"
+#include <jstring.hpp>
 
 class Asset;
 
 class MeshImporter {
 public:
-	static Asset** Import(jstring file, int &count);
+	static Asset** Import(jwstring file, int &count);
 };
 

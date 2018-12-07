@@ -33,6 +33,12 @@
     <Filter Include="Header Files\Assets">
       <UniqueIdentifier>{4d80ad57-1cd9-420d-aec0-fe9b0dc94e90}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\dds">
+      <UniqueIdentifier>{4c624878-ddcb-4a41-aeb2-39f4331d0a5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\dds">
+      <UniqueIdentifier>{02da8ced-8757-49f2-912d-0a89016975d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Input.cpp">
@@ -82,6 +88,27 @@
     </ClCompile>
     <ClCompile Include="ConstantBuffer.cpp">
       <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="AssetFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IOUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jstring.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jwstring.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dds\DDSTextureLoader.cpp">
+      <Filter>Source Files\dds</Filter>
+    </ClCompile>
+    <ClCompile Include="Asset.cpp">
+      <Filter>Source Files\Assets</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,8 +169,50 @@
     <ClInclude Include="IJaeGame.hpp">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
+    <ClInclude Include="jvector.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryStream.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetFile.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IOUtil.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="jmap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="jstring.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Asset.hpp">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\dds.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\DDSTextureLoader.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\LoaderHelpers.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\pch.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="dds\PlatformHelpers.hpp">
+      <Filter>Header Files\dds</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="dds\GenerateMips_main.inc">
+      <Filter>Header Files\dds</Filter>
+    </None>
   </ItemGroup>
 </Project>

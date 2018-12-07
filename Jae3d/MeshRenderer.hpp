@@ -15,15 +15,12 @@ class Material;
 class ConstantBuffer;
 
 class MeshRenderer : public Object {
-protected:
-	bool UpdateTransform();
-
 public:
-	MeshRenderer();
-	MeshRenderer(jstring name);
-	~MeshRenderer();
+	JAE_API MeshRenderer();
+	JAE_API MeshRenderer(jwstring name);
+	JAE_API ~MeshRenderer();
 
-	void Draw(std::shared_ptr<CommandList> commandList);
+	JAE_API void Draw(std::shared_ptr<CommandList> commandList, unsigned int frameIndex);
 
 	std::shared_ptr<Material> mMaterial;
 	std::shared_ptr<Mesh> mMesh;

@@ -4,7 +4,7 @@
 using namespace DirectX;
 using namespace std;
 
-Object::Object(jstring name) : mName(name) {}
+Object::Object(jwstring name) : mName(name) {}
 Object::~Object() {}
 
 bool Object::UpdateTransform() {

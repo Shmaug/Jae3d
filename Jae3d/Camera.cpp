@@ -8,13 +8,19 @@ using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Camera::Camera(jstring name) : Object(name) {
-	mCBuffer = shared_ptr<ConstantBuffer>(new ConstantBuffer(sizeof(CameraBuffer), "Camera CB"));
+Camera::Camera(jwstring name) : Object(name) {
+	mCBuffer = shared_ptr<ConstantBuffer>(new ConstantBuffer(sizeof(CameraBuffer), L"Camera CB", Graphics::BufferCount()));
 }
-Camera::~Camera() { }
+Camera::~Camera() {}
 
-void Camera::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList){
-	commandList->SetGraphicsRootConstantBufferView(1, mCBuffer->GetGPUAddress());
+void Camera::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int frameIndex){
+	XMStoreFloat4x4(&mCameraBufferData.View, mView);
+	XMStoreFloat4x4(&mCameraBufferData.Projection, mProjection);
+	XMStoreFloat4x4(&mCameraBufferData.ViewProjection, mViewProjection);
+	XMStoreFloat3(&mCameraBufferData.CameraPosition, WorldPosition());
+	mCBuffer->Write(&mCameraBufferData, sizeof(CameraBuffer), 0, frameIndex);
+
+	commandList->SetGraphicsRootConstantBufferView(1, mCBuffer->GetGPUAddress(frameIndex));
 }
 
 bool Camera::UpdateTransform(){
@@ -25,12 +31,6 @@ bool Camera::UpdateTransform(){
 	mView = XMMatrixLookToLH(WorldPosition(), fwd, up);
 	mProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(mFieldOfView), mAspect, mNear, mFar);
 	mViewProjection = mView * mProjection;
-
-	XMStoreFloat4x4(&mCameraBufferData.View, mView);
-	XMStoreFloat4x4(&mCameraBufferData.Projection, mProjection);
-	XMStoreFloat4x4(&mCameraBufferData.ViewProjection, mViewProjection);
-	XMStoreFloat3(&mCameraBufferData.CameraPosition, WorldPosition());
-	mCBuffer->Write(&mCameraBufferData, sizeof(CameraBuffer), 0);
 
 	return true;
 }

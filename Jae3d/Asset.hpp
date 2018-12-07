@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Jae3d/Util.hpp"
+#include "Util.hpp"
 #include "jstring.hpp"
 #include "IOUtil.hpp"
 
@@ -15,15 +15,15 @@ class MemoryStream;
 
 class Asset {
 public:
-	jstring mName;
-	jstring mGroup;
+	jwstring mName;
+	jwstring mGroup;
 
-	Asset(jstring name);
-	Asset(jstring name, MemoryStream &ms);
-	~Asset();
+	JAE_API Asset(jwstring name);
+	JAE_API Asset(jwstring name, MemoryStream &ms);
+	JAE_API ~Asset();
 	
-	virtual void WriteData(MemoryStream &ms);
-	virtual uint64_t TypeId();
+	JAE_API virtual void WriteData(MemoryStream &ms);
+	JAE_API virtual uint64_t TypeId();
 };
 
 #pragma warning(pop)

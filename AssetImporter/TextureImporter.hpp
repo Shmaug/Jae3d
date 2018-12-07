@@ -1,13 +1,17 @@
 #pragma once
 
-#include "../Common/jstring.hpp"
-
-class TextureAsset;
+#include <Texture.hpp>
 
 class TextureImporter {
 public:
-	static TextureAsset* Import(jstring file);
-	static TextureAsset* ImportTGA(jstring file);
-	static TextureAsset* ImportDDS(jstring file);
+	struct meta {
+		DXGI_FORMAT format;
+		bool linear;
+		bool mipMaps;
+	};
+
+	static Texture* Import(jwstring file);
+	static Texture* Import(jwstring file, meta &metadata);
+	static Texture* ImportDDS(jwstring file);
 };
 

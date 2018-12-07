@@ -21,6 +21,8 @@
 #include <vector>
 #include <stdint.h>
 
+#include "../Util.hpp"
+
 namespace DirectX
 {
     enum DDS_ALPHA_MODE
@@ -41,7 +43,7 @@ namespace DirectX
     };
 
     // Standard version
-    HRESULT __cdecl LoadDDSTextureFromMemory(
+	JAE_API HRESULT __cdecl LoadDDSTextureFromMemory(
         _In_ ID3D12Device* d3dDevice,
         _In_reads_bytes_(ddsDataSize) const uint8_t* ddsData,
         size_t ddsDataSize,
@@ -51,7 +53,7 @@ namespace DirectX
         _Out_opt_ DDS_ALPHA_MODE* alphaMode = nullptr,
         _Out_opt_ bool* isCubeMap = nullptr);
 
-    HRESULT __cdecl LoadDDSTextureFromFile(
+	JAE_API HRESULT __cdecl LoadDDSTextureFromFile(
         _In_ ID3D12Device* d3dDevice,
         _In_z_ const wchar_t* szFileName,
         _Outptr_ ID3D12Resource** texture,
@@ -62,7 +64,7 @@ namespace DirectX
         _Out_opt_ bool* isCubeMap = nullptr);
 
     // Extended version
-    HRESULT __cdecl LoadDDSTextureFromMemoryEx(
+	JAE_API HRESULT __cdecl LoadDDSTextureFromMemoryEx(
         _In_ ID3D12Device* d3dDevice,
         _In_reads_bytes_(ddsDataSize) const uint8_t* ddsData,
         size_t ddsDataSize,
@@ -74,7 +76,7 @@ namespace DirectX
         _Out_opt_ DDS_ALPHA_MODE* alphaMode = nullptr,
         _Out_opt_ bool* isCubeMap = nullptr);
 
-    HRESULT __cdecl LoadDDSTextureFromFileEx(
+	JAE_API HRESULT __cdecl LoadDDSTextureFromFileEx(
         _In_ ID3D12Device* d3dDevice,
         _In_z_ const wchar_t* szFileName,
         size_t maxsize,

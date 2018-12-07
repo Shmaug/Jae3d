@@ -9,25 +9,21 @@
 using namespace Microsoft::WRL;
 using namespace std;
 
-MeshRenderer::MeshRenderer() : MeshRenderer("") {}
-MeshRenderer::MeshRenderer(jstring name) : Object(name) { 
-	mConstantBuffer = new ConstantBuffer(sizeof(ObjectBuffer), "MeshRenderer CB");
+MeshRenderer::MeshRenderer() : MeshRenderer(L"") {}
+MeshRenderer::MeshRenderer(jwstring name) : Object(name) { 
+	mConstantBuffer = new ConstantBuffer(sizeof(ObjectBuffer), L"MeshRenderer CB", Graphics::BufferCount());
 }
 MeshRenderer::~MeshRenderer() { delete mConstantBuffer; }
 
-bool MeshRenderer::UpdateTransform() {
-	if (!Object::UpdateTransform()) return false;
+void MeshRenderer::Draw(shared_ptr<CommandList> commandList, unsigned int frameIndex) {
+	if (!mMesh || !mMaterial) return;
+	UpdateTransform();
 
 	XMStoreFloat4x4(&mObjectBufferData.ObjectToWorld, ObjectToWorld());
 	XMStoreFloat4x4(&mObjectBufferData.WorldToObject, WorldToObject());
-	mConstantBuffer->Write(&mObjectBufferData, sizeof(ObjectBuffer));
+	mConstantBuffer->Write(&mObjectBufferData, sizeof(ObjectBuffer), 0, frameIndex);
 
-	return true;
-}
-void MeshRenderer::Draw(shared_ptr<CommandList> commandList) {
-	if (!mMesh || !mMaterial) return;
-	UpdateTransform();
 	commandList->SetMaterial(mMaterial);
-	commandList->D3DCommandList()->SetGraphicsRootConstantBufferView(0, mConstantBuffer->GetGPUAddress());
+	commandList->D3DCommandList()->SetGraphicsRootConstantBufferView(0, mConstantBuffer->GetGPUAddress(frameIndex));
 	commandList->DrawMesh(*mMesh);
 }

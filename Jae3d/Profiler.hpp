@@ -27,11 +27,11 @@ namespace Profiler {
 		double endTime;
 	};
 
-	void BeginSample(LPCSTR name);
-	void EndSample();
-	void FrameStart();
-	void FrameEnd();
+	JAE_API void BeginSample(LPCSTR name);
+	JAE_API void EndSample();
+	JAE_API void FrameStart();
+	JAE_API void FrameEnd();
 
-	void PrintLastFrame(char *buffer, int size);
+	JAE_API void PrintLastFrame(wchar_t *buffer, int size);
 };
 

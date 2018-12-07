@@ -1,7 +1,6 @@
 #include "AssetDatabase.hpp"
-#include "../Common/Asset.hpp"
-#include "../Common/AssetFile.hpp"
-#include "../Common/TextureAsset.hpp"
+#include "Asset.hpp"
+#include "AssetFile.hpp"
 
 #include "Mesh.hpp"
 #include "Shader.hpp"
@@ -11,29 +10,15 @@
 
 using namespace std;
 
-jmap<jstring, shared_ptr<Asset>> AssetDatabase::assets;
+jmap<jwstring, shared_ptr<Asset>> AssetDatabase::assets;
 
-void AssetDatabase::LoadAssets(jstring file) {
+void AssetDatabase::LoadAssets(jwstring file) {
 	int count;
-	AssetFile::AssetData* a = AssetFile::Read(file, count);
+	Asset** a = AssetFile::Read(file, count);
 	for (int i = 0; i < count; i++) {
-		Asset* t = nullptr;
-
-		switch (a[i].type) {
-		case AssetFile::TYPEID_MESH:
-			t = new Mesh(a[i].name, *a[i].buffer);
-			break;
-		case AssetFile::TYPEID_SHADER:
-			t = new Shader(a[i].name, *a[i].buffer);
-			break;
-		case AssetFile::TYPEID_TEXTURE:
-			t = new Texture(a[i].name, *a[i].buffer);
-			break;
-		}
-
-		if (t) {
-			t->mGroup = file;
-			assets.emplace(t->mName, shared_ptr<Asset>(t));
+		if (a[i]) {
+			a[i]->mGroup = file;
+			assets.emplace(a[i]->mName, shared_ptr<Asset>(a[i]));
 		}
 	}
 	delete[] a;
@@ -42,6 +27,6 @@ void AssetDatabase::UnloadAssets() {
 	assets.clear();
 }
 
-shared_ptr<Asset> AssetDatabase::GetAsset(jstring name) {
+shared_ptr<Asset> AssetDatabase::GetAsset(jwstring name) {
 	return assets.at(name);
 }

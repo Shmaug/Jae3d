@@ -10,42 +10,43 @@
 #include <d3d12.h>
 #include <DirectXMath.h>
 
+#include "jstring.hpp"
+#include "jmap.hpp"
+
 class CommandList;
 class Shader;
 class Texture;
 class ConstantBuffer;
 
-#include "../Common/ShaderAsset.hpp"
-
 class Material {
 public:
-	jstring mName;
+	jwstring mName;
 
-	Material(jstring name, std::shared_ptr<Shader> shader);
-	~Material();
+	JAE_API Material(jwstring name, std::shared_ptr<Shader> shader);
+	JAE_API ~Material();
 
-	void SetShader(std::shared_ptr<Shader> shader, bool resetParameters = false);
+	JAE_API void SetShader(std::shared_ptr<Shader> shader, bool resetParameters = false);
 
-	void SetInt(jstring param, int v);
-	void SetInt2(jstring param, DirectX::XMINT2 v);
-	void SetInt3(jstring param, DirectX::XMINT3 v);
-	void SetInt4(jstring param, DirectX::XMINT4 v);
+	JAE_API void SetInt(jwstring param, int v, unsigned int frameIndex);
+	JAE_API void SetInt2(jwstring param, DirectX::XMINT2 v, unsigned int frameIndex);
+	JAE_API void SetInt3(jwstring param, DirectX::XMINT3 v, unsigned int frameIndex);
+	JAE_API void SetInt4(jwstring param, DirectX::XMINT4 v, unsigned int frameIndex);
 
-	void SetUInt(jstring param, unsigned int v);
-	void SetUInt2(jstring param, DirectX::XMUINT2 v);
-	void SetUInt3(jstring param, DirectX::XMUINT3 v);
-	void SetUInt4(jstring param, DirectX::XMUINT4 v);
+	JAE_API void SetUInt(jwstring param, unsigned int v, unsigned int frameIndex);
+	JAE_API void SetUInt2(jwstring param, DirectX::XMUINT2 v, unsigned int frameIndex);
+	JAE_API void SetUInt3(jwstring param, DirectX::XMUINT3 v, unsigned int frameIndex);
+	JAE_API void SetUInt4(jwstring param, DirectX::XMUINT4 v, unsigned int frameIndex);
 
-	void SetFloat(jstring param, float v);
-	void SetFloat2(jstring param, DirectX::XMFLOAT2 vec);
-	void SetFloat3(jstring param, DirectX::XMFLOAT3 vec);
-	void SetFloat4(jstring param, DirectX::XMFLOAT4 vec);
+	JAE_API void SetFloat(jwstring param, float v, unsigned int frameIndex);
+	JAE_API void SetFloat2(jwstring param, DirectX::XMFLOAT2 vec, unsigned int frameIndex);
+	JAE_API void SetFloat3(jwstring param, DirectX::XMFLOAT3 vec, unsigned int frameIndex);
+	JAE_API void SetFloat4(jwstring param, DirectX::XMFLOAT4 vec, unsigned int frameIndex);
 
-	void SetColor3(jstring param, DirectX::XMFLOAT3 vec);
-	void SetColor4(jstring param, DirectX::XMFLOAT4 vec);
+	JAE_API void SetColor3(jwstring param, DirectX::XMFLOAT3 vec, unsigned int frameIndex);
+	JAE_API void SetColor4(jwstring param, DirectX::XMFLOAT4 vec, unsigned int frameIndex);
 
-	void SetTexture(jstring param, std::shared_ptr<Texture> tex);
-	void SetCBuffer(jstring param, std::shared_ptr<ConstantBuffer> tex);
+	JAE_API void SetTexture(jwstring param, std::shared_ptr<Texture> tex, unsigned int frameIndex);
+	JAE_API void SetCBuffer(jwstring param, std::shared_ptr<ConstantBuffer> tex, unsigned int frameIndex);
 
 private:
 	// Stores all types of material parameters
@@ -107,12 +108,12 @@ private:
 	};
 
 	friend class CommandList;
-	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	JAE_API void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int frameIndex);
 
 	// constant buffers for integral material parameters: [root index, cbuffer]
 	int mParamCbufferCount;
 	ParameterCBuffer* mParamCbuffers;
 
 	std::shared_ptr<Shader> mShader;
-	jmap<jstring, MaterialValue> mParamValues;
+	jmap<jwstring, MaterialValue> mParamValues;
 };

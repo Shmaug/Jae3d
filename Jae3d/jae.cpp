@@ -23,6 +23,9 @@ using namespace std;
 #undef CreateWindow
 #endif
 
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST ((HINSTANCE)&__ImageBase)
+
 IJaeGame* g_Game;
 
 // Window callback function.
@@ -57,7 +60,7 @@ HWND CreateWindow(const wchar_t* windowClassName, HINSTANCE hInst, const wchar_t
 		nullptr
 	);
 
-	assert(hWnd && "Failed to create window");
+	assert(hWnd); // failed to create the window
 
 	return hWnd;
 }
@@ -68,7 +71,7 @@ void ReadInput(MSG msg) {
 	LPBYTE lpb = new BYTE[dwSize];
 	if (lpb == 0) return;
 	if (GetRawInputData((HRAWINPUT)msg.lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
-		OutputDebugString("Incorrect GetRawInputData size\n");
+		OutputDebugString(L"Incorrect GetRawInputData size\n");
 	RAWINPUT* raw = (RAWINPUT*)lpb;
 
 	if (raw->header.dwType == RIM_TYPEMOUSE) {
@@ -131,18 +134,10 @@ LRESULT CALLBACK JaeWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		// not handled.
 		case WM_SYSCHAR:
 			break;
+
 		case WM_SIZE:
-		{
-			auto window = Graphics::GetWindow();
-			RECT clientRect = {};
-			::GetClientRect(window->GetHandle(), &clientRect);
-
-			int width = clientRect.right - clientRect.left;
-			int height = clientRect.bottom - clientRect.top;
-
-			window->Resize();
+			Graphics::GetWindow()->Resize();
 			if (g_Game) g_Game->OnResize();
-		}
 		break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
@@ -176,7 +171,7 @@ void RegisterWindowClass(HINSTANCE hInst, const wchar_t* windowClassName) {
 	assert(SUCCEEDED(hr));
 }
 
-HWND JaeCreateWindow(HINSTANCE hInstance, LPCWSTR className, LPCWSTR title, int width, int height) {
+HWND JaeCreateWindow(LPCWSTR title, int width, int height, unsigned int bufferCount) {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// Using this awareness context allows the client area of the window 
 	// to achieve 100% scaling while still allowing non-client window content to 
@@ -189,8 +184,8 @@ HWND JaeCreateWindow(HINSTANCE hInstance, LPCWSTR className, LPCWSTR title, int 
 		return 0;
 	}
 
-	RegisterWindowClass(hInstance, className);
-	HWND hWnd = CreateWindow(className, hInstance, title, width, height);
+	RegisterWindowClass(HINST, L"Jae3d d3d12");
+	HWND hWnd = CreateWindow(L"Jae3d d3d12", HINST, title, width, height);
 
 	// register raw input devices
 	RAWINPUTDEVICE rID[2];
@@ -205,9 +200,9 @@ HWND JaeCreateWindow(HINSTANCE hInstance, LPCWSTR className, LPCWSTR title, int 
 	rID[1].dwFlags = 0;
 	rID[1].hwndTarget = NULL;
 	if (RegisterRawInputDevices(rID, 2, sizeof(RAWINPUTDEVICE)) == FALSE)
-		OutputDebugString("Failed to register raw input device(s)\n");
+		OutputDebugString(L"Failed to register raw input device(s)\n");
 
-	Graphics::Initialize(hWnd);
+	Graphics::Initialize(hWnd, bufferCount);
 	ShowWindow(hWnd, SW_SHOW);
 
 	return hWnd;

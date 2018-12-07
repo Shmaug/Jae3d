@@ -10,13 +10,19 @@
 
 #define _WRL Microsoft::WRL
 
+#ifdef JAE_EXPORTS
+#define JAE_API __declspec(dllexport)
+#else
+#define JAE_API __declspec(dllimport)
+#endif
+
 inline void ThrowIfFailed(HRESULT hr) {
 	if (FAILED(hr)) {
 		throw std::exception();
 	}
 }
 
-inline void WINAPIV OutputDebugf(LPCSTR fmt, ...) {
+inline void WINAPIV OutputDebugf(LPCWSTR fmt, ...) {
 	TCHAR s[1025];
 	va_list args;
 	va_start(args, fmt);
@@ -58,7 +64,11 @@ inline unsigned char Log2(size_t value) {
 
 	// If perfect power of two (only one set bit), return index of bit.  Otherwise round up
 	// fractional log by adding 1 to most signicant set bit's index.
+#ifdef _WIN64
 	if (_BitScanReverse64(&mssb, value) > 0 && _BitScanForward64(&lssb, value) > 0)
+#else
+	if (_BitScanReverse(&mssb, value) > 0 && _BitScanForward(&lssb, value) > 0)
+#endif
 		return unsigned char(mssb + (mssb == lssb ? 0 : 1));
 	else
 		return 0;

@@ -11,11 +11,11 @@ class ConstantBuffer;
 
 class Camera : public Object {
 protected:
-	bool UpdateTransform();
+	JAE_API bool UpdateTransform();
 
 public:
-	Camera(jstring name);
-	~Camera();
+	JAE_API Camera(jwstring name);
+	JAE_API ~Camera();
 
 	float FieldOfView() const { return mFieldOfView; }
 	float Aspect() const { return mAspect; }
@@ -32,7 +32,7 @@ public:
 
 private:
 	friend class CommandList;
-	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int frameIndex);
 
 	float mFieldOfView = 70.0f;
 	float mAspect = 1.0f;

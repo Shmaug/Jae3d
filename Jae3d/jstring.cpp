@@ -21,22 +21,44 @@ jstring::jstring(jstring &&mvstr) {
 	mvstr.mLength = 0;
 	mvstr.mCapacity = 1;
 }
-jstring::jstring(const size_t length) : mLength(0), mCapacity(length + 1) {
-	mCStr = new char[length + 1];
-	mCStr[0] = '\0';
+jstring::jstring(const size_t length) : mLength(0) {
+	if (length < 1024) {
+		mCapacity = length + 1;
+		mCStr = new char[length + 1];
+		mCStr[0] = '\0';
+	} else {
+		mCStr = new char[1];
+		mCStr[0] = '\0';
+		mLength = 0;
+		mCapacity = 1;
+	}
 }
 jstring::jstring(const char* str) {
-	mLength = strlen(str);
-	mCapacity = mLength + 1;
-	mCStr = new char[mCapacity];
-	strcpy_s(mCStr, mCapacity, str);
+	if (str) {
+		mLength = strlen(str);
+		mCapacity = mLength + 1;
+		mCStr = new char[mCapacity];
+		strcpy_s(mCStr, mCapacity, str);
+	} else {
+		mCStr = new char[1];
+		mCStr[0] = '\0';
+		mLength = 0;
+		mCapacity = 1;
+	}
 }
 jstring::jstring(const char* start, const size_t length) {
-	mLength = length;
-	mCapacity = mLength + 1;
-	mCStr = new char[mCapacity];
-	strncpy_s(mCStr, mCapacity, start, mLength);
-	mCStr[mLength] = '\0';
+	if (start && length < 1024) {
+		mLength = length;
+		mCapacity = mLength + 1;
+		mCStr = new char[mCapacity];
+		strncpy_s(mCStr, mCapacity, start, mLength);
+		mCStr[mLength] = '\0';
+	} else {
+		mCStr = new char[1];
+		mCStr[0] = '\0';
+		mLength = 0;
+		mCapacity = 1;
+	}
 }
 jstring::~jstring() {
 	if (mCStr) delete[] mCStr;

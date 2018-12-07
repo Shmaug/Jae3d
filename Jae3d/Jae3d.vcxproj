@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -70,10 +70,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ExecutablePath>C:\Program Files (x86)\Windows Kits\10\Redist\D3D\x86;D:\Programs\FBX SDK\2019.0\lib\vs2015\x86\debug;$(ExecutablePath)</ExecutablePath>
-    <LibraryPath>C:\Program Files %28x86%29\Windows Kits\10\Lib\10.0.16299.0\um\x86;D:\Programs\FBX SDK\2019.0\lib\vs2015\x86\debug;$(LibraryPath)</LibraryPath>
-    <IncludePath>D:\Programs\FBX SDK\2019.0\include;$(IncludePath)</IncludePath>
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -81,13 +81,13 @@
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <IncludePath>$(IncludePath)</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -95,7 +95,7 @@
     <ExecutablePath>$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(FxCopDir);$(PATH);</ExecutablePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -105,10 +105,11 @@
       <ConformanceMode>false</ConformanceMode>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <PreprocessorDefinitions>JAE_EXPORTS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Windows Kits\10\Lib\10.0.17134.0\um\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
@@ -117,7 +118,8 @@
       <ObjectFileOutput>$(OutDir)Assets\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>Xcopy $(ProjectDir)Assets $(OutputPath)Assets /E /C /Q /Y /I</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -141,14 +143,14 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <PreprocessorDefinitions>_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>JAE_EXPORTS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ProgramDataBaseFileName>$(IntDir)vc$(ProjectName).pdb</ProgramDataBaseFileName>
       <FunctionLevelLinking>
       </FunctionLevelLinking>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Windows Kits\10\Lib\10.0.17134.0\um\x64;$(SolutionDir)Common\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;Common.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
@@ -186,6 +188,8 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>JAE_EXPORTS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -197,7 +201,8 @@
       <ObjectFileOutput>$(OutDir)Assets\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>Xcopy $(ProjectDir)Assets $(OutputPath)Assets /E /C /Q /Y /I</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -222,18 +227,20 @@
       <ConformanceMode>false</ConformanceMode>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>JAE_EXPORTS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
       <ObjectFileOutput>$(OutDir)Assets\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>Xcopy $(ProjectDir)Assets $(OutputPath)Assets /E /C /Q /Y /I</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -249,15 +256,22 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Asset.cpp" />
     <ClCompile Include="AssetDatabase.cpp" />
+    <ClCompile Include="AssetFile.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CommandList.cpp" />
     <ClCompile Include="CommandQueue.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
+    <ClCompile Include="dds\DDSTextureLoader.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="IOUtil.cpp" />
     <ClCompile Include="jae.cpp" />
+    <ClCompile Include="jstring.cpp" />
+    <ClCompile Include="jwstring.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="MemoryStream.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="Object.cpp" />
@@ -267,17 +281,30 @@
     <ClCompile Include="Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Asset.hpp" />
     <ClInclude Include="AssetDatabase.hpp" />
+    <ClInclude Include="AssetFile.hpp" />
     <ClInclude Include="Camera.hpp" />
     <ClInclude Include="CommandList.hpp" />
     <ClInclude Include="CommandQueue.hpp" />
     <ClInclude Include="ConstantBuffer.hpp" />
+    <ClInclude Include="d3dx12.hpp" />
+    <ClInclude Include="dds\dds.hpp" />
+    <ClInclude Include="dds\DDSTextureLoader.hpp" />
+    <ClInclude Include="dds\LoaderHelpers.hpp" />
+    <ClInclude Include="dds\pch.hpp" />
+    <ClInclude Include="dds\PlatformHelpers.hpp" />
     <ClInclude Include="Graphics.hpp" />
     <ClInclude Include="Input.hpp" />
+    <ClInclude Include="IOUtil.hpp" />
     <ClInclude Include="jae.hpp" />
+    <ClInclude Include="jmap.hpp" />
+    <ClInclude Include="jstring.hpp" />
+    <ClInclude Include="jvector.hpp" />
     <ClInclude Include="KeyCode.hpp" />
     <ClInclude Include="IJaeGame.hpp" />
     <ClInclude Include="Material.hpp" />
+    <ClInclude Include="MemoryStream.hpp" />
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="MeshRenderer.hpp" />
     <ClInclude Include="Object.hpp" />
@@ -288,12 +315,8 @@
     <ClInclude Include="Util.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="dds\GenerateMips_main.inc" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Common\Common.vcxproj">
-      <Project>{9f2adca6-211c-4a5d-8604-b4dd692ce7e0}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -10,6 +10,11 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace std;
 
+#ifdef _DEBUG
+#include <dxgidebug.h>
+ComPtr<IDXGIDebug1> dxgiDebugInterface;
+#endif
+
 #pragma region static variable initialization
 bool Graphics::mInitialized = false;
 
@@ -29,7 +34,7 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice() {
 
 	ComPtr<ID3D12Device2> d3d12Device2;
 	HRESULT hr = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2));
-#if defined(_DEBUG)
+#ifdef _DEBUG
 	if (FAILED(hr)) {
 		ComPtr<IDXGIAdapter> warpAdapter = GetAdapter(true);
 		hr = D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2));
@@ -39,7 +44,7 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice() {
 
 	
 	// Enable debug messages in debug mode.
-#if defined(_DEBUG)
+#ifdef _DEBUG
 	ComPtr<ID3D12InfoQueue> pInfoQueue;
 	if (SUCCEEDED(d3d12Device2.As(&pInfoQueue))) {
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
@@ -161,6 +166,9 @@ bool Graphics::CheckTearingSupport() {
 DXGI_FORMAT Graphics::GetDisplayFormat() { return mWindow->GetDisplayFormat(); }
 DXGI_FORMAT Graphics::GetDepthFormat() { return mWindow->GetDepthFormat(); }
 
+unsigned int Graphics::BufferCount() { return mWindow->BufferCount(); }
+unsigned int Graphics::CurrentFrameIndex() { return mWindow->CurrentFrameIndex(); }
+
 UINT Graphics::GetMSAASamples() {
 	return mWindow->GetMSAASamples();
 }
@@ -168,23 +176,25 @@ UINT Graphics::GetMSAASamples() {
 
 #pragma region runtime
 
-void Graphics::Initialize(HWND hWnd) {
-#if defined(_DEBUG)
+void Graphics::Initialize(HWND hWnd, unsigned int bufferCount) {
+#ifdef _DEBUG
 	// Always enable the debug layer before doing anything DX12 related
 	// so all possible errors generated while creating DX12 objects
 	// are caught by the debug layer.
 	ComPtr<ID3D12Debug> debugInterface;
 	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
 	debugInterface->EnableDebugLayer();
+	
+	DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebugInterface));
 #endif
 
 	mDevice = CreateDevice();
 
-	mDirectCommandQueue = std::make_shared<CommandQueue>(mDevice, D3D12_COMMAND_LIST_TYPE_DIRECT);
-	mComputeCommandQueue = std::make_shared<CommandQueue>(mDevice, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-	mCopyCommandQueue = std::make_shared<CommandQueue>(mDevice, D3D12_COMMAND_LIST_TYPE_COPY);
+	mDirectCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_DIRECT));
+	mComputeCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_COMPUTE));
+	mCopyCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_COPY));
 
-	mWindow = std::make_shared<Window>(hWnd, 3);
+	mWindow = shared_ptr<Window>(new Window(hWnd, bufferCount));
 
 	mInitialized = true;
 }
@@ -219,9 +229,21 @@ DXGI_SAMPLE_DESC Graphics::GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UIN
 }
 
 void Graphics::Destroy(){
-	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY)->Flush();
-	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->Flush();
-	GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->Flush();
+	mDirectCommandQueue->Flush();
+	mComputeCommandQueue->Flush();
+	mCopyCommandQueue->Flush();
+
+	mDirectCommandQueue.reset();
+	mComputeCommandQueue.reset();
+	mCopyCommandQueue.reset();
+
+	mWindow.reset();
+
+	mDevice.Reset();
+
+#ifdef _DEBUG
+	//dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+#endif
 }
 #pragma endregion
 
@@ -229,7 +251,7 @@ void Graphics::UploadData(shared_ptr<CommandList> commandList,
 	ID3D12Resource** dst, ID3D12Resource** intermediate,
 	size_t count, size_t stride, const void* data) {
 
-	auto device = Graphics::GetDevice();
+	auto device = GetDevice();
 
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),

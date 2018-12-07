@@ -20,7 +20,8 @@ CommandQueue::CommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE
 	assert(mFenceEvent && "Failed to create fence event handle.");
 }
 CommandQueue::~CommandQueue() {
-	::CloseHandle(mFenceEvent);
+	Flush();
+	CloseHandle(mFenceEvent);
 }
 
 uint64_t CommandQueue::Signal() {
@@ -31,7 +32,7 @@ uint64_t CommandQueue::Signal() {
 void CommandQueue::WaitForFenceValue(uint64_t value) {
 	if (!IsFenceComplete(value)) {
 		md3d12Fence->SetEventOnCompletion(value, mFenceEvent);
-		::WaitForSingleObject(mFenceEvent, DWORD_MAX);
+		WaitForSingleObject(mFenceEvent, DWORD_MAX);
 	}
 }
 bool CommandQueue::IsFenceComplete(uint64_t value) {
@@ -44,7 +45,7 @@ void CommandQueue::Flush() {
 ComPtr<ID3D12CommandQueue> CommandQueue::GetCommandQueue() const {
 	return md3d12CommandQueue;
 }
-shared_ptr<CommandList> CommandQueue::GetCommandList() {
+shared_ptr<CommandList> CommandQueue::GetCommandList(unsigned int frameIndex) {
 	ComPtr<ID3D12CommandAllocator> commandAllocator;
 	shared_ptr<CommandList> commandList;
 
@@ -58,7 +59,7 @@ shared_ptr<CommandList> CommandQueue::GetCommandList() {
 	if (!mCommandListQueue.empty()) {
 		commandList = mCommandListQueue.front();
 		mCommandListQueue.pop();
-		commandList->Reset(commandAllocator);
+		commandList->Reset(commandAllocator, frameIndex);
 	} else
 		commandList = CreateCommandList(commandAllocator);
 
