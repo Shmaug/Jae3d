@@ -1,13 +1,6 @@
 #pragma once
 
-#include "jstring.hpp"
-#include "jmap.hpp"
-
-#include "Util.hpp"
-
-#include <memory>
-
-class Asset;
+#include "Common.hpp"
 
 class AssetDatabase {
 private:

@@ -7,6 +7,7 @@
 
 using namespace std;
 using namespace Microsoft::WRL;
+using namespace DirectX;
 
 CommandList::CommandList(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type, ComPtr<ID3D12CommandAllocator> allocator) {
 	ThrowIfFailed(device->CreateCommandList(0, type, allocator.Get(), nullptr, IID_PPV_ARGS(&mCommandList)));
@@ -53,10 +54,23 @@ void CommandList::SetCamera(shared_ptr<Camera> camera) {
 	if (camera && mActiveShader) camera->SetActive(mCommandList, mFrameIndex);
 	mActiveCamera = camera;
 }
+void CommandList::SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend) {
+	mState.blendState = blend;
+}
+void CommandList::SetInputElements(MESH_SEMANTIC input) {
+	mState.input = input;
+}
 void CommandList::DrawMesh(Mesh &mesh) {
-	// set PSO
 	assert(mActiveShader);
 
-	mActiveShader->SetPSO(mCommandList, mesh.Semantics());
+	mState.input = mesh.Semantics();
+	mState.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+	mActiveShader->SetPSO(mCommandList, mState);
 	mesh.Draw(mCommandList);
+}
+void CommandList::DrawUserMesh(D3D12_PRIMITIVE_TOPOLOGY_TYPE topology) {
+	assert(mActiveShader);
+	mState.topology = topology;
+	mActiveShader->SetPSO(mCommandList, mState);
 }

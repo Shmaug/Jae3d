@@ -1,19 +1,19 @@
 #pragma once
 
 #include "Util.hpp"
-
-#include <vector>
+#include "jstring.hpp"
+#include "jvector.hpp"
 
 namespace Profiler {
 	class ProfilerSample {
 	public:
-		std::vector<ProfilerSample*> children;
+		jvector<ProfilerSample*> children;
 		ProfilerSample *parent;
-		LPCSTR name;
+		jwstring name;
 		double startTime;
 		double endTime;
 
-		ProfilerSample(LPCSTR name, double startTime) : name(name), startTime(startTime) {
+		ProfilerSample(jwstring name, double startTime) : name(name), startTime(startTime) {
 			parent = nullptr;
 		}
 
@@ -21,16 +21,17 @@ namespace Profiler {
 	};
 
 	struct ProfilerFrame {
-		std::vector<ProfilerSample*> samples;
+		jvector<ProfilerSample*> samples;
 		long index;
 		double startTime;
 		double endTime;
 	};
 
-	JAE_API void BeginSample(LPCSTR name);
+	JAE_API void BeginSample(jwstring name);
 	JAE_API void EndSample();
 	JAE_API void FrameStart();
 	JAE_API void FrameEnd();
+	JAE_API double LastFrameTime();
 
 	JAE_API void PrintLastFrame(wchar_t *buffer, int size);
 };

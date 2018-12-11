@@ -40,6 +40,8 @@ public:
 	DXGI_FORMAT GetDepthFormat() const { return mDepthFormat; }
 	int GetWidth() const { return mClientWidth; }
 	int GetHeight() const { return mClientHeight; }
+	UINT GetLogPixelsX() const { return mLogPixelsX; }
+	UINT GetLogPixelsY() const { return mLogPixelsY; }
 	RECT GetRect() { GetWindowRect(mhWnd, &mWindowRect); return mWindowRect; }
 	HWND GetHandle() const { return mhWnd; }
 	UINT GetMSAASamples() const { return mmsaaSampleCount; }
@@ -52,6 +54,8 @@ private:
 
 	uint32_t mClientWidth = 1280;
 	uint32_t mClientHeight = 720;
+	UINT mLogPixelsX;
+	UINT mLogPixelsY;
 
 	UINT mmsaaSampleCount = 8;
 	UINT mBufferCount = 3;

@@ -110,11 +110,14 @@
     <ClCompile Include="Asset.cpp">
       <Filter>Source Files\Assets</Filter>
     </ClCompile>
+    <ClCompile Include="Font.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="SpriteBatch.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Util.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Camera.hpp">
       <Filter>Header Files\Objects</Filter>
     </ClInclude>
@@ -207,6 +210,18 @@
     </ClInclude>
     <ClInclude Include="dds\PlatformHelpers.hpp">
       <Filter>Header Files\dds</Filter>
+    </ClInclude>
+    <ClInclude Include="Font.hpp">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SpriteBatch.hpp">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

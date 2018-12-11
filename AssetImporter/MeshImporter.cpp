@@ -13,8 +13,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include <Mesh.hpp>
 #include <IOUtil.hpp>
+#include <Mesh.hpp>
 
 #include <d3d12.h>
 #include <DirectXMath.h>
@@ -80,17 +80,17 @@ void XMSET(XMUINT4 &v, int i, unsigned int val) {
 Mesh* Convert(aiMesh *aimesh){
 	Mesh *mesh = new Mesh(utf8toUtf16(aimesh->mName.C_Str()));
 
-	mesh->HasSemantic(Mesh::SEMANTIC_NORMAL, aimesh->HasNormals());
-	mesh->HasSemantic(Mesh::SEMANTIC_TANGENT, aimesh->HasTangentsAndBitangents());
-	mesh->HasSemantic(Mesh::SEMANTIC_BINORMAL, aimesh->HasTangentsAndBitangents());
-	mesh->HasSemantic(Mesh::SEMANTIC_COLOR0, aimesh->HasVertexColors(0));
-	mesh->HasSemantic(Mesh::SEMANTIC_COLOR1, aimesh->HasVertexColors(1));
-	mesh->HasSemantic(Mesh::SEMANTIC_BLENDINDICES, aimesh->HasBones());
-	mesh->HasSemantic(Mesh::SEMANTIC_BLENDWEIGHT, aimesh->HasBones());
-	mesh->HasSemantic(Mesh::SEMANTIC_TEXCOORD0, aimesh->HasTextureCoords(0));
-	mesh->HasSemantic(Mesh::SEMANTIC_TEXCOORD1, aimesh->HasTextureCoords(1));
-	mesh->HasSemantic(Mesh::SEMANTIC_TEXCOORD2, aimesh->HasTextureCoords(2));
-	mesh->HasSemantic(Mesh::SEMANTIC_TEXCOORD3, aimesh->HasTextureCoords(3));
+	mesh->HasSemantic(MESH_SEMANTIC_NORMAL, aimesh->HasNormals());
+	mesh->HasSemantic(MESH_SEMANTIC_TANGENT, aimesh->HasTangentsAndBitangents());
+	mesh->HasSemantic(MESH_SEMANTIC_BINORMAL, aimesh->HasTangentsAndBitangents());
+	mesh->HasSemantic(MESH_SEMANTIC_COLOR0, aimesh->HasVertexColors(0));
+	mesh->HasSemantic(MESH_SEMANTIC_COLOR1, aimesh->HasVertexColors(1));
+	mesh->HasSemantic(MESH_SEMANTIC_BLENDINDICES, aimesh->HasBones());
+	mesh->HasSemantic(MESH_SEMANTIC_BLENDWEIGHT, aimesh->HasBones());
+	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD0, aimesh->HasTextureCoords(0));
+	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD1, aimesh->HasTextureCoords(1));
+	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD2, aimesh->HasTextureCoords(2));
+	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD3, aimesh->HasTextureCoords(3));
 
 	mesh->VertexCount(aimesh->mNumVertices);
 
@@ -130,7 +130,7 @@ Mesh* Convert(aiMesh *aimesh){
 		for (uint32_t j = 0; j < aimesh->mNumBones; j++) {
 			aiBone *bone = aimesh->mBones[j];
 
-			Mesh::Bone b(utf8toUtf16(bone->mName.C_Str()), ai2dx(bone->mOffsetMatrix));
+			MeshBone b(utf8toUtf16(bone->mName.C_Str()), ai2dx(bone->mOffsetMatrix));
 			for (uint32_t k = 0; k < bone->mNumWeights; k++) {
 				aiVertexWeight vweight = bone->mWeights[k];
 
@@ -158,7 +158,7 @@ Mesh* Convert(aiMesh *aimesh){
 	return mesh;
 }
 
-Asset** MeshImporter::Import(jwstring path, int &count) {
+Asset** ImportMesh(jwstring path, int &count) {
 	const aiScene *scene = aiImportFile(utf16toUtf8(path.c_str()).c_str(), 
 		aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_MakeLeftHanded | aiProcess_FlipUVs);
 	jwstring fname = GetNameExtW(path);

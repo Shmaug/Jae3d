@@ -1,59 +1,22 @@
 #pragma once
 
+#include "Common.hpp"
 #include "Asset.hpp"
-
-#include "Util.hpp"
-
-#include <wrl.h>
-
-#include <d3d12.h>
-#include <DirectXMath.h>
-
-#include "d3dx12.hpp"
-#include "jvector.hpp"
-
-class CommandList;
 
 class Mesh : public Asset {
 public:
-	enum SEMANTIC {
-		SEMANTIC_POSITION = 0, // always have position
-		SEMANTIC_NORMAL = 1,
-		SEMANTIC_TANGENT = 2,
-		SEMANTIC_BINORMAL = 4,
-		SEMANTIC_COLOR0 = 8,
-		SEMANTIC_COLOR1 = 16,
-		SEMANTIC_BLENDINDICES = 32,
-		SEMANTIC_BLENDWEIGHT = 64,
-		SEMANTIC_TEXCOORD0 = 128,
-		SEMANTIC_TEXCOORD1 = 256,
-		SEMANTIC_TEXCOORD2 = 512,
-		SEMANTIC_TEXCOORD3 = 1024,
-	};
-
-	struct Bone {
-		jwstring mName;
-		DirectX::XMFLOAT4X4 mBoneToMesh;
-
-		Bone() : mName(L""), mBoneToMesh(DirectX::XMFLOAT4X4()) {}
-		Bone(const Bone &b) : mName(b.mName), mBoneToMesh(b.mBoneToMesh) {}
-		Bone(jwstring name, DirectX::XMFLOAT4X4 m) : mName(name), mBoneToMesh(m) {}
-
-		Bone& operator=(const Bone &rhs) {
-			if (&rhs == this) return *this;
-			mName = rhs.mName;
-			mBoneToMesh = rhs.mBoneToMesh;
-			return *this;
-		}
-	};
-
 	JAE_API Mesh(jwstring name);
 	JAE_API Mesh(jwstring name, MemoryStream &ms);
 	JAE_API ~Mesh();
 
 	JAE_API void LoadCube(float size);
 	JAE_API void LoadQuad(float size);
-	JAE_API void Upload();
+	// Copies the mesh to the GPU
+	JAE_API void UploadStatic();
+	// Keeps the mesh mapped to the GPU for frequent updating
+	// vertexSize the size in bytes to allocate for vertices
+	// indexSize the size in bytes to allocate for indices
+	JAE_API void UploadDynamic(size_t vertexSize, size_t indexSize);
 	JAE_API void ReleaseGpu();
 
 	JAE_API void WriteData(MemoryStream &ms);
@@ -82,99 +45,99 @@ public:
 
 	JAE_API unsigned int AddVertex(DirectX::XMFLOAT3 &v);
 
-	void HasSemantic(SEMANTIC s, bool v) {
-		if (s == SEMANTIC_POSITION || HasSemantic(s) == v) return;
+	void HasSemantic(MESH_SEMANTIC s, bool v) {
+		if (s == MESH_SEMANTIC_POSITION || HasSemantic(s) == v) return;
 		if (v) {
-			mSemantics = (SEMANTIC)(mSemantics | s);
+			mSemantics = (MESH_SEMANTIC)(mSemantics | s);
 			switch (s) {
-			case SEMANTIC_NORMAL:
+			case MESH_SEMANTIC_NORMAL:
 				mNormals.resize(VertexCount());
 				break;
-			case SEMANTIC_TANGENT:
+			case MESH_SEMANTIC_TANGENT:
 				mTangents.resize(VertexCount());
 				break;
-			case SEMANTIC_BINORMAL:
+			case MESH_SEMANTIC_BINORMAL:
 				mBinormals.resize(VertexCount());
 				break;
-			case SEMANTIC_COLOR0:
+			case MESH_SEMANTIC_COLOR0:
 				mColor0.resize(VertexCount());
 				break;
-			case SEMANTIC_COLOR1:
+			case MESH_SEMANTIC_COLOR1:
 				mColor1.resize(VertexCount());
 				break;
-			case SEMANTIC_BLENDINDICES:
+			case MESH_SEMANTIC_BLENDINDICES:
 				mBlendIndices.resize(VertexCount());
 				break;
-			case SEMANTIC_BLENDWEIGHT:
+			case MESH_SEMANTIC_BLENDWEIGHT:
 				mBlendWeights.resize(VertexCount());
 				break;
-			case SEMANTIC_TEXCOORD0:
+			case MESH_SEMANTIC_TEXCOORD0:
 				mTexcoord0.resize(VertexCount());
 				break;
-			case SEMANTIC_TEXCOORD1:
+			case MESH_SEMANTIC_TEXCOORD1:
 				mTexcoord1.resize(VertexCount());
 				break;
-			case SEMANTIC_TEXCOORD2:
+			case MESH_SEMANTIC_TEXCOORD2:
 				mTexcoord2.resize(VertexCount());
 				break;
-			case SEMANTIC_TEXCOORD3:
+			case MESH_SEMANTIC_TEXCOORD3:
 				mTexcoord3.resize(VertexCount());
 				break;
 			}
 		} else {
-			mSemantics = (SEMANTIC)(mSemantics & ~s);
+			mSemantics = (MESH_SEMANTIC)(mSemantics & ~s);
 			switch (s) {
-			case SEMANTIC_NORMAL:
+			case MESH_SEMANTIC_NORMAL:
 				mNormals.free();
 				break;
-			case SEMANTIC_TANGENT:
+			case MESH_SEMANTIC_TANGENT:
 				mTangents.free();
 				break;
-			case SEMANTIC_BINORMAL:
+			case MESH_SEMANTIC_BINORMAL:
 				mBinormals.free();
 				break;
-			case SEMANTIC_COLOR0:
+			case MESH_SEMANTIC_COLOR0:
 				mColor0.free();
 				break;
-			case SEMANTIC_COLOR1:
+			case MESH_SEMANTIC_COLOR1:
 				mColor1.free();
 				break;
-			case SEMANTIC_BLENDINDICES:
+			case MESH_SEMANTIC_BLENDINDICES:
 				mBlendIndices.free();
 				break;
-			case SEMANTIC_BLENDWEIGHT:
+			case MESH_SEMANTIC_BLENDWEIGHT:
 				mBlendWeights.free();
 				break;
-			case SEMANTIC_TEXCOORD0:
+			case MESH_SEMANTIC_TEXCOORD0:
 				mTexcoord0.free();
 				break;
-			case SEMANTIC_TEXCOORD1:
+			case MESH_SEMANTIC_TEXCOORD1:
 				mTexcoord1.free();
 				break;
-			case SEMANTIC_TEXCOORD2:
+			case MESH_SEMANTIC_TEXCOORD2:
 				mTexcoord2.free();
 				break;
-			case SEMANTIC_TEXCOORD3:
+			case MESH_SEMANTIC_TEXCOORD3:
 				mTexcoord3.free();
 				break;
 			}
 		}
 	}
-	bool HasSemantic(SEMANTIC s) const { if (s == SEMANTIC_POSITION) return true; return mSemantics & s; }
-	SEMANTIC Semantics() const { return mSemantics; }
+	bool HasSemantic(MESH_SEMANTIC s) const { if (s == MESH_SEMANTIC_POSITION) return true; return mSemantics & s; }
+	MESH_SEMANTIC Semantics() const { return mSemantics; }
 
 	template<typename T>
-	T* GetSemantic(SEMANTIC s) {
+	T* GetSemantic(MESH_SEMANTIC s) {
 		switch (s) {
-		case SEMANTIC_POSITION:
+		case MESH_SEMANTIC_POSITION:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
 			return mVertices.data();
 			break;
-		case SEMANTIC_NORMAL:
+		case MESH_SEMANTIC_NORMAL:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
 			return mNormals.data();
 			break;
-		case SEMANTIC_TANGENT:
+		case MESH_SEMANTIC_TANGENT:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
 			return mTangents.data();
 			break;
@@ -246,10 +209,12 @@ public:
 
 private:
 	bool m32BitIndices = false;
+	bool mDataUploaded = false;
+	bool mDataMapped = false;
 
-	SEMANTIC mSemantics = SEMANTIC_POSITION;
+	MESH_SEMANTIC mSemantics = MESH_SEMANTIC_POSITION;
 
-	jvector<Bone> bones;
+	jvector<MeshBone> bones;
 	jvector<DirectX::XMFLOAT3> mVertices;
 	jvector<DirectX::XMFLOAT3> mNormals;
 	jvector<DirectX::XMFLOAT3> mTangents;
@@ -268,12 +233,13 @@ private:
 	friend class CommandList;
 	JAE_API void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
-	JAE_API char* CreateVertexArray(size_t &vsize);
-
-	bool mDataUploaded = false;
+	JAE_API size_t VertexSize();
+	JAE_API void WriteVertexArray(BYTE* dst);
 
 	_WRL::ComPtr<ID3D12Resource> mVertexBuffer;
 	_WRL::ComPtr<ID3D12Resource> mIndexBuffer;
+	void* mMappedVertexBuffer;
+	void* mMappedIndexBuffer;
 	UINT mIndexCount;
 	D3D12_VERTEX_BUFFER_VIEW mVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW mIndexBufferView;

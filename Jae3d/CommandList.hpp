@@ -1,22 +1,17 @@
 #pragma once
 
-#include "Util.hpp"
+#include "Common.hpp"
 
-#include <wrl.h>
-
-#include <memory>
-
-#include <d3d12.h>
-
-class Camera;
-class Mesh;
-class Shader;
-class Material;
+#ifdef DrawText
+#undef DrawText
+#endif
 
 class CommandList {
 public:
 	JAE_API CommandList(_WRL::ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type, _WRL::ComPtr<ID3D12CommandAllocator> allocator);
 	JAE_API ~CommandList();
+
+	unsigned int GetFrameIndex() const { return mFrameIndex; }
 
 	JAE_API void Reset(_WRL::ComPtr<ID3D12CommandAllocator> allocator, unsigned int frameIndex);
 
@@ -27,7 +22,11 @@ public:
 	JAE_API void SetMaterial(std::shared_ptr<Material> material);
 	JAE_API void SetCamera(std::shared_ptr<Camera> camera);
 
+	JAE_API void SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend);
+	JAE_API void SetInputElements(MESH_SEMANTIC input);
+
 	JAE_API void DrawMesh(Mesh &mesh);
+	JAE_API void DrawUserMesh(D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 
 	inline _WRL::ComPtr<ID3D12GraphicsCommandList2> D3DCommandList() const { return mCommandList; }
 
@@ -35,6 +34,7 @@ private:
 	std::shared_ptr<Material> mActiveMaterial;
 	std::shared_ptr<Shader> mActiveShader;
 	std::shared_ptr<Camera> mActiveCamera;
+	ShaderState mState;
 
 	_WRL::ComPtr<ID3D12GraphicsCommandList2> mCommandList;
 

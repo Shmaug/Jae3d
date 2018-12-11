@@ -20,6 +20,7 @@ class CommandQueue;
 class CommandList;
 class Game;
 class Window;
+class SpriteBatch;
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -36,7 +37,8 @@ public:
 	JAE_API static std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
 	static bool IsInitialized() { return mInitialized; }
 	static _WRL::ComPtr<ID3D12Device2> GetDevice() { return mDevice; }
-	static std::shared_ptr<Window> GetWindow() { return mWindow; }
+	JAE_API static std::shared_ptr<Window> GetWindow();
+	JAE_API static std::shared_ptr<SpriteBatch> GetSpriteBatch();
 	JAE_API static UINT GetMSAASamples();
 
 	JAE_API static void Initialize(HWND hWnd, unsigned int bufferCount);
@@ -58,6 +60,7 @@ public:
 private:
 	// Set to true once the DX12 objects have been initialized.
 	JAE_API static bool mInitialized;
+	JAE_API static std::shared_ptr<SpriteBatch> mSpriteBatch;
 
 	JAE_API static std::shared_ptr<Window> mWindow;
 

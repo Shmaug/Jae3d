@@ -30,7 +30,7 @@ Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
 	uint32_t pcount = ms.Read<uint32_t>();
 	for (unsigned int i = 0; i < pcount; i++) {
 		jwstring name = ms.ReadString();
-		PARAM_TYPE type = (PARAM_TYPE)ms.Read<uint32_t>();
+		SHADER_PARAM_TYPE type = (SHADER_PARAM_TYPE)ms.Read<uint32_t>();
 		uint32_t index = ms.Read<uint32_t>();
 		uint32_t offset = ms.Read<uint32_t>();
 		ShaderParameter::ShaderValue value = ms.Read<ShaderParameter::ShaderValue>();
@@ -42,7 +42,7 @@ Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
 	for (unsigned int i = 0; i < pbcount; i++) {
 		uint32_t index = ms.Read<uint32_t>();
 		uint32_t size = ms.Read<uint32_t>();
-		mCBufferParameters.push_back(ParameterBuffer(index, size));
+		mCBufferParameters.push_back(ShaderParameterBuffer(index, size));
 	}
 }
 Shader::~Shader() {
@@ -66,10 +66,10 @@ bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	return false;
 }
 
-void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, Mesh::SEMANTIC input) {
-	if (!mStates.has(input))
-		mStates.emplace(input, CreatePSO(input));
-	commandList->SetPipelineState(mStates.at(input).Get());
+void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state) {
+	if (!mStates.has(state))
+		mStates.emplace(state, CreatePSO(state));
+	commandList->SetPipelineState(mStates.at(state).Get());
 }
 
 void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
@@ -83,7 +83,7 @@ void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	}
 }
 
-ComPtr<ID3D12PipelineState> Shader::CreatePSO(Mesh::SEMANTIC input) {
+ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	auto device = Graphics::GetDevice();
 
 	if (!mBlobs[SHADERSTAGE_VERTEX] && !mBlobs[SHADERSTAGE_HULL] &&
@@ -94,68 +94,71 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(Mesh::SEMANTIC input) {
 
 	UINT inputElementCount = 0;
 	inputElementCount++; // position
-	if (input & Mesh::SEMANTIC_NORMAL) inputElementCount++;
-	if (input & Mesh::SEMANTIC_TANGENT) inputElementCount++;
-	if (input & Mesh::SEMANTIC_BINORMAL) inputElementCount++;
-	if (input & Mesh::SEMANTIC_COLOR0) inputElementCount++;
-	if (input & Mesh::SEMANTIC_COLOR1) inputElementCount++;
-	if (input & Mesh::SEMANTIC_BLENDINDICES) inputElementCount++;
-	if (input & Mesh::SEMANTIC_BLENDWEIGHT) inputElementCount++;
-	if (input & Mesh::SEMANTIC_TEXCOORD0) inputElementCount++;
-	if (input & Mesh::SEMANTIC_TEXCOORD1) inputElementCount++;
-	if (input & Mesh::SEMANTIC_TEXCOORD2) inputElementCount++;
-	if (input & Mesh::SEMANTIC_TEXCOORD3) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_NORMAL) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_TANGENT) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_BINORMAL) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_COLOR0) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_COLOR1) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_BLENDINDICES) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_BLENDWEIGHT) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_TEXCOORD0) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_TEXCOORD1) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_TEXCOORD2) inputElementCount++;
+	if (state.input & MESH_SEMANTIC_TEXCOORD3) inputElementCount++;
 
 	D3D12_INPUT_ELEMENT_DESC* inputElements = new D3D12_INPUT_ELEMENT_DESC[inputElementCount];
 	int i = 0;
 	inputElements[i++] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_NORMAL)
+	if (state.input & MESH_SEMANTIC_NORMAL)
 		inputElements[i++] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_TANGENT)
+	if (state.input & MESH_SEMANTIC_TANGENT)
 		inputElements[i++] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_BINORMAL)
+	if (state.input & MESH_SEMANTIC_BINORMAL)
 		inputElements[i++] = { "BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_COLOR0)
+	if (state.input & MESH_SEMANTIC_COLOR0)
 		inputElements[i++] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_COLOR1)
+	if (state.input & MESH_SEMANTIC_COLOR1)
 		inputElements[i++] = { "COLOR", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_BLENDINDICES)
+	if (state.input & MESH_SEMANTIC_BLENDINDICES)
 		inputElements[i++] = { "BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_BLENDWEIGHT) 
+	if (state.input & MESH_SEMANTIC_BLENDWEIGHT)
 		inputElements[i++] = { "BLENDWEIGHT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_TEXCOORD0)
-		inputElements[i++] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_TEXCOORD1)
-		inputElements[i++] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_TEXCOORD2)
-		inputElements[i++] = { "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (input & Mesh::SEMANTIC_TEXCOORD3)
-		inputElements[i++] = { "TEXCOORD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (state.input & MESH_SEMANTIC_TEXCOORD0)
+		inputElements[i++] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (state.input & MESH_SEMANTIC_TEXCOORD1)
+		inputElements[i++] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (state.input & MESH_SEMANTIC_TEXCOORD2)
+		inputElements[i++] = { "TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (state.input & MESH_SEMANTIC_TEXCOORD3)
+		inputElements[i++] = { "TEXCOORD", 3, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	DXGI_SAMPLE_DESC sampDesc = {};
 	sampDesc.Count = Graphics::GetMSAASamples();
 	sampDesc.Quality = 0;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
-	state.InputLayout = { inputElements, inputElementCount };
-	state.pRootSignature = mRootSignature.Get();
-	if (mBlobs[SHADERSTAGE_VERTEX])		state.VS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_VERTEX]);
-	if (mBlobs[SHADERSTAGE_HULL])		state.HS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_HULL]);
-	if (mBlobs[SHADERSTAGE_DOMAIN])		state.DS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_DOMAIN]);
-	if (mBlobs[SHADERSTAGE_GEOMETRY])	state.GS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_GEOMETRY]);
-	if (mBlobs[SHADERSTAGE_PIXEL])		state.PS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_PIXEL]);
-	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	state.SampleMask = UINT_MAX;
-	state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	state.NumRenderTargets = 1;
-	state.RTVFormats[0] = Graphics::GetDisplayFormat();
-	state.DSVFormat = Graphics::GetDepthFormat();
-	state.SampleDesc = sampDesc;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoState = {};
+	psoState.InputLayout = { inputElements, inputElementCount };
+	psoState.pRootSignature = mRootSignature.Get();
+	if (mBlobs[SHADERSTAGE_VERTEX])		psoState.VS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_VERTEX]);
+	if (mBlobs[SHADERSTAGE_HULL])		psoState.HS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_HULL]);
+	if (mBlobs[SHADERSTAGE_DOMAIN])		psoState.DS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_DOMAIN]);
+	if (mBlobs[SHADERSTAGE_GEOMETRY])	psoState.GS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_GEOMETRY]);
+	if (mBlobs[SHADERSTAGE_PIXEL])		psoState.PS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_PIXEL]);
+	psoState.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	if (state.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE)
+		psoState.RasterizerState.AntialiasedLineEnable = TRUE;
+	psoState.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoState.BlendState.RenderTarget[0] = state.blendState;
+	psoState.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoState.SampleMask = UINT_MAX;
+	psoState.PrimitiveTopologyType = state.topology;
+	psoState.NumRenderTargets = 1;
+	psoState.RTVFormats[0] = Graphics::GetDisplayFormat();
+	psoState.DSVFormat = Graphics::GetDepthFormat();
+	psoState.SampleDesc = sampDesc;
 
 	ComPtr<ID3D12PipelineState> pso;
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&pso)));
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&psoState, IID_PPV_ARGS(&pso)));
 
 	delete[] inputElements;
 	return pso;
@@ -287,6 +290,8 @@ HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHA
 	if (errorBlob) {
 		std::cerr << "Error compiling " << profile << "\n";
 		std::cerr << reinterpret_cast<const char*>(errorBlob->GetBufferPointer());
+		OutputDebugf(L"Error compiling %S\n", profile);
+		OutputDebugf(L"%S\n", reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
 		errorBlob->Release();
 	}
 
@@ -298,7 +303,6 @@ HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHA
 }
 
 void Shader::WriteData(MemoryStream &ms) {
-	Asset::WriteData(ms);
 	uint8_t mask = 0;
 	for (int i = 0; i < 7; i++)
 		if (mBlobs[i])
@@ -315,12 +319,14 @@ void Shader::WriteData(MemoryStream &ms) {
 	int i = 0;
 	ms.Write((uint32_t)0);
 	if (!mParams.empty()) {
-		for (auto& kp : mParams) {
-			ms.WriteString(kp.Key());
-			ms.Write((uint32_t)kp.Value().Type());
-			ms.Write(kp.Value().RootIndex());
-			ms.Write(kp.Value().CBufferOffset());
-			ms.Write(kp.Value().GetDefaultValue());
+		auto it = mParams.begin();
+		while (it.Valid()) {
+			ms.WriteString((*it).Key());
+			ms.Write((uint32_t)(*it).Value().Type());
+			ms.Write((*it).Value().RootIndex());
+			ms.Write((*it).Value().CBufferOffset());
+			ms.Write((*it).Value().GetDefaultValue());
+			it++;
 			i++;
 		}
 		size_t posc = ms.Tell();

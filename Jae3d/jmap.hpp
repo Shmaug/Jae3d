@@ -28,7 +28,7 @@ public:
 	private:
 		key_t mKey;
 		val_t mValue;
-		KeyValuePair* mNext;
+		KeyValuePair* mNext = nullptr;
 	};
 	class jmap_iterator
 	{
@@ -45,7 +45,7 @@ public:
 			if (_kp) _kp = _kp->Next();
 			while (!_kp){
 				_i++;
-				if (_i < DATA_SIZE)
+				if (_i < _map->mDataSize)
 					_kp = _map->mData[_i];
 				else {
 					done = true;
@@ -61,10 +61,19 @@ public:
 		bool Valid() const { return !done; }
 	};
 	
-	jmap() {}
-	jmap(jmap &m) {
-		for (int i = 0; i < DATA_SIZE; i++) {
-			if (!mData[i]) continue;
+	jmap() : mDataSize(31) {
+		mData = new KeyValuePair*[mDataSize];
+		ZeroMemory(mData, sizeof(size_t) * mDataSize);
+	}
+	jmap(size_t size) : mDataSize(size) {
+		mData = new KeyValuePair*[mDataSize];
+		ZeroMemory(mData, sizeof(size_t) * mDataSize);
+	}
+	jmap(jmap &m) : mDataSize(m.mDataSize) {
+		mData = new KeyValuePair*[mDataSize];
+		ZeroMemory(mData, sizeof(size_t) * mDataSize);
+		for (int i = 0; i < mDataSize; i++) {
+			if (!m.mData[i]) continue;
 			KeyValuePair* nkp = m.mData[i];
 			KeyValuePair* p = new(mData[i])KeyValuePair(*nkp);
 			nkp = nkp->Next();
@@ -78,10 +87,11 @@ public:
 	}
 	~jmap() {
 		clear();
+		delete[] mData;
 	}
 
 	void clear() {
-		for (int i = 0; i < DATA_SIZE; i++) {
+		for (int i = 0; i < mDataSize; i++) {
 			KeyValuePair* kp = mData[i];
 			while (kp) {
 				KeyValuePair* kp_c = kp;
@@ -92,12 +102,14 @@ public:
 		}
 	}
 	bool empty() const {
-		for (size_t i = 0; i < DATA_SIZE; ++i)
+		for (size_t i = 0; i < mDataSize; ++i)
 			if (mData[i] != nullptr) return false;
 		return true;
 	}
 
 	void emplace(key_t &key, val_t &val) {
+		if (is_pointer_and_null(key)) return;
+
 		size_t i;
 		KeyValuePair* kp = get(key, i);
 		if (kp)
@@ -117,25 +129,22 @@ public:
 	}
 
 	jmap_iterator begin() {
-		for (size_t i = 0; i < DATA_SIZE; ++i)
+		for (size_t i = 0; i < mDataSize; ++i)
 			if (mData[i])
 				return jmap_iterator(this, i, mData[i]);
 		return jmap_iterator(this, (size_t)-1, nullptr);
 	}
-	jmap_iterator end() {
-		for (size_t i = DATA_SIZE - 1; i >= 0; --i)
-			if (mData[i]) {
-				KeyValuePair* kp = mData[i];
-				while (kp->Next()) kp = kp->Next();
-				return jmap_iterator(this, i, kp);
-			}
-		return jmap_iterator(this, (size_t)-1, nullptr);
-	}
 
 	jmap& operator=(jmap& m) {
-		for (int i = 0; i < DATA_SIZE; i++) {
-			delete mData[i];
-			if (!mData[i]) continue;
+		clear();
+		delete[] mData;
+
+		mDataSize = m.mDataSize;
+		mData = new KeyValuePair*[mDataSize];
+		ZeroMemory(mData, sizeof(mData));
+
+		for (int i = 0; i < mDataSize; i++) {
+			if (!m.mData[i]) continue;
 			KeyValuePair* nkp = m.mData[i];
 			KeyValuePair* p = new(mData[i])KeyValuePair(*nkp);
 			nkp = nkp->Next();
@@ -150,11 +159,12 @@ public:
 	}
 
 private:
-	static const size_t DATA_SIZE = 61; // prime
-	KeyValuePair* mData[DATA_SIZE];
+	// should be prime
+	size_t mDataSize;
+	KeyValuePair** mData;
 
 	KeyValuePair* get(key_t &key, size_t &i) const {
-		i = std::hash<key_t>{}(key) % DATA_SIZE;
+		i = std::hash<key_t>{}(key) % mDataSize;
 		KeyValuePair* kp = mData[i];
 		while (kp) {
 			if (kp->Key() == key) return kp;
@@ -162,5 +172,14 @@ private:
 		}
 		return nullptr;
 	}
+
+	template<typename T>
+	bool is_pointer_and_null(T &x) {
+		return false;
+	};
+	template<typename T>
+	bool is_pointer_and_null(T* x) {
+		return x == nullptr;
+	};
 };
 

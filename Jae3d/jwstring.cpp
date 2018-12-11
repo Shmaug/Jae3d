@@ -22,16 +22,9 @@ jwstring::jwstring(jwstring &&mvstr) {
 	mvstr.mCapacity = 1;
 }
 jwstring::jwstring(const size_t length) : mLength(0) {
-	if (length < 1024) {
-		mCapacity = length + 1;
-		mCStr = new wchar_t[length + 1];
-		mCStr[0] = '\0';
-	} else {
-		mCStr = new wchar_t[1];
-		mCStr[0] = '\0';
-		mLength = 0;
-		mCapacity = 1;
-	}
+	mCapacity = length + 1;
+	mCStr = new wchar_t[length + 1];
+	mCStr[0] = '\0';
 }
 jwstring::jwstring(const wchar_t* str) {
 	if (str) {
@@ -47,18 +40,11 @@ jwstring::jwstring(const wchar_t* str) {
 	}
 }
 jwstring::jwstring(const wchar_t* start, const size_t length) {
-	if (start && length < 1024) {
-		mLength = length;
-		mCapacity = mLength + 1;
-		mCStr = new wchar_t[mCapacity];
-		wcsncpy_s(mCStr, mCapacity, start, mLength);
-		mCStr[mLength] = '\0';
-	} else {
-		mCStr = new wchar_t[1];
-		mCStr[0] = '\0';
-		mLength = 0;
-		mCapacity = 1;
-	}
+	mLength = length;
+	mCapacity = mLength + 1;
+	mCStr = new wchar_t[mCapacity];
+	wcsncpy_s(mCStr, mCapacity, start, mLength);
+	mCStr[mLength] = '\0';
 }
 jwstring::~jwstring() {
 	if (mCStr) delete[] mCStr;

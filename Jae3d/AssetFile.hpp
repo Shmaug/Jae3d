@@ -16,6 +16,7 @@ public:
 		TYPEID_MESH = 1,
 		TYPEID_SHADER = 2,
 		TYPEID_TEXTURE = 3,
+		TYPEID_FONT = 4,
 	};
 
 	JAE_API static Asset** Read(jwstring file, int &count);

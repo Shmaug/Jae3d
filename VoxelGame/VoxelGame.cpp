@@ -1,27 +1,28 @@
 #include "VoxelGame.hpp"
 
-#include <Jae3d/jae.hpp>
-#include <Jae3d/Profiler.hpp>
-#include <Jae3d/Input.hpp>
-#include <Jae3d/Util.hpp>
-#include <Jae3d/Window.hpp>
-#include <Jae3d/Graphics.hpp>
-#include <Jae3d/CommandQueue.hpp>
-#include <Jae3d/CommandList.hpp>
-#include <Jae3d/AssetDatabase.hpp>
+#include <jae.hpp>
+#include <Profiler.hpp>
+#include <Input.hpp>
+#include <Util.hpp>
+#include <Window.hpp>
+#include <Graphics.hpp>
+#include <CommandQueue.hpp>
+#include <CommandList.hpp>
+#include <AssetDatabase.hpp>
 
-#include <Jae3d/MeshRenderer.hpp>
-#include <Jae3d/Mesh.hpp>
-#include <Jae3d/Camera.hpp>
-#include <Jae3d/Shader.hpp>
-#include <Jae3d/Material.hpp>
-#include <Jae3d/Texture.hpp>
-#include <Jae3d/ConstantBuffer.hpp>
+#include <MeshRenderer.hpp>
+#include <Mesh.hpp>
+#include <Camera.hpp>
+#include <Shader.hpp>
+#include <Material.hpp>
+#include <Texture.hpp>
+#include <ConstantBuffer.hpp>
+#include <SpriteBatch.hpp>
+#include <Font.hpp>
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace std;
-
 
 const char* formatToString(DXGI_FORMAT f) {
 	static const char* formats[120] = {
@@ -166,6 +167,12 @@ shared_ptr<MeshRenderer> barrel;
 shared_ptr<MeshRenderer> rifle;
 shared_ptr<MeshRenderer> rifle2;
 shared_ptr<MeshRenderer> dragon;
+shared_ptr<Font> arial;
+
+wchar_t pbuf[1024];
+
+float frameTimes[128];
+unsigned int frameTimeIndex;
 
 float yaw;
 float pitch;
@@ -188,9 +195,13 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 }
 
 void VoxelGame::Initialize() {
+	AssetDatabase::LoadAssets(L"common.asset");
 	AssetDatabase::LoadAssets(L"models.asset");
 	AssetDatabase::LoadAssets(L"shaders.asset");
 	AssetDatabase::LoadAssets(L"textures.asset");
+
+	arial = AssetDatabase::GetAsset<Font>(L"arial");
+	arial->GetTexture()->Upload();
 
 	camera = shared_ptr<Camera>(new Camera(L"Camera"));
 	camera->LocalPosition(0, 1.668f, -2.0f);
@@ -222,10 +233,10 @@ void VoxelGame::Initialize() {
 
 	cubeMesh->LoadCube(1.0f);
 
-	cubeMesh->Upload();
-	barrelMesh->Upload();
-	rifleMesh->Upload();
-	dragonMesh->Upload();
+	cubeMesh->UploadStatic();
+	barrelMesh->UploadStatic();
+	rifleMesh->UploadStatic();
+	dragonMesh->UploadStatic();
 
 	uvgridTexture->Upload();
 	barrelTexture->Upload();
@@ -349,22 +360,14 @@ void VoxelGame::Update(double total, double delta) {
 #pragma endregion
 
 	lightBuffer->Write(&light, sizeof(LightBuffer), 0, -1);
-
-	// fps stats
-	static double timer = 0;
-	timer += delta;
-	if (timer >= 1.0) {
-		timer = 0;
-		OutputDebugf(L"FPS: %d.%d\n", (int)mfps, (int)((mfps - floor(mfps)) * 10.0f + .5f));
-
-		wchar_t pbuf[1024];
-		Profiler::PrintLastFrame(pbuf, 1024);
-		OutputDebugString(pbuf);
-	}
 }
+
 void VoxelGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE dsv) {
 	auto window = Graphics::GetWindow();
-	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)window->GetWidth(), (float)window->GetHeight());
+	float w = (float)window->GetWidth();
+	float h = (float)window->GetHeight();
+
+	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, w, h);
 	D3D12_RECT sr = { 0, 0, window->GetWidth(), window->GetHeight() };
 	commandList->D3DCommandList()->RSSetViewports(1, &vp);
 	commandList->D3DCommandList()->RSSetScissorRects(1, &sr);
@@ -382,6 +385,23 @@ void VoxelGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR
 	rifle->Draw(commandList, frameIndex);
 	rifle2->Draw(commandList, frameIndex);
 	barrel->Draw(commandList, frameIndex);
+
+	shared_ptr<SpriteBatch> sb = Graphics::GetSpriteBatch();
+	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender() * .5f), .5f, {1,1,1,1}, L"FPS: %d.%d\n", (int)mfps, (int)((mfps - floor(mfps)) * 10.0f + .5f));
+	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender()), .5f, { 1,1,1,1 }, pbuf);
+
+	jvector<XMFLOAT3> verts;
+	jvector<XMFLOAT4> colors;
+	for (int i = 1; i < 128; i++) {
+		int d = frameTimeIndex - i; if (d < 0) d += 128;
+		verts.push_back({ 512.0f - i * 4.0f, h - frameTimes[d] * 5000, 0 });
+		float r = fmin(frameTimes[d] / .025f, 1.0f); // full red < 40fps
+		r *= r;
+		colors.push_back({ r, 1.0f - r, 0, 1 });
+	}
+	sb->DrawLines(verts, colors);
+
+	sb->Flush(commandList);
 }
 
 void VoxelGame::DoFrame(){
@@ -390,21 +410,21 @@ void VoxelGame::DoFrame(){
 	static auto t0 = clock.now();
 	static int frameCounter;
 	static double elapsedSeconds;
+	static double elapsedSeconds2;
 
 	Profiler::FrameStart();
 
 #pragma region update
+	Profiler::BeginSample(L"Update");
 	auto t1 = clock.now();
 	double delta = (t1 - t0).count() * 1e-9;
 	t0 = t1;
-
-	Profiler::BeginSample("Update");
 	Update((t1 - start).count() * 1e-9, delta);
 	Profiler::EndSample();
 #pragma endregion
 
 #pragma region render
-	Profiler::BeginSample("Render");
+	Profiler::BeginSample(L"Render");
 	auto commandQueue = Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList(Graphics::CurrentFrameIndex());
 	auto d3dCommandList = commandList->D3DCommandList();
@@ -418,11 +438,14 @@ void VoxelGame::DoFrame(){
 	Render(commandList, rtv, dsv);
 	Profiler::EndSample();
 
-	Profiler::BeginSample("Present");
+	Profiler::BeginSample(L"Present");
 	window->Present(commandList, commandQueue);
 
 	Profiler::EndSample();
 #pragma endregion
+
+	Input::FrameEnd();
+	Profiler::FrameEnd();
 
 	// measure fps
 	frameCounter++;
@@ -431,8 +454,14 @@ void VoxelGame::DoFrame(){
 		mfps = frameCounter / elapsedSeconds;
 		frameCounter = 0;
 		elapsedSeconds = 0.0;
+		ZeroMemory(pbuf, sizeof(wchar_t) * 1024);
+		Profiler::PrintLastFrame(pbuf, 1024);
 	}
 
-	Input::FrameEnd();
-	Profiler::FrameEnd();
+	elapsedSeconds2 += delta;
+	if (elapsedSeconds2 > 0.05) {
+		elapsedSeconds2 = 0;
+		frameTimes[frameTimeIndex] = (float)Profiler::LastFrameTime();
+		frameTimeIndex = (frameTimeIndex + 1) % 128;
+	}
 }

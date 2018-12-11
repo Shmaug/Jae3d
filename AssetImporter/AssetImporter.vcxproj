@@ -71,8 +71,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ASSIMP_HOME)\bin\x64;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>$(ASSIMP_HOME)\include;$(DIRECTXTEX_HOME);$(SolutionDir)Jae3d;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ASSIMP_HOME)\include;$(DIRECTXTEX_HOME);$(SolutionDir)Jae3d;$(FREETYPE_HOME)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(FREETYPE_HOME)\win64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -83,9 +83,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <IncludePath>$(ASSIMP_HOME)\include;$(DIRECTXTEX_HOME);$(SolutionDir)Jae3d;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(ASSIMP_HOME)\include;$(DIRECTXTEX_HOME);$(SolutionDir)Jae3d;$(FREETYPE_HOME)\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <ExecutablePath>$(ASSIMP_HOME)\bin\x86;$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
-    <LibraryPath>$(ASSIMP_HOME)\lib\x86;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x86\Debug;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <LibraryPath>$(ASSIMP_HOME)\lib\x86;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x86\Debug;$(FREETYPE_HOME)\win32;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
@@ -106,8 +106,8 @@
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>assimp-vc140-mt.lib;DirectXTex.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;Jae3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>assimp-vc140-mt.lib;DirectXTex.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;Jae3d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ASSIMP_HOME)\lib\x64;$(DIRECTXTEX_HOME)\Bin\Desktop_2017_Win10\x64\Debug;$(FREETYPE_HOME)\win64;$(OutDir)</AdditionalLibraryDirectories>
       <SubSystem>
       </SubSystem>
       <EntryPointSymbol>
@@ -163,6 +163,7 @@
     <ClCompile Include="Button.cpp" />
     <ClCompile Include="CDialogEventHandler.cpp" />
     <ClCompile Include="FileTree.cpp" />
+    <ClCompile Include="FontImporter.cpp" />
     <ClCompile Include="Label.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshImporter.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="Button.hpp" />
     <ClInclude Include="CDialogEventHandler.hpp" />
     <ClInclude Include="FileTree.hpp" />
+    <ClInclude Include="FontImporter.hpp" />
     <ClInclude Include="Label.hpp" />
     <ClInclude Include="UIControl.hpp" />
     <ClInclude Include="MeshImporter.hpp" />

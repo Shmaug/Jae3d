@@ -3,8 +3,8 @@
 #include "Profiler.hpp"
 #include "CommandQueue.hpp"
 #include "Window.hpp"
-
 #include "CommandList.hpp"
+#include "SpriteBatch.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -17,8 +17,10 @@ ComPtr<IDXGIDebug1> dxgiDebugInterface;
 
 #pragma region static variable initialization
 bool Graphics::mInitialized = false;
+std::shared_ptr<SpriteBatch> Graphics::mSpriteBatch;
 
 shared_ptr<Window> Graphics::mWindow;
+shared_ptr<SpriteBatch> mSpriteBatch;
 
 shared_ptr<CommandQueue> Graphics::mDirectCommandQueue;
 shared_ptr<CommandQueue> Graphics::mComputeCommandQueue;
@@ -169,6 +171,8 @@ DXGI_FORMAT Graphics::GetDepthFormat() { return mWindow->GetDepthFormat(); }
 unsigned int Graphics::BufferCount() { return mWindow->BufferCount(); }
 unsigned int Graphics::CurrentFrameIndex() { return mWindow->CurrentFrameIndex(); }
 
+shared_ptr<Window> Graphics::GetWindow() { return mWindow; }
+shared_ptr<SpriteBatch> Graphics::GetSpriteBatch() { return mSpriteBatch; }
 UINT Graphics::GetMSAASamples() {
 	return mWindow->GetMSAASamples();
 }
@@ -195,6 +199,7 @@ void Graphics::Initialize(HWND hWnd, unsigned int bufferCount) {
 	mCopyCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_COPY));
 
 	mWindow = shared_ptr<Window>(new Window(hWnd, bufferCount));
+	mSpriteBatch = shared_ptr<SpriteBatch>(new SpriteBatch());
 
 	mInitialized = true;
 }
@@ -238,6 +243,7 @@ void Graphics::Destroy(){
 	mCopyCommandQueue.reset();
 
 	mWindow.reset();
+	mSpriteBatch.reset();
 
 	mDevice.Reset();
 

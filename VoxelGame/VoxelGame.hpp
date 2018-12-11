@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Jae3d/IJaeGame.hpp>
+#include <IJaeGame.hpp>
 
 class VoxelGame : public IJaeGame {
 public:

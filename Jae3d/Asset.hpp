@@ -22,8 +22,8 @@ public:
 	JAE_API Asset(jwstring name, MemoryStream &ms);
 	JAE_API ~Asset();
 	
-	JAE_API virtual void WriteData(MemoryStream &ms);
-	JAE_API virtual uint64_t TypeId();
+	JAE_API virtual void WriteData(MemoryStream &ms) = 0;
+	JAE_API virtual uint64_t TypeId() = 0;
 };
 
 #pragma warning(pop)

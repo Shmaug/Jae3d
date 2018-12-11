@@ -47,6 +47,9 @@
     <ClCompile Include="Label.cpp">
       <Filter>Source Files\ui</Filter>
     </ClCompile>
+    <ClCompile Include="FontImporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MeshImporter.hpp">
@@ -75,6 +78,9 @@
     </ClInclude>
     <ClInclude Include="Label.hpp">
       <Filter>Header Files\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="FontImporter.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

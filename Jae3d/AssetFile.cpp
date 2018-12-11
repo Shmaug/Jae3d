@@ -7,6 +7,7 @@
 #include "Texture.hpp"
 #include "Mesh.hpp"
 #include "Shader.hpp"
+#include "Font.hpp"
 
 #include "MemoryStream.hpp"
 
@@ -24,8 +25,6 @@ Asset** AssetFile::Read_V1(istream &is, int &count) {
 		uint8_t id = ReadStream<uint8_t>(is);
 		uint64_t type = ReadStream<uint64_t>(is);
 		jwstring name = ReadStream<jwstring>(is);
-		OutputDebugString(name.c_str());
-		OutputDebugString(L"\n");
 
 		bool compressed = ReadStream<uint8_t>(is);
 		uint64_t size = ReadStream<uint64_t>(is);
@@ -57,6 +56,9 @@ Asset** AssetFile::Read_V1(istream &is, int &count) {
 			break;
 		case TYPEID_TEXTURE:
 			assets[i] = new Texture(name, mems);
+			break;
+		case TYPEID_FONT:
+			assets[i] = new Font(name, mems);
 			break;
 		}
 

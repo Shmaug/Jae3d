@@ -6,19 +6,14 @@
 #include <wrl.h>
 #include <shlwapi.h>
 #include <shlobj.h>
-#include <uxtheme.h>
-#pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "runtimeobject.lib")
 #pragma comment(lib, "propsys.lib")
 #pragma comment(lib, "gdi32.lib")
 
 #include <algorithm>
-#include <memory>
 
-#include <jstring.hpp>
-#include <jvector.hpp>
+#include <Common.hpp>
 #include <jae.hpp>
 
 #include <IOUtil.hpp>
@@ -31,6 +26,7 @@
 #include "MeshImporter.hpp"
 #include "ShaderImporter.hpp"
 #include "TextureImporter.hpp"
+#include "FontImporter.hpp"
 
 #include "Label.hpp"
 #include "Button.hpp"
@@ -65,44 +61,47 @@ void LoadFile(jwstring file, jvector<Asset*> &assets) {
 
 	if (ext == L"obj") {
 		int count;
-		Asset** arr = MeshImporter::Import(file, count);
+		Asset** arr = ImportMesh(file, count);
 		for (int i = 0; i < count; i++)
 			assets.push_back(arr[i]);
 		delete[] arr;
 	} else if (ext == L"fbx") {
 		int count;
-		Asset** arr = MeshImporter::Import(file, count);
+		Asset** arr = ImportMesh(file, count);
 		for (int i = 0; i < count; i++)
 			assets.push_back(arr[i]);
 		delete[] arr;
 	} else if (ext == L"blend") {
 		int count;
-		Asset** arr = MeshImporter::Import(file, count);
+		Asset** arr = ImportMesh(file, count);
 		for (int i = 0; i < count; i++)
 			assets.push_back(arr[i]);
 		delete[] arr;
 	}
 	else if (ext == L"png")
-		assets.push_back((Asset*)TextureImporter::Import(file));
+		assets.push_back((Asset*)ImportTexture(file));
 	else if (ext == L"gif")
-		assets.push_back((Asset*)TextureImporter::Import(file));
+		assets.push_back((Asset*)ImportTexture(file));
 	else if (ext == L"bmp")
-		assets.push_back((Asset*)TextureImporter::Import(file));
+		assets.push_back((Asset*)ImportTexture(file));
 	else if (ext == L"tif" || ext == L"tiff")
-		assets.push_back((Asset*)TextureImporter::Import(file));
+		assets.push_back((Asset*)ImportTexture(file));
 	else if (ext == L"jpg" || ext == L"jpeg")
-		assets.push_back((Asset*)TextureImporter::Import(file));
+		assets.push_back((Asset*)ImportTexture(file));
 	else if (ext == L"tga")
-		assets.push_back((Asset*)TextureImporter::Import(file));
+		assets.push_back((Asset*)ImportTexture(file));
 	else if (ext == L"dds")
-		assets.push_back((Asset*)TextureImporter::ImportDDS(file));
+		assets.push_back((Asset*)ImportTexture(file));
 
 	else if (ext == L"cso")
-		assets.push_back((Asset*)ShaderImporter::ReadShader(file));
+		assets.push_back((Asset*)ReadShader(file));
 	else if (ext == L"hlsl")
-		assets.push_back((Asset*)ShaderImporter::CompileShader(file));
+		assets.push_back((Asset*)CompileShader(file));
+
+	else if (ext == L"ttf")
+		assets.push_back((Asset*)ImportFont(file));
 }
-void LoadDirectory(jwstring dir, jvector<jwstring>* files) {
+void LoadDirectory(jwstring dir, jvector<jwstring>* files, bool recursive) {
 	jwstring d = dir + L"\\*";
 
 	WIN32_FIND_DATAW ffd;
@@ -118,9 +117,10 @@ void LoadDirectory(jwstring dir, jvector<jwstring>* files) {
 		jwstring c = dir + L"\\" + jwstring(ffd.cFileName);
 		if (GetExtW(c) == L"meta") continue;
 
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			LoadDirectory(c.c_str(), files);
-		else
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			if (recursive)
+				LoadDirectory(c.c_str(), files, recursive);
+		} else
 			files->push_back(GetFullPathW(c));
 	} while (FindNextFileW(hFind, &ffd) != 0);
 
@@ -329,7 +329,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	return 0;
 }
 int uiMain() {
-	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	//SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	// Check for DirectX Math library support.
 	if (!DirectX::XMVerifyCPUSupport()) {
 		MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
@@ -406,7 +406,6 @@ int uiMain() {
 
 int cmdMain(int argc, char** argv) {
 	jvector<jwstring> files;
-	jvector<jwstring> directories;
 	jwstring output;
 	jwstring input;
 	bool compress = true;
@@ -419,6 +418,8 @@ int cmdMain(int argc, char** argv) {
 				mode = 0;
 			} else if (str == L"-d") {
 				mode = 1;
+			} else if (str == L"-dr") {
+				mode = 4;
 			} else if (str == L"-o") {
 				mode = 2;
 			} else if (str == L"-r") {
@@ -432,13 +433,16 @@ int cmdMain(int argc, char** argv) {
 				files.push_back(GetFullPathW(str));
 				break;
 			case 1:
-				directories.push_back(str);
+				LoadDirectory(str, &files, false);
 				break;
 			case 2:
 				output = str;
 				break;
 			case 3:
 				input = GetFullPathW(str);
+				break;
+			case 4:
+				LoadDirectory(str, &files, true);
 				break;
 			}
 		}
@@ -468,10 +472,7 @@ int cmdMain(int argc, char** argv) {
 	}
 
 	if (output.empty()) wprintf(L"Please specify an output file [-o]");
-	if (files.empty() && directories.empty()) wprintf(L"Please specify input files [-f] or input directories [-d]");
-
-	for (int i = 0; i < directories.size(); i++)
-		LoadDirectory(directories[i], &files);
+	if (files.empty()) wprintf(L"Please specify input files [-f] or input directories [-d/-dr]");
 
 	// print file names
 	jvector<Asset*> assets;

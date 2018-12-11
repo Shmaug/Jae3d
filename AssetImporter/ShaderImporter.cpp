@@ -11,43 +11,43 @@ using namespace std;
 using namespace DirectX;
 
 enum PARSEMODE {
-	NONE,
-	PRAGMA,
-	INCLUDE,
-	SHADERSTAGE,
-	PARAMTYPE,
-	PARAMNAME,
-	PARAMVALUE
+	PARSEMODE_NONE,
+	PARSEMODE_PRAGMA,
+	PARSEMODE_INCLUDE,
+	PARSEMODE_SHADERSTAGE,
+	PARSEMODE_PARAMTYPE,
+	PARSEMODE_PARAMNAME,
+	PARSEMODE_PARAMVALUE
 };
 
-const unordered_map<Shader::PARAM_TYPE, unsigned int> paramSizes = {
-	{ Shader::PARAM_TYPE_CBUFFER, 0 },
-	{ Shader::PARAM_TYPE_SRV, 0 },
-	{ Shader::PARAM_TYPE_UAV, 0 },
-	{ Shader::PARAM_TYPE_SAMPLER, 0 },
-	{ Shader::PARAM_TYPE_TEXTURE, 0 },
+const unordered_map<SHADER_PARAM_TYPE, unsigned int> paramSizes = {
+	{ SHADER_PARAM_TYPE_CBUFFER, 0 },
+	{ SHADER_PARAM_TYPE_SRV, 0 },
+	{ SHADER_PARAM_TYPE_UAV, 0 },
+	{ SHADER_PARAM_TYPE_SAMPLER, 0 },
+	{ SHADER_PARAM_TYPE_TEXTURE, 0 },
 	
-	{ Shader::PARAM_TYPE_FLOATRANGE, 4 },
-	{ Shader::PARAM_TYPE_INTRANGE, 4 },
-	{ Shader::PARAM_TYPE_UINTRANGE, 4 },
+	{ SHADER_PARAM_TYPE_FLOATRANGE, 4 },
+	{ SHADER_PARAM_TYPE_INTRANGE, 4 },
+	{ SHADER_PARAM_TYPE_UINTRANGE, 4 },
 
-	{ Shader::PARAM_TYPE_COLOR3, 12 },
-	{ Shader::PARAM_TYPE_COLOR4, 16 },
+	{ SHADER_PARAM_TYPE_COLOR3, 12 },
+	{ SHADER_PARAM_TYPE_COLOR4, 16 },
 
-	{ Shader::PARAM_TYPE_FLOAT,  4 },
-	{ Shader::PARAM_TYPE_FLOAT2, 8 },
-	{ Shader::PARAM_TYPE_FLOAT3, 12 },
-	{ Shader::PARAM_TYPE_FLOAT4, 16 },
+	{ SHADER_PARAM_TYPE_FLOAT,  4 },
+	{ SHADER_PARAM_TYPE_FLOAT2, 8 },
+	{ SHADER_PARAM_TYPE_FLOAT3, 12 },
+	{ SHADER_PARAM_TYPE_FLOAT4, 16 },
 
-	{ Shader::PARAM_TYPE_INT,  4 },
-	{ Shader::PARAM_TYPE_INT2, 8 },
-	{ Shader::PARAM_TYPE_INT3, 12 },
-	{ Shader::PARAM_TYPE_INT4, 16 },
+	{ SHADER_PARAM_TYPE_INT,  4 },
+	{ SHADER_PARAM_TYPE_INT2, 8 },
+	{ SHADER_PARAM_TYPE_INT3, 12 },
+	{ SHADER_PARAM_TYPE_INT4, 16 },
 
-	{ Shader::PARAM_TYPE_UINT,  4 },
-	{ Shader::PARAM_TYPE_UINT2, 8 },
-	{ Shader::PARAM_TYPE_UINT3, 12 },
-	{ Shader::PARAM_TYPE_UINT4, 16 },
+	{ SHADER_PARAM_TYPE_UINT,  4 },
+	{ SHADER_PARAM_TYPE_UINT2, 8 },
+	{ SHADER_PARAM_TYPE_UINT3, 12 },
+	{ SHADER_PARAM_TYPE_UINT4, 16 },
 };
 
 // remove whitespace, return new length
@@ -106,39 +106,39 @@ XMUINT4 atou4(const wchar_t* str) {
 	return v;
 }
 
-Shader::PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
-	static const std::unordered_map<jwstring, Shader::PARAM_TYPE> paramTypes {
-		{ L"cbuf",	Shader::PARAM_TYPE_CBUFFER },
-		{ L"srv",	Shader::PARAM_TYPE_SRV },
-		{ L"uav",	Shader::PARAM_TYPE_UAV },
-		{ L"samp",	Shader::PARAM_TYPE_SAMPLER },
-		{ L"tex",	Shader::PARAM_TYPE_TEXTURE },
+SHADER_PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
+	static const std::unordered_map<jwstring, SHADER_PARAM_TYPE> paramTypes {
+		{ L"cbuf",	SHADER_PARAM_TYPE_CBUFFER },
+		{ L"srv",	SHADER_PARAM_TYPE_SRV },
+		{ L"uav",	SHADER_PARAM_TYPE_UAV },
+		{ L"samp",	SHADER_PARAM_TYPE_SAMPLER },
+		{ L"tex",	SHADER_PARAM_TYPE_TEXTURE },
 
-		{ L"floatrange", Shader::PARAM_TYPE_FLOATRANGE },
-		{ L"intrange",	Shader::PARAM_TYPE_INTRANGE },
-		{ L"uintrange",	Shader::PARAM_TYPE_UINTRANGE },
+		{ L"floatrange", SHADER_PARAM_TYPE_FLOATRANGE },
+		{ L"intrange",	SHADER_PARAM_TYPE_INTRANGE },
+		{ L"uintrange",	SHADER_PARAM_TYPE_UINTRANGE },
 
-		{ L"rgb",	Shader::PARAM_TYPE_COLOR3 },
-		{ L"rgba",	Shader::PARAM_TYPE_COLOR4 },
+		{ L"rgb",	SHADER_PARAM_TYPE_COLOR3 },
+		{ L"rgba",	SHADER_PARAM_TYPE_COLOR4 },
 		
-		{ L"float",	Shader::PARAM_TYPE_FLOAT },
-		{ L"float2", Shader::PARAM_TYPE_FLOAT2 },
-		{ L"float3", Shader::PARAM_TYPE_FLOAT3 },
-		{ L"float4", Shader::PARAM_TYPE_FLOAT4 },
+		{ L"float",	SHADER_PARAM_TYPE_FLOAT },
+		{ L"float2", SHADER_PARAM_TYPE_FLOAT2 },
+		{ L"float3", SHADER_PARAM_TYPE_FLOAT3 },
+		{ L"float4", SHADER_PARAM_TYPE_FLOAT4 },
 		
-		{ L"int",	Shader::PARAM_TYPE_INT },
-		{ L"int2",	Shader::PARAM_TYPE_INT2 },
-		{ L"int3",	Shader::PARAM_TYPE_INT3 },
-		{ L"int4",	Shader::PARAM_TYPE_INT4 },
+		{ L"int",	SHADER_PARAM_TYPE_INT },
+		{ L"int2",	SHADER_PARAM_TYPE_INT2 },
+		{ L"int3",	SHADER_PARAM_TYPE_INT3 },
+		{ L"int4",	SHADER_PARAM_TYPE_INT4 },
 		
-		{ L"uint",	Shader::PARAM_TYPE_UINT },
-		{ L"uint2",	Shader::PARAM_TYPE_UINT2 },
-		{ L"uint3",	Shader::PARAM_TYPE_UINT3 },
-		{ L"uint4",	Shader::PARAM_TYPE_UINT4 },
+		{ L"uint",	SHADER_PARAM_TYPE_UINT },
+		{ L"uint2",	SHADER_PARAM_TYPE_UINT2 },
+		{ L"uint3",	SHADER_PARAM_TYPE_UINT3 },
+		{ L"uint4",	SHADER_PARAM_TYPE_UINT4 },
 	};
 	
 	range = L"(0,0)";
-	if (str.empty()) return Shader::PARAM_TYPE_FLOAT;
+	if (str.empty()) return SHADER_PARAM_TYPE_FLOAT;
 
 	jwstring val = str;
 
@@ -156,15 +156,15 @@ Shader::PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
 
 	if (paramTypes.count(val) == 0) {
 		cerr << "Invalid parameter type " << str.c_str() << "(" << val.c_str() << ")\n";
-		return Shader::PARAM_TYPE_FLOAT;
+		return SHADER_PARAM_TYPE_FLOAT;
 	}
 	return paramTypes.at(val);
 }
 
 void SetParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName, jwstring &tstr, jwstring &vstr){
 	jwstring range;
-	Shader::ShaderParameter::ShaderValue value;
-	Shader::PARAM_TYPE paramType = ParseType(tstr, range);
+	ShaderParameter::ShaderValue value;
+	SHADER_PARAM_TYPE paramType = ParseType(tstr, range);
 
 	wstring valstr = L"0";
 
@@ -177,68 +177,68 @@ void SetParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName,
 	}
 
 	switch (paramType) {
-		case Shader::PARAM_TYPE_CBUFFER:
-		case Shader::PARAM_TYPE_SRV:
-		case Shader::PARAM_TYPE_UAV:
-		case Shader::PARAM_TYPE_SAMPLER:
-		case Shader::PARAM_TYPE_TEXTURE:
+		case SHADER_PARAM_TYPE_CBUFFER:
+		case SHADER_PARAM_TYPE_SRV:
+		case SHADER_PARAM_TYPE_UAV:
+		case SHADER_PARAM_TYPE_SAMPLER:
+		case SHADER_PARAM_TYPE_TEXTURE:
 			break;
 
-		case Shader::PARAM_TYPE_FLOATRANGE:
+		case SHADER_PARAM_TYPE_FLOATRANGE:
 			value.floatRange = atof2(range.c_str());
 			value.floatValue = (float)_wtof(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_INTRANGE:
+		case SHADER_PARAM_TYPE_INTRANGE:
 			value.intRange = atoi2(range.c_str());
 			value.intValue = _wtoi(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_UINTRANGE:
+		case SHADER_PARAM_TYPE_UINTRANGE:
 			value.uintRange = atou2(range.c_str());
 			value.uintValue = _wtoi(valstr.c_str());
 			break;
 
-		case Shader::PARAM_TYPE_FLOAT:
+		case SHADER_PARAM_TYPE_FLOAT:
 			value.floatValue = (float)_wtof(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_FLOAT2:
+		case SHADER_PARAM_TYPE_FLOAT2:
 			value.float2Value = atof2(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_COLOR3:
+		case SHADER_PARAM_TYPE_COLOR3:
 			value.float3Value = atof3(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_FLOAT3:
+		case SHADER_PARAM_TYPE_FLOAT3:
 			value.float3Value = atof3(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_COLOR4:
+		case SHADER_PARAM_TYPE_COLOR4:
 			value.float4Value = atof4(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_FLOAT4:
+		case SHADER_PARAM_TYPE_FLOAT4:
 			value.float4Value = atof4(valstr.c_str());
 			break;
 
-		case Shader::PARAM_TYPE_INT:
+		case SHADER_PARAM_TYPE_INT:
 			value.intValue = _wtoi(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_INT2:
+		case SHADER_PARAM_TYPE_INT2:
 			value.int2Value = atoi2(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_INT3:
+		case SHADER_PARAM_TYPE_INT3:
 			value.int3Value = atoi3(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_INT4:
+		case SHADER_PARAM_TYPE_INT4:
 			value.int4Value = atoi4(valstr.c_str());
 			break;
 
-		case Shader::PARAM_TYPE_UINT:
+		case SHADER_PARAM_TYPE_UINT:
 			value.uintValue = _wtoi(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_UINT2:
+		case SHADER_PARAM_TYPE_UINT2:
 			value.uint2Value = atou2(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_UINT3:
+		case SHADER_PARAM_TYPE_UINT3:
 			value.uint3Value = atou3(valstr.c_str());
 			break;
-		case Shader::PARAM_TYPE_UINT4:
+		case SHADER_PARAM_TYPE_UINT4:
 			value.uint4Value = atou4(valstr.c_str());
 			break;
 	}
@@ -247,10 +247,10 @@ void SetParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName,
 	unsigned int size = paramSizes.at(paramType);
 	unsigned int nextBoundary = 16 * ((cbo + 16) / 16);
 	if (cbo + size > nextBoundary) {
-		shader->AddParameter(paramName, Shader::ShaderParameter(paramType, rootParamIndex, nextBoundary, value));
+		shader->AddParameter(paramName, ShaderParameter(paramType, rootParamIndex, nextBoundary, value));
 		cbo = nextBoundary + size;
 	} else {
-		shader->AddParameter(paramName, Shader::ShaderParameter(paramType, rootParamIndex, cbo, value));
+		shader->AddParameter(paramName, ShaderParameter(paramType, rootParamIndex, cbo, value));
 		cbo += size;
 	}
 }
@@ -261,8 +261,8 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 	std::wstring line;
 	while (std::getline(infile, line)) {
 		linenum++;
-		PARSEMODE mode = NONE;
-		Shader::SHADERSTAGE stage;
+		PARSEMODE mode = PARSEMODE_NONE;
+		SHADERSTAGE stage;
 		jwstring paramType;
 		jwstring paramName;
 
@@ -286,19 +286,19 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			i = j;
 #pragma endregion
 
-			if (mode == NONE) {
+			if (mode == PARSEMODE_NONE) {
 				// first word found on the line
 				if (word == L"#pragma")
-					mode = PRAGMA;
+					mode = PARSEMODE_PRAGMA;
 				else if (word == L"#include")
-					mode = INCLUDE;
+					mode = PARSEMODE_INCLUDE;
 				else
 					break;
 				continue;
 			}
 
 			switch (mode) {
-			case INCLUDE: // parse pragmas from #included file
+			case PARSEMODE_INCLUDE: // parse pragmas from #included file
 			{
 				jwstring dir = path;
 				const size_t last_slash_idx = path.rfind(L'\\');
@@ -308,40 +308,40 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				wifstream incstr(inc.c_str());
 				if (incstr.is_open())
 					ParseShader(shader, incstr, rootParamIndex, inc);
-				mode = PRAGMA;
+				mode = PARSEMODE_PRAGMA;
 				break;
 			}
-			case PRAGMA: // reading pragma type
+			case PARSEMODE_PRAGMA: // reading pragma type
 			{
 				if (word == L"rootsig") {
-					stage = Shader::SHADERSTAGE_ROOTSIG;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_ROOTSIG;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"vertex") {
-					stage = Shader::SHADERSTAGE_VERTEX;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_VERTEX;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"hull") {
-					stage = Shader::SHADERSTAGE_HULL;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_HULL;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"domain") {
-					stage = Shader::SHADERSTAGE_DOMAIN;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_DOMAIN;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"geometry") {
-					stage = Shader::SHADERSTAGE_GEOMETRY;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_GEOMETRY;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"pixel") {
-					stage = Shader::SHADERSTAGE_PIXEL;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_PIXEL;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"compute") {
-					stage = Shader::SHADERSTAGE_COMPUTE;
-					mode = SHADERSTAGE;
+					stage = SHADERSTAGE_COMPUTE;
+					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"Parameter") {
-					mode = PARAMTYPE;
+					mode = PARSEMODE_PARAMTYPE;
 				}
 				break;
 			}
-			case SHADERSTAGE: // reading entry point
+			case PARSEMODE_SHADERSTAGE: // reading entry point
 			{
-				mode = PRAGMA;
+				mode = PARSEMODE_PRAGMA;
 				HRESULT hr = shader->CompileShaderStage(path, word, stage);
 				if (FAILED(hr)) {
 					_com_error err(hr);
@@ -350,46 +350,46 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				break;
 			}
 
-			case PARAMTYPE: // reading parameter type
+			case PARSEMODE_PARAMTYPE: // reading parameter type
 			{
 				paramType = word;
-				mode = PARAMNAME;
+				mode = PARSEMODE_PARAMNAME;
 				break;
 			}
-			case PARAMNAME: // reading parameter name
+			case PARSEMODE_PARAMNAME: // reading parameter name
 			{ 
 				jwstring range;
-				Shader::PARAM_TYPE ptype = ParseType(paramType, range);
+				SHADER_PARAM_TYPE ptype = ParseType(paramType, range);
 				paramName = word;
-				if (ptype <= Shader::PARAM_TYPE_TEXTURE) {
+				if (ptype <= SHADER_PARAM_TYPE_TEXTURE) {
 					// increase Root Parameter index since we are registering a Root Parameter
 					if (cbo > 0) {
 						shader->AddParameterBuffer(rootParamIndex - 1, cbo);
 						wprintf(L"Root Parameter %d: Integral Constant Buffer (%d)\n", rootParamIndex - 1, cbo);
 					}
 					cbo = 0;
-					shader->AddParameter(paramName, Shader::ShaderParameter(ptype, rootParamIndex++, 0, {}));
+					shader->AddParameter(paramName, ShaderParameter(ptype, rootParamIndex++, 0, {}));
 					wprintf(L"Root Parameter %d: %s (%s)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
-					mode = PRAGMA;
+					mode = PARSEMODE_PRAGMA;
 				} else
 					// integral value (will be placed in a cbuffer)
-					mode = PARAMVALUE;
+					mode = PARSEMODE_PARAMVALUE;
 				break;
 			}
-			case PARAMVALUE:
+			case PARSEMODE_PARAMVALUE:
 			{
 				// cbv value description
 				int cbo1 = cbo;
 				SetParam(shader, rootParamIndex - 1, cbo, paramName, paramType, word);
 				wprintf(L"Root Parameter %d offset %d: %s (%s)\n", rootParamIndex - 1, cbo1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
-				mode = PRAGMA;
+				mode = PARSEMODE_PRAGMA;
 				break;
 			}
 			}
 		}
 
 		// if a parameter had no default value
-		if (mode == PARAMVALUE)
+		if (mode == PARSEMODE_PARAMVALUE)
 			SetParam(shader, rootParamIndex - 1, cbo, paramName, paramType, jwstring(L""));
 	}
 
@@ -399,7 +399,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 	}
 }
 
-Shader* ShaderImporter::CompileShader(jwstring path) {
+Shader* CompileShader(jwstring path) {
 	Shader* shader = new Shader(GetNameW(path));
 
 	wprintf(L"Compiling %s\n", shader->mName.c_str());
@@ -411,25 +411,25 @@ Shader* ShaderImporter::CompileShader(jwstring path) {
 	return shader;
 }
 
-Shader* ShaderImporter::ReadShader(jwstring path) {
+Shader* ReadShader(jwstring path) {
 	Shader* shader = new Shader(GetNameW(path));
 
-	Shader::SHADERSTAGE stage;
+	SHADERSTAGE stage;
 	jwstring end = GetNameW(path).substr(-3);
 	if (end == L"_rs")
-		stage = Shader::SHADERSTAGE_ROOTSIG;
+		stage = SHADERSTAGE_ROOTSIG;
 	else if (end == L"_vs")
-		stage = Shader::SHADERSTAGE_VERTEX;
+		stage = SHADERSTAGE_VERTEX;
 	else if (end == L"_hs")
-		stage = Shader::SHADERSTAGE_HULL;
+		stage = SHADERSTAGE_HULL;
 	else if (end == L"_ds")
-		stage = Shader::SHADERSTAGE_DOMAIN;
+		stage = SHADERSTAGE_DOMAIN;
 	else if (end == L"_gs")
-		stage = Shader::SHADERSTAGE_GEOMETRY;
+		stage = SHADERSTAGE_GEOMETRY;
 	else if (end == L"_ps")
-		stage = Shader::SHADERSTAGE_PIXEL;
+		stage = SHADERSTAGE_PIXEL;
 	else if (end == L"_cs")
-		stage = Shader::SHADERSTAGE_COMPUTE;
+		stage = SHADERSTAGE_COMPUTE;
 
 	shader->ReadShaderStage(path, stage);
 	return shader;

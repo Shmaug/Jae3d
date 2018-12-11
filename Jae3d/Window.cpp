@@ -24,6 +24,11 @@ Window::Window(HWND hWnd, UINT bufferCount) : mhWnd(hWnd), mBufferCount(bufferCo
 	mClientWidth = (uint32_t)(crect.right - crect.left);
 	mClientHeight = (uint32_t)(crect.bottom - crect.top);
 
+	HDC hdc = GetDC(hWnd);
+	mLogPixelsX = GetDeviceCaps(hdc, LOGPIXELSX);
+	mLogPixelsY = GetDeviceCaps(hdc, LOGPIXELSY);
+	ReleaseDC(hWnd, hdc);
+
 	auto device = Graphics::GetDevice();
 	CreateSwapChain();
 
@@ -205,6 +210,11 @@ void Window::SetFullscreen(bool fullscreen) {
 }
 
 void Window::Resize() {
+	HDC hdc = GetDC(mhWnd);
+	mLogPixelsX = GetDeviceCaps(hdc, LOGPIXELSX);
+	mLogPixelsY = GetDeviceCaps(hdc, LOGPIXELSY);
+	ReleaseDC(mhWnd, hdc);
+
 	RECT crect;
 	GetClientRect(mhWnd, &crect);
 	uint32_t width = (uint32_t)(crect.right - crect.left);

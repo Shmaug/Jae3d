@@ -73,5 +73,4 @@ inline unsigned char Log2(size_t value) {
 	else
 		return 0;
 }
-
 #endif
