@@ -17,16 +17,15 @@
           "DENY_HULL_SHADER_ROOT_ACCESS )," \
 RootSigCommon \
 RootSigPBR \
-"DescriptorTable(SRV(t0), visibility=SHADER_VISIBILITY_PIXEL)," \
-"DescriptorTable(SRV(t1), visibility=SHADER_VISIBILITY_PIXEL)," \
 "DescriptorTable(SRV(t2), visibility=SHADER_VISIBILITY_PIXEL)," \
-"StaticSampler(s0, filter=FILTER_MIN_MAG_MIP_LINEAR," \
-	"visibility=SHADER_VISIBILITY_PIXEL),"\
+"DescriptorTable(SRV(t3), visibility=SHADER_VISIBILITY_PIXEL)," \
+"DescriptorTable(SRV(t4), visibility=SHADER_VISIBILITY_PIXEL)," \
+"StaticSampler(s1, filter=FILTER_MIN_MAG_MIP_LINEAR, visibility=SHADER_VISIBILITY_PIXEL)"
 
-Texture2D<float4> CombinedTex : register(t0);
-Texture2D<float3> NormalTex : register(t1);
-Texture2D<float4> MetallicTex : register(t2);
-sampler Sampler : register(s0);
+Texture2D<float4> CombinedTex : register(t2);
+Texture2D<float3> NormalTex : register(t3);
+Texture2D<float4> MetallicTex : register(t4);
+sampler Sampler : register(s1);
 
 struct v2f {
 	float4 pos : SV_Position;
@@ -67,14 +66,19 @@ float4 psmain(v2f i) : SV_Target{
 	float3 worldPos = float3(i.tbn0.w, i.tbn1.w, i.tbn2.w);
 	float2 uv = i.uv.xy;
 
-	float3 view = normalize(worldPos - Camera.CameraPosition.xyz);
+	float3 view = normalize(worldPos - Camera.Position.xyz);
 
 	float4 tex = CombinedTex.Sample(Sampler, uv);
 	float3 bump = normalize(NormalTex.Sample(Sampler, uv).rgb * 2 - 1);
 	float metallic = MetallicTex.Sample(Sampler, uv).r;
 
-	normal = normalize(tangent * bump.x + binormal * bump.y + normal * bump.z);
+	Surface sfc;
+	sfc.albedo = tex.rgb;
+	sfc.metallic = metallic;
+	sfc.roughness = tex.a;
+	sfc.normal = normalize(tangent * bump.x + binormal * bump.y + normal * bump.z);
+	sfc.worldPos = worldPos;
 
-	float3 light = UnityBRDF(tex.rgb, tex.a, metallic, normal, -view, -Light.LightDir0.xyz, Light.LightCol0.rgb);
+	float3 light = ShadePoint(sfc, i.pos, view);
 	return float4(light, 1.0);
 }

@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Common.hpp"
-
-#include <variant>
+#include "jvector.hpp"
 
 class Material {
 public:
@@ -11,6 +10,7 @@ public:
 	JAE_API Material(jwstring name, std::shared_ptr<Shader> shader);
 	JAE_API ~Material();
 
+	// Set shader and synchronize parameters
 	JAE_API void SetShader(std::shared_ptr<Shader> shader, bool resetParameters = false);
 
 	JAE_API void SetInt(jwstring param, int v, unsigned int frameIndex);
@@ -35,8 +35,10 @@ public:
 	JAE_API void SetCBuffer(jwstring param, std::shared_ptr<ConstantBuffer> tex, unsigned int frameIndex);
 
 private:
+	jvector<CommandList*> mActive;
 	friend class CommandList;
-	JAE_API void SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int frameIndex);
+	// Sets the shader and all parameters
+	JAE_API void SetActive(CommandList* commandList);
 
 	// constant buffers for integral material parameters: [root index, cbuffer]
 	int mParamCbufferCount;

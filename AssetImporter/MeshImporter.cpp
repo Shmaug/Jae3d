@@ -158,6 +158,17 @@ Mesh* Convert(aiMesh *aimesh){
 	return mesh;
 }
 
+void ImportMesh(jwstring path, jvector<AssetMetadata> &meta) {
+	AssetMetadata metadata(path);
+	int c;
+	Asset** a = ImportMesh(path, c);
+	for (int i = 0; i < c; i++) {
+		AssetMetadata t = metadata;
+		t.asset = std::shared_ptr<Asset>(a[i]);
+		meta.push_back(t);
+	}
+	delete[] a;
+}
 Asset** ImportMesh(jwstring path, int &count) {
 	const aiScene *scene = aiImportFile(utf16toUtf8(path.c_str()).c_str(), 
 		aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_MakeLeftHanded | aiProcess_FlipUVs);

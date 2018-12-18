@@ -57,7 +57,7 @@ Mesh::~Mesh() {
 	Clear();
 	ReleaseGpu();
 }
-uint64_t Mesh::TypeId() { return (uint64_t)AssetFile::TYPEID_MESH; }
+uint64_t Mesh::TypeId() { return (uint64_t)ASSET_TYPE_MESH; }
 
 void Mesh::WriteData(MemoryStream &ms) {
 	ms.Write((uint32_t)mSemantics);

@@ -358,9 +358,9 @@ void SpriteBatch::CreateShader() {
 ;
 	
 	mTexturedShader = std::shared_ptr<Shader>(new Shader(L"Textured Sprite Shader"));
-	mTexturedShader->CompileShaderStage(texrootsig, "RootSig", SHADERSTAGE_ROOTSIG);
-	mTexturedShader->CompileShaderStage(texshader, "vsmain", SHADERSTAGE_VERTEX);
-	mTexturedShader->CompileShaderStage(texshader, "psmain", SHADERSTAGE_PIXEL);
+	mTexturedShader->CompileShaderStage(texrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
+	mTexturedShader->CompileShaderStage(texshader, "vsmain", SHADER_STAGE_VERTEX);
+	mTexturedShader->CompileShaderStage(texshader, "psmain", SHADER_STAGE_PIXEL);
 	mTexturedShader->Upload();
 
 		const char colrootsig[] =
@@ -384,9 +384,9 @@ void SpriteBatch::CreateShader() {
 ;
 	
 	mColoredShader = std::shared_ptr<Shader>(new Shader(L"Colored Sprite Shader"));
-	mColoredShader->CompileShaderStage(colrootsig, "RootSig", SHADERSTAGE_ROOTSIG);
-	mColoredShader->CompileShaderStage(colshader, "vsmain", SHADERSTAGE_VERTEX);
-	mColoredShader->CompileShaderStage(colshader, "psmain", SHADERSTAGE_PIXEL);
+	mColoredShader->CompileShaderStage(colrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
+	mColoredShader->CompileShaderStage(colshader, "vsmain", SHADER_STAGE_VERTEX);
+	mColoredShader->CompileShaderStage(colshader, "psmain", SHADER_STAGE_PIXEL);
 	mColoredShader->Upload();
 }
 
@@ -395,9 +395,9 @@ void SpriteBatch::SpriteContext::DrawQuadGroup(ComPtr<ID3D12GraphicsCommandList>
 	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)Graphics::GetWindow()->GetWidth(), (float)Graphics::GetWindow()->GetHeight(), 0, 0, 1.0f));
 	cmdList->SetGraphicsRoot32BitConstants(0, 16, &m, 0);
 
-	ID3D12DescriptorHeap* heaps[] = { tex->GetDescriptorHeap().Get() };
-	cmdList->SetDescriptorHeaps(1, heaps);
-	cmdList->SetGraphicsRootDescriptorTable(1, tex->GetGPUDescriptor());
+	ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
+	cmdList->SetDescriptorHeaps(1, &heap);
+	cmdList->SetGraphicsRootDescriptorTable(1, tex->GetSRVGPUDescriptor());
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList->IASetVertexBuffers(0, 1, &mQuadVertexBufferView);
@@ -429,8 +429,7 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		commandList->SetCamera(nullptr);
 		commandList->SetShader(mTexturedShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
-		commandList->SetInputElements((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_TEXCOORD0 | MESH_SEMANTIC_COLOR0));
-		commandList->DrawUserMesh(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_TEXCOORD0 | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 
 		for (unsigned int i = 0; i < mQuadDrawQueue.size(); i++) {
 			SpriteDraw s = mQuadDrawQueue[i];
@@ -461,8 +460,7 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		commandList->SetCamera(nullptr);
 		commandList->SetShader(mColoredShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
-		commandList->SetInputElements((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_COLOR0));
-		commandList->DrawUserMesh(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
 		unsigned int curl = ctx->mLineIndexOffset;
 		for (unsigned int i = 0; i < mLineDrawQueue.size(); i++)

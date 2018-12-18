@@ -13,15 +13,13 @@ using namespace std;
 jmap<jwstring, shared_ptr<Asset>> AssetDatabase::assets;
 
 void AssetDatabase::LoadAssets(jwstring file) {
-	int count;
-	Asset** a = AssetFile::Read(file, count);
-	for (int i = 0; i < count; i++) {
+	jvector<Asset*> a = AssetFile::Read(file);
+	for (int i = 0; i < a.size(); i++) {
 		if (a[i]) {
 			a[i]->mGroup = file;
 			assets.emplace(a[i]->mName, shared_ptr<Asset>(a[i]));
 		}
 	}
-	delete[] a;
 }
 void AssetDatabase::UnloadAssets() {
 	assets.clear();

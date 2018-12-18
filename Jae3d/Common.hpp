@@ -61,6 +61,14 @@ const D3D12_RENDER_TARGET_BLEND_DESC BLEND_STATE_PREMUL {
 	D3D12_COLOR_WRITE_ENABLE_ALL	// UINT8 RenderTargetWriteMask;
 };
 
+enum ASSET_TYPE : uint32_t {
+	ASSET_TYPE_UNSPECIFIED	= 0,
+	ASSET_TYPE_MESH			= 1,
+	ASSET_TYPE_SHADER		= 2,
+	ASSET_TYPE_TEXTURE		= 3,
+	ASSET_TYPE_FONT			= 4,
+};
+
 enum MESH_SEMANTIC {
 	MESH_SEMANTIC_POSITION		= 0x000, // always have position
 	MESH_SEMANTIC_NORMAL		= 0x001,
@@ -76,14 +84,14 @@ enum MESH_SEMANTIC {
 	MESH_SEMANTIC_TEXCOORD3		= 0x400,
 };
 
-enum SHADERSTAGE {
-	SHADERSTAGE_ROOTSIG,
-	SHADERSTAGE_VERTEX,
-	SHADERSTAGE_HULL,
-	SHADERSTAGE_DOMAIN,
-	SHADERSTAGE_GEOMETRY,
-	SHADERSTAGE_PIXEL,
-	SHADERSTAGE_COMPUTE
+enum SHADER_STAGE {
+	SHADER_STAGE_ROOTSIG,
+	SHADER_STAGE_VERTEX,
+	SHADER_STAGE_HULL,
+	SHADER_STAGE_DOMAIN,
+	SHADER_STAGE_GEOMETRY,
+	SHADER_STAGE_PIXEL,
+	SHADER_STAGE_COMPUTE
 };
 enum SHADER_PARAM_TYPE {
 	SHADER_PARAM_TYPE_CBUFFER,
@@ -221,18 +229,29 @@ struct ShaderState {
 	MESH_SEMANTIC input;
 	D3D12_RENDER_TARGET_BLEND_DESC blendState;
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
+	D3D12_FILL_MODE fillMode;
+	bool ztest;
+	bool zwrite;
 
-	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE) {}
-	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState) {}
+	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE), ztest(true), zwrite(true), fillMode(D3D12_FILL_MODE_SOLID) {}
+	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState), topology(s.topology), ztest(s.ztest), zwrite(s.zwrite), fillMode(s.fillMode) {}
 	~ShaderState() {}
 
 	ShaderState& operator =(const ShaderState &rhs) {
 		input = rhs.input;
 		blendState = rhs.blendState;
+		topology = rhs.topology;
+		ztest = rhs.ztest;
+		zwrite = rhs.zwrite;
+		fillMode = rhs.fillMode;
 		return *this;
 	}
 	bool operator ==(const ShaderState &rhs) {
 		return input == rhs.input &&
+			topology == rhs.topology &&
+			ztest == rhs.ztest &&
+			zwrite == rhs.zwrite && 
+			fillMode == rhs.fillMode &&
 			blendState.BlendEnable == rhs.blendState.BlendEnable &&
 			blendState.BlendOp == rhs.blendState.BlendOp &&
 			blendState.BlendOpAlpha == rhs.blendState.BlendOpAlpha &&
@@ -258,6 +277,10 @@ namespace std {
 		size_t operator()(const ShaderState &s) const noexcept {
 			size_t h = 0;
 			hash_combine(h, s.input);
+			hash_combine(h, s.topology);
+			hash_combine(h, s.ztest);
+			hash_combine(h, s.zwrite);
+			hash_combine(h, s.fillMode);
 			hash_combine(h, s.blendState.BlendEnable);
 			hash_combine(h, s.blendState.BlendOp);
 			hash_combine(h, s.blendState.BlendOpAlpha);

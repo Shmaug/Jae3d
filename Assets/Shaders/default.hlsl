@@ -14,23 +14,21 @@
 RootSigCommon \
 RootSigPBR
 
-struct appdata {
-	float3 vertex : POSITION;
-	float3 normal : NORMAL;
-};
 struct v2f {
 	float4 pos : SV_Position;
 	float3 normal : NORMAL;
 	float3 worldPos : TEXCOORD0;
+	float4 screenPos : TEXCOORD1;
 };
 
-v2f vsmain(appdata v) {
+v2f vsmain(float3 vertex : POSITION, float3 normal : NORMAL) {
 	v2f o;
 
-	float4 wp = mul(Object.ObjectToWorld, float4(v.vertex, 1));
-	float3 wn = mul(float4(v.normal, 1), Object.WorldToObject).xyz;
+	float4 wp = mul(Object.ObjectToWorld, float4(vertex, 1));
+	float3 wn = mul(float4(normal, 1), Object.WorldToObject).xyz;
 
 	o.pos = mul(Camera.ViewProjection, wp);
+	o.screenPos = o.pos;
 	o.normal = wn;
 	o.worldPos = wp.xyz;
 
@@ -38,8 +36,15 @@ v2f vsmain(appdata v) {
 }
 
 float4 psmain(v2f i) : SV_Target{
-	float3 view = normalize(i.worldPos - Camera.CameraPosition.xyz);
+	float3 view = normalize(i.worldPos - Camera.Position.xyz);
 
-	float3 light = UnityBRDF(1.0, .5, 0, normalize(i.normal), -view, -Light.LightDir0.xyz, Light.LightCol0.rgb);
+	Surface sfc;
+	sfc.albedo = 1.0;
+	sfc.metallic = 0.0;
+	sfc.roughness = .5;
+	sfc.normal = normalize(i.normal);
+	sfc.worldPos = i.worldPos;
+
+	float3 light = ShadePoint(sfc, i.pos, view);
 	return float4(light, 1.0);
 }

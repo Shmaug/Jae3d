@@ -13,10 +13,10 @@
 
 using namespace std;
 
-Asset** AssetFile::Read_V1(istream &is, int &count) {
+jvector<Asset*> AssetFile::Read_V1(istream &is) {
 	uint32_t assetCount = ReadStream<uint32_t>(is);
 
-	Asset** assets = new Asset*[assetCount];
+	jvector<Asset*> assets(assetCount);
 
 	MemoryStream mems(1024);
 	MemoryStream cmem(1024);
@@ -48,33 +48,32 @@ Asset** AssetFile::Read_V1(istream &is, int &count) {
 		}
 
 		switch (type) {
-		case TYPEID_MESH:
-			assets[i] = new Mesh(name, mems);
+		case ASSET_TYPE_MESH:
+			assets.push_back(new Mesh(name, mems));
 			break;
-		case TYPEID_SHADER:
-			assets[i] = new Shader(name, mems);
+		case ASSET_TYPE_SHADER:
+			assets.push_back(new Shader(name, mems));
 			break;
-		case TYPEID_TEXTURE:
-			assets[i] = new Texture(name, mems);
+		case ASSET_TYPE_TEXTURE:
+			assets.push_back(new Texture(name, mems));
 			break;
-		case TYPEID_FONT:
-			assets[i] = new Font(name, mems);
+		case ASSET_TYPE_FONT:
+			assets.push_back(new Font(name, mems));
 			break;
 		}
 
 		is.seekg(p + size);
 	}
 
-	count = assetCount;
 	return assets;
 }
-void AssetFile::Write_V1(ostream &os, Asset** assets, size_t count, bool compress) {
-	WriteStream(os, (uint32_t)count);
+void AssetFile::Write_V1(ostream &os, jvector<Asset*> assets, bool compress) {
+	WriteStream(os, (uint32_t)assets.size());
 
 	MemoryStream mems(1024);
 	MemoryStream cmem(1024);
 
-	for (int i = 0; i < count; i++) {
+	for (int i = 0; i < assets.size(); i++) {
 		wprintf(L"%s\n", assets[i]->mName.c_str());
 		WriteStream(os, (uint8_t)0x01); // "item" identifier
 		WriteStream(os, assets[i]->TypeId());
@@ -101,9 +100,7 @@ void AssetFile::Write_V1(ostream &os, Asset** assets, size_t count, bool compres
 	}
 }
 
-Asset** AssetFile::Read(jwstring file, int &count) {
-	count = 0;
-
+jvector<Asset*> AssetFile::Read(jwstring file) {
 	jwstring fullpath = GetFullPathW(file);
 
 	ifstream is;
@@ -111,14 +108,14 @@ Asset** AssetFile::Read(jwstring file, int &count) {
 	if (!is.is_open()) {
 		OutputDebugf(L"Failed to open file %s for reading!\n", fullpath.c_str());
 		cerr << "Failed to open file " << fullpath.c_str() << " for reading!\n";
-		return nullptr;
+		return jvector<Asset*>();
 	}
 
 	// magic number
 	if (ReadStream<uint64_t>(is) != (uint64_t)14242) {
 		OutputDebugf(L"Wrong magic number!\n", fullpath.c_str());
 		cerr << "Failed to open file " << fullpath.c_str() << " for reading!\n";
-		return nullptr;
+		return jvector<Asset*>();
 	}
 
 	// ASSET text
@@ -131,7 +128,7 @@ Asset** AssetFile::Read(jwstring file, int &count) {
 		am[4] != 'T') {
 		OutputDebugf(L"Wrong ASSET identifier!\n", fullpath.c_str());
 		cerr << "Failed to open file " << fullpath.c_str() << " for reading!\n";
-		return nullptr;
+		return jvector<Asset*>();
 	}
 
 	uint64_t version = ReadStream<uint64_t>(is);
@@ -139,12 +136,12 @@ Asset** AssetFile::Read(jwstring file, int &count) {
 	switch (version) {
 	default:
 	case (uint64_t)0001:
-		return Read_V1(is, count);
+		return Read_V1(is);
 	}
 
-	return nullptr;
+	return jvector<Asset*>();
 }
-void AssetFile::Write(jwstring file, Asset** assets, size_t count, bool compress, uint64_t version) {
+void AssetFile::Write(jwstring file, jvector<Asset*> assets, bool compress, uint64_t version) {
 	ofstream os;
 	os.open(file.c_str(), ios::out | ios::binary);
 	if (!os.is_open()) {
@@ -152,7 +149,7 @@ void AssetFile::Write(jwstring file, Asset** assets, size_t count, bool compress
 		return;
 	}
 
-	printf("Writing %d assets to %S\n", (int)count, file.c_str());
+	printf("Writing %d assets to %S\n", (int)assets.size(), file.c_str());
 
 	WriteStream(os, (uint64_t)14242); // 'magic' number
 	os.write("ASSET", 5);
@@ -161,7 +158,7 @@ void AssetFile::Write(jwstring file, Asset** assets, size_t count, bool compress
 	switch (version) {
 	default:
 	case (uint64_t)0001:
-		Write_V1(os, assets, count, compress);
+		Write_V1(os, assets, compress);
 		break;
 	}
 }

@@ -50,6 +50,9 @@
     <ClCompile Include="FontImporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Properties.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MeshImporter.hpp">
@@ -80,6 +83,12 @@
       <Filter>Header Files\ui</Filter>
     </ClInclude>
     <ClInclude Include="FontImporter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Properties.hpp">
+      <Filter>Header Files\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImportCommon.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

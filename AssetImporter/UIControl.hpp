@@ -7,6 +7,8 @@ struct InputState {
 	POINT cursor;
 	bool lmb;
 	bool rmb;
+	bool lmbFirst;
+	bool rmbFirst;
 	int clickCount;
 };
 

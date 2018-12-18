@@ -3,6 +3,7 @@
 #include "Util.hpp"
 #include "jstring.hpp"
 #include "IOUtil.hpp"
+#include "Common.hpp"
 
 #include <iostream>
 #include <fstream>

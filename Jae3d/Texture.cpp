@@ -191,10 +191,10 @@ inline size_t BitsPerPixel(_In_ DXGI_FORMAT fmt) {
 
 Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth,
 	D3D12_RESOURCE_DIMENSION dimension, unsigned int arraySize,
-	DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, void* data, size_t dataSize, bool isDDS)
+	DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS)
 	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(dimension), mArraySize(arraySize), mFormat(format), mAlphaMode(alphaMode), mMipLevels(mipLevels), mDataSize(dataSize), mIsDDS(isDDS) {
 	mData = new uint8_t[mDataSize];
-	memcpy(mData, data, dataSize);
+	SetPixelData(data);
 }
 
 Texture::Texture(jwstring name, MemoryStream &ms) : Asset(name, ms) {
@@ -220,8 +220,7 @@ Texture::~Texture() {
 	if (mData) delete[] mData;
 }
 
-uint64_t Texture::TypeId() { return (uint64_t)AssetFile::TYPEID_TEXTURE; }
-
+uint64_t Texture::TypeId() { return (uint64_t)ASSET_TYPE_TEXTURE; }
 void Texture::WriteData(MemoryStream &ms) {
 	ms.Write((uint32_t)mWidth);
 	ms.Write((uint32_t)mHeight);
@@ -238,9 +237,18 @@ void Texture::WriteData(MemoryStream &ms) {
 		ms.Write(reinterpret_cast<const char*>(mData), mDataSize);
 }
 
-void Texture::Upload() {
+void Texture::SetPixelData(const void* data) {
+	if (data)
+		memcpy(mData, data, mDataSize);
+	else
+		ZeroMemory(mData, mDataSize);
+}
+
+void Texture::Upload(D3D12_RESOURCE_FLAGS flags) {
 	if (mDataSize == 0 || !mData) return;
 	auto device = Graphics::GetDevice();
+
+	mTexture.Reset();
 
 	vector<D3D12_SUBRESOURCE_DATA> subresources;
 	if (mIsDDS) {
@@ -260,7 +268,7 @@ void Texture::Upload() {
 		desc.MipLevels = static_cast<UINT16>(mMipLevels);
 		desc.DepthOrArraySize = (mDimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) ? static_cast<UINT16>(mDepth) : static_cast<UINT16>(mArraySize);
 		desc.Format = mFormat;
-		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		desc.Flags = flags;
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 		desc.Dimension = mDimension;
@@ -307,33 +315,47 @@ void Texture::Upload() {
 
 	D3D12_RESOURCE_DESC desc = mTexture->GetDesc();
 
-	D3D12_SRV_DIMENSION dim;
+	D3D12_SRV_DIMENSION srvdim;
+	D3D12_UAV_DIMENSION uavdim;
 	switch (desc.Dimension) {
 	default:
 	case (D3D12_RESOURCE_DIMENSION_UNKNOWN):
-		dim =  D3D12_SRV_DIMENSION_UNKNOWN;
+		srvdim = D3D12_SRV_DIMENSION_UNKNOWN;
+		uavdim =  D3D12_UAV_DIMENSION_UNKNOWN;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_BUFFER):
-		dim =  D3D12_SRV_DIMENSION_BUFFER;
+		srvdim =  D3D12_SRV_DIMENSION_BUFFER;
+		uavdim = D3D12_UAV_DIMENSION_BUFFER;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_TEXTURE1D):
-		dim =  D3D12_SRV_DIMENSION_TEXTURE1D;
+		srvdim =  D3D12_SRV_DIMENSION_TEXTURE1D;
+		uavdim = D3D12_UAV_DIMENSION_TEXTURE1D;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
-		dim =  D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvdim =  D3D12_SRV_DIMENSION_TEXTURE2D;
+		uavdim = D3D12_UAV_DIMENSION_TEXTURE2D;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_TEXTURE3D):
-		dim =  D3D12_SRV_DIMENSION_TEXTURE3D;
+		srvdim =  D3D12_SRV_DIMENSION_TEXTURE3D;
+		uavdim = D3D12_UAV_DIMENSION_TEXTURE3D;
 		break;
 	}
 
-	msrvHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-	
-	// Describe and create a SRV for the texture.
+	mHasDescriptorHeaps = true;
+	mSRVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.ViewDimension = dim;
+	srvDesc.ViewDimension = srvdim;
 	srvDesc.Format = desc.Format;
 	srvDesc.Texture2D.MipLevels = desc.MipLevels;
-	device->CreateShaderResourceView(mTexture.Get(), &srvDesc, msrvHeap->GetCPUDescriptorHandleForHeapStart());
+	device->CreateShaderResourceView(mTexture.Get(), &srvDesc, mSRVHeap->GetCPUDescriptorHandleForHeapStart());
+
+	if (flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+		mUAVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.ViewDimension = uavdim;
+		uavDesc.Format = desc.Format;
+		device->CreateUnorderedAccessView(mTexture.Get(), 0, &uavDesc, mUAVHeap->GetCPUDescriptorHandleForHeapStart());
+	}
 }

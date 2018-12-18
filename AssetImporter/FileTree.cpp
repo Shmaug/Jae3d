@@ -19,14 +19,14 @@ void FileTree::Draw(HDC hdc, RECT &window, bool force) {
 
 	TEXTMETRIC metric;
 	GetTextMetrics(hdc, &metric);
-	RECT textRect{ r.left + 15, r.top + 20 - metric.tmHeight - 4, r.right, r.top + 20 };
+	RECT textRect{ r.left + 15, r.top + 30 - metric.tmHeight - 4, r.right, r.top + 30 };
 
 	for (int i = 0; i < mFiles.size(); i++) {
 		if (mSelectedIndex == i) {
-			RECT sr{ r.left, r.top + 20 * i, r.right, r.top + 20 * (i + 1) };
+			RECT sr{ r.left, r.top + 20 * i + 10, r.right, r.top + 20 * (i + 1) + 10 };
 			FillRect(hdc, &sr, Brushes::selectedBrush);
 		} else if (mHoveredIndex == i) {
-			RECT sr{ r.left, r.top + 20 * i, r.right, r.top + 20 * (i + 1) };
+			RECT sr{ r.left, r.top + 20 * i + 10, r.right, r.top + 20 * (i + 1) + 10 };
 			FillRect(hdc, &sr, Brushes::hvrBrush);
 		}
 		DrawTextW(hdc, mFiles[i].mName.c_str(), (int)mFiles[i].mName.length(), &textRect, DT_LEFT);
@@ -51,7 +51,7 @@ void FileTree::Update(WPARAM wParam, RECT &window, InputState input) {
 		if (input.lmb) mSelectedIndex = -1;
 	} else {
 		RECT r = CalcRect(window);
-		UIControl::Update(wParam, window, input);
+		r.top += 10;
 		for (int i = 0; i < mFiles.size(); i++) {
 			if (input.cursor.y > r.top + 20 * i && input.cursor.y < r.top + 20 * (i + 1)) {
 				mHoveredIndex = i;

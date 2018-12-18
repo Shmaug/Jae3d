@@ -1,8 +1,11 @@
 #pragma multi_compile COLORSPACE_GAMMA _
+
 #pragma Parameter cbuf		 Material
-#pragma Parameter rgb		 color			(1, 1, 1)
-#pragma Parameter float(0,1) roughness		.5
-#pragma Parameter float(0,1) metallic		0
+#pragma Parameter rgb		 color		(1, 1, 1)
+#pragma Parameter float(0,1) roughness	.5
+#pragma Parameter float(0,1) metallic	0
+
+#define RootSigPBR "CBV(b3, visibility=SHADER_VISIBILITY_PIXEL),"
 
 struct MaterialBuffer {
 	float3 baseColor;
@@ -10,8 +13,6 @@ struct MaterialBuffer {
 	float metallic;
 };
 ConstantBuffer<MaterialBuffer> Material : register(b3);
-
-#define RootSigPBR "CBV(b3, space=0, visibility=SHADER_VISIBILITY_PIXEL),"
 
 #define PI 3.14159265359
 #define INV_PI 0.31830988618
@@ -32,31 +33,11 @@ float DisneyDiffuse(float NdotV, float NdotL, float LdotH, float perceptualRough
 	return lightScatter * viewScatter;
 }
 float SmithJointGGXVisibilityTerm(float NdotL, float NdotV, float roughness) {
-	// Ref: http://jcgt.org/published/0003/02/03/paper.pdf
-#if 0
-	// Original formulation:
-	//  lambda_v    = (-1 + sqrt(a2 * (1 - NdotL2) / NdotL2 + 1)) * 0.5f;
-	//  lambda_l    = (-1 + sqrt(a2 * (1 - NdotV2) / NdotV2 + 1)) * 0.5f;
-	//  G           = 1 / (1 + lambda_v + lambda_l);
-
-	// Reorder code to be more optimal
-	float a = roughness;
-	float a2 = a * a;
-
-	float lambdaV = NdotL * sqrt((-NdotV * a2 + NdotV) * NdotV + a2);
-	float lambdaL = NdotV * sqrt((-NdotL * a2 + NdotL) * NdotL + a2);
-
-	// Simplify visibility term: (2.0f * NdotL * NdotV) /  ((4.0f * NdotL * NdotV) * (lambda_v + lambda_l + 1e-5f));
-	return 0.5f / (lambdaV + lambdaL + 1e-5f);  // This function is not intended to be running on Mobile,
-												// therefore epsilon is smaller than can be represented by float
-#else
-	// Approximation of the above formulation (simplify the sqrt, not mathematically correct but close enough)
 	float a = roughness;
 	float lambdaV = NdotL * (NdotV * (1 - a) + a);
 	float lambdaL = NdotV * (NdotL * (1 - a) + a);
 
 	return 0.5f / (lambdaV + lambdaL + 1e-5f);
-#endif
 }
 
 float GGXTerm(float NdotH, float roughness) {
@@ -74,6 +55,7 @@ float3 FresnelLerp(float3 F0, float3 F90, float cosA) {
 }
 
 #define COLORSPACE_GAMMA
+
 #ifdef COLORSPACE_GAMMA
 #define unity_ColorSpaceDielectricSpec float4(0.220916301, 0.220916301, 0.220916301, 1.0 - 0.220916301)
 #else // Linear values
@@ -136,20 +118,20 @@ float3 UnityBRDF(float3 albedo, float perceptualRoughness, float metallic, float
 
 	float specularTerm = V * D * PI; // Torrance-Sparrow model, Fresnel is applied later
 
-#   ifdef COLORSPACE_GAMMA
+	#ifdef COLORSPACE_GAMMA
 	specularTerm = sqrt(max(1e-4h, specularTerm));
-#   endif
+	#endif
 
 	// specularTerm * nl can be NaN on Metal in some cases, use max() to make sure it's a sane value
 	specularTerm = max(0, specularTerm * nl);
 
 	// surfaceReduction = Int D(NdotH) * NdotH * Id(NdotL>0) dH = 1/(roughness^2+1)
 	float surfaceReduction;
-#   ifdef COLORSPACE_GAMMA
+	#ifdef COLORSPACE_GAMMA
 	surfaceReduction = 1.0 - 0.28*roughness*perceptualRoughness;      // 1-0.28*x^3 as approximation for (1/(x^4+1))^(1/2.2) on the domain [0;1]
-#   else
+	#else
 	surfaceReduction = 1.0 / (roughness*roughness + 1.0);           // fade \in [0.5;1]
-#   endif
+	#endif
 
 	// To provide true Lambert lighting, we need to be able to kill specular completely.
 	specularTerm *= any(specColor) ? 1.0 : 0.0;
@@ -160,4 +142,70 @@ float3 UnityBRDF(float3 albedo, float perceptualRoughness, float metallic, float
 		;//+ surfaceReduction * gi.specular * FresnelLerp(specColor, grazingTerm, nv);
 
 	return color;
+}
+float3 UnityGI(float3 albedo, float perceptualRoughness, float metallic, float3 normal, float3 viewDir, float3 giDiffuse, float3 giSpecular) {
+	albedo *= Material.baseColor;
+	perceptualRoughness *= Material.roughness;
+	metallic *= Material.metallic;
+
+	float oneMinusReflectivity;
+	float3 specColor;
+	float3 diffColor = DiffuseAndSpecularFromMetallic(albedo, metallic, specColor, oneMinusReflectivity);
+
+	float nv = saturate(dot(normal, viewDir)); // TODO: this saturate should no be necessary here
+	
+	// Specular term
+	// HACK: theoretically we should divide diffuseTerm by Pi and not multiply specularTerm!
+	// BUT 1) that will make shader look significantly darker than Legacy ones
+	// and 2) on engine side "Non-important" lights have to be divided by Pi too in cases when they are injected into ambient SH
+	float roughness = perceptualRoughness * perceptualRoughness;
+
+	// GGX with roughtness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughtness remapping.
+	roughness = max(roughness, 0.002);
+
+	// surfaceReduction = Int D(NdotH) * NdotH * Id(NdotL>0) dH = 1/(roughness^2+1)
+	float surfaceReduction;
+	#ifdef COLORSPACE_GAMMA
+	surfaceReduction = 1.0 - 0.28*roughness*perceptualRoughness;      // 1-0.28*x^3 as approximation for (1/(x^4+1))^(1/2.2) on the domain [0;1]
+	#else
+	surfaceReduction = 1.0 / (roughness*roughness + 1.0);           // fade \in [0.5;1]
+	#endif
+
+	float grazingTerm = saturate((1 - perceptualRoughness) + (1 - oneMinusReflectivity));
+
+	return diffColor * giDiffuse + surfaceReduction * giSpecular * FresnelLerp(specColor, grazingTerm, nv);
+}
+
+struct Surface {
+	float3 albedo;
+	float metallic;
+	float roughness;
+	float3 normal;
+	float3 worldPos;
+};
+float LightAttenuation(float x, float r) {
+	float atten = 1 / ((x + 1) * (x + 1));
+	float b = 1 / ((r + 1) * (r + 1));
+	return (atten - b) / (1 - b);
+}
+
+float3 ShadeLight(Surface sfc, float3 view, Light light) {
+	float3 ldir = light.position.xyz - sfc.worldPos;
+	float dist = length(ldir);
+	float3 lcol = light.color.rgb;
+
+	return max(0, UnityBRDF(sfc.albedo, sfc.roughness, sfc.metallic, sfc.normal, -view, ldir / dist, lcol * LightAttenuation(dist, light.position.w)));
+}
+
+float3 ShadePoint(Surface sfc, float4 screenPos, float3 view) {
+	uint2 index = GetLightMask(screenPos);
+
+	float3 ambient = lerp(Lighting.groundColor.rgb, Lighting.skyColor.rgb, sfc.normal.y * sfc.normal.y);
+
+	float3 light = UnityGI(sfc.albedo, sfc.roughness, sfc.metallic, sfc.normal, view, ambient, ambient);
+	for (unsigned int i = 0; i < Lighting.lightCount; i++)
+		if ((i < 32 && index.x & (1 << i)) || (i >= 32 && (index.y & (1 << (i - 32)))))
+			light += ShadeLight(sfc, view, Lighting.lights[i]);
+
+	return light;
 }

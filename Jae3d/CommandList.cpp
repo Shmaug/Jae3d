@@ -4,6 +4,8 @@
 #include "Shader.hpp"
 #include "Mesh.hpp"
 #include "Material.hpp"
+#include "Texture.hpp"
+#include "AssetDatabase.hpp"
 
 using namespace std;
 using namespace Microsoft::WRL;
@@ -18,6 +20,7 @@ void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator, unsigned int f
 	ThrowIfFailed(mCommandList->Reset(allocator.Get(), nullptr));
 	mActiveShader = nullptr;
 	mActiveCamera = nullptr;
+	mActiveMaterial = nullptr;
 	mFrameIndex = frameIndex;
 }
 
@@ -32,45 +35,65 @@ void CommandList::SetCompute(shared_ptr<Shader> shader) {
 }
 void CommandList::SetShader(shared_ptr<Shader> shader) {
 	if (mActiveShader == shader) return;
-	if (shader) {
-		shader->SetActive(mCommandList);
-		if (mActiveCamera)
-			mActiveCamera->SetActive(mCommandList, mFrameIndex); // set camera data again since root signature changed
-	}
+
+	if (shader) shader->SetActive(mCommandList);
 	mActiveShader = shader;
 }
 void CommandList::SetMaterial(shared_ptr<Material> material) {
 	if (mActiveMaterial == material) return;
+
 	if (material) {
-		if (material->mShader)
-			SetShader(material->mShader);
-		material->SetActive(mCommandList, mFrameIndex);
+		material->SetActive(this);
+		if (mActiveCamera) {
+			material->SetCBuffer(L"CameraBuffer", mActiveCamera->mCBuffer, mFrameIndex);
+			material->SetCBuffer(L"LightBuffer", mActiveCamera->mLightBuffer, mFrameIndex);
+			material->SetTexture(L"LightIndexBuffer", mActiveCamera->mLightIndexTexture[mFrameIndex], mFrameIndex);
+		}
+	}
+
+	if (mActiveMaterial) {
+		for (int i = 0; i < mActiveMaterial->mActive.size(); i++)
+			if (mActiveMaterial->mActive[i] == this) {
+				mActiveMaterial->mActive.remove(i);
+				break;
+			}
 	}
 	mActiveMaterial = material;
 }
 void CommandList::SetCamera(shared_ptr<Camera> camera) {
 	if (mActiveCamera == camera) return;
 
-	if (camera && mActiveShader) camera->SetActive(mCommandList, mFrameIndex);
+	if (camera) {
+		camera->WriteCBuffer(mFrameIndex);
+		if (mActiveMaterial) {
+			mActiveMaterial->SetCBuffer(L"CameraBuffer", camera->mCBuffer, mFrameIndex);
+			mActiveMaterial->SetCBuffer(L"LightBuffer", camera->mLightBuffer, mFrameIndex);
+			mActiveMaterial->SetTexture(L"LightIndexBuffer", camera->mLightIndexTexture[mFrameIndex], mFrameIndex);
+		}
+	}
 	mActiveCamera = camera;
 }
+
 void CommandList::SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend) {
 	mState.blendState = blend;
 }
-void CommandList::SetInputElements(MESH_SEMANTIC input) {
+void CommandList::SetDepthWrite(bool depthWrite) {
+	mState.zwrite = depthWrite;
+}
+void CommandList::SetDepthTest(bool depthTest) {
+	mState.ztest = depthTest;
+}
+void CommandList::SetFillMode(D3D12_FILL_MODE fillMode) {
+	mState.fillMode = fillMode;
+}
+
+void CommandList::DrawUserMesh(MESH_SEMANTIC input, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology) {
+	assert(mActiveShader);
 	mState.input = input;
-}
-void CommandList::DrawMesh(Mesh &mesh) {
-	assert(mActiveShader);
-
-	mState.input = mesh.Semantics();
-	mState.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-	mActiveShader->SetPSO(mCommandList, mState);
-	mesh.Draw(mCommandList);
-}
-void CommandList::DrawUserMesh(D3D12_PRIMITIVE_TOPOLOGY_TYPE topology) {
-	assert(mActiveShader);
 	mState.topology = topology;
 	mActiveShader->SetPSO(mCommandList, mState);
+}
+void CommandList::DrawMesh(Mesh &mesh) {
+	DrawUserMesh(mesh.Semantics(), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	mesh.Draw(mCommandList);
 }

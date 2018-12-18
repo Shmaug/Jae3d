@@ -59,7 +59,7 @@ Font::Font(jwstring name,
 	}
 }
 Font::~Font() {}
-uint64_t Font::TypeId() { return AssetFile::TYPEID_FONT; }
+uint64_t Font::TypeId() { return ASSET_TYPE_FONT; }
 
 FontGlyph Font::GetGlyph(wchar_t c) const {
 	return mGlyphs.at(c);

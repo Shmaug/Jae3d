@@ -5,16 +5,16 @@
 
 #include <Asset.hpp>
 #include <memory>
+#include "ImportCommon.hpp"
 
 class Viewport {
 public:
-	Viewport();
-	~Viewport();
-
 	void Init(HWND hwnd);
 	void Resize();
 	void DoFrame();
 
-	void Show(std::shared_ptr<Asset> asset);
-};
+	void Show(AssetMetadata &asset);
 
+private:
+	AssetMetadata shownAsset;
+};

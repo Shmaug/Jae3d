@@ -54,7 +54,7 @@ Shader::~Shader() {
 	mParams.clear();
 	mStates.clear();
 }
-uint64_t Shader::TypeId() { return (uint64_t)AssetFile::TYPEID_SHADER; }
+uint64_t Shader::TypeId() { return (uint64_t)ASSET_TYPE_SHADER; }
 
 // Set the root signature on the GPU
 bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
@@ -86,8 +86,8 @@ void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	auto device = Graphics::GetDevice();
 
-	if (!mBlobs[SHADERSTAGE_VERTEX] && !mBlobs[SHADERSTAGE_HULL] &&
-		!mBlobs[SHADERSTAGE_DOMAIN] && !mBlobs[SHADERSTAGE_GEOMETRY] && !mBlobs[SHADERSTAGE_PIXEL]){
+	if (!mBlobs[SHADER_STAGE_VERTEX] && !mBlobs[SHADER_STAGE_HULL] &&
+		!mBlobs[SHADER_STAGE_DOMAIN] && !mBlobs[SHADER_STAGE_GEOMETRY] && !mBlobs[SHADER_STAGE_PIXEL]){
 		// no applicable blobs!
 		return nullptr;
 	}
@@ -139,17 +139,24 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoState = {};
 	psoState.InputLayout = { inputElements, inputElementCount };
 	psoState.pRootSignature = mRootSignature.Get();
-	if (mBlobs[SHADERSTAGE_VERTEX])		psoState.VS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_VERTEX]);
-	if (mBlobs[SHADERSTAGE_HULL])		psoState.HS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_HULL]);
-	if (mBlobs[SHADERSTAGE_DOMAIN])		psoState.DS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_DOMAIN]);
-	if (mBlobs[SHADERSTAGE_GEOMETRY])	psoState.GS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_GEOMETRY]);
-	if (mBlobs[SHADERSTAGE_PIXEL])		psoState.PS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_PIXEL]);
+	if (mBlobs[SHADER_STAGE_VERTEX])	psoState.VS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_VERTEX]);
+	if (mBlobs[SHADER_STAGE_HULL])		psoState.HS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_HULL]);
+	if (mBlobs[SHADER_STAGE_DOMAIN])	psoState.DS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_DOMAIN]);
+	if (mBlobs[SHADER_STAGE_GEOMETRY])	psoState.GS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_GEOMETRY]);
+	if (mBlobs[SHADER_STAGE_PIXEL])		psoState.PS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_PIXEL]);
 	psoState.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	if (state.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE)
+	if (state.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE || state.fillMode == D3D12_FILL_MODE_WIREFRAME)
 		psoState.RasterizerState.AntialiasedLineEnable = TRUE;
+	psoState.RasterizerState.FillMode = state.fillMode;
 	psoState.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoState.BlendState.RenderTarget[0] = state.blendState;
 	psoState.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	if (!state.ztest && !state.zwrite)
+		psoState.DepthStencilState.DepthEnable = false;
+	else {
+		psoState.DepthStencilState.DepthWriteMask = state.zwrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		psoState.DepthStencilState.DepthFunc = state.ztest ? D3D12_COMPARISON_FUNC_LESS_EQUAL : D3D12_COMPARISON_FUNC_ALWAYS;
+	}
 	psoState.SampleMask = UINT_MAX;
 	psoState.PrimitiveTopologyType = state.topology;
 	psoState.NumRenderTargets = 1;
@@ -166,24 +173,24 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 void Shader::CreateComputePSO() {
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = mRootSignature.Get();
-	psoDesc.CS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADERSTAGE_COMPUTE]);
+	psoDesc.CS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_COMPUTE]);
 	Graphics::GetDevice()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&mComputePSO));
 }
 
 void Shader::Upload() {
 	if (mCreated) return;
 	
-	ID3DBlob* rsblob = mBlobs[SHADERSTAGE_ROOTSIG];
+	ID3DBlob* rsblob = mBlobs[SHADER_STAGE_ROOTSIG];
 	if (rsblob)
 		ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)));
 	
 	mCreated = true;
 }
 
-HRESULT Shader::ReadShaderStage(jwstring path, SHADERSTAGE stage) {
+HRESULT Shader::ReadShaderStage(jwstring path, SHADER_STAGE stage) {
 	return D3DReadFileToBlob(path.c_str(), &mBlobs[stage]);
 }
-HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADERSTAGE stage) {
+HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_STAGE stage) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -195,31 +202,31 @@ HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADERSTA
 
 	switch (stage) {
 	default:
-	case SHADERSTAGE_ROOTSIG:
+	case SHADER_STAGE_ROOTSIG:
 		profile = "rootsig_1_1";
 		defines.push_back({ "" });
 		break;
-	case SHADERSTAGE_VERTEX:
+	case SHADER_STAGE_VERTEX:
 		profile = "vs_5_1";
 		defines.push_back({ "SHADER_STAGE_VERTEX", "" });
 		break;
-	case SHADERSTAGE_HULL:
+	case SHADER_STAGE_HULL:
 		profile = "hs_5_1";
 		defines.push_back({ "SHADER_STAGE_HULL", "" });
 		break;
-	case SHADERSTAGE_DOMAIN:
+	case SHADER_STAGE_DOMAIN:
 		profile = "ds_5_1";
 		defines.push_back({ "SHADER_STAGE_DOMAIN", "" });
 		break;
-	case SHADERSTAGE_GEOMETRY:
+	case SHADER_STAGE_GEOMETRY:
 		profile = "gs_5_1";
 		defines.push_back({ "SHADER_STAGE_GEOMETRY", "" });
 		break;
-	case SHADERSTAGE_PIXEL:
+	case SHADER_STAGE_PIXEL:
 		profile = "ps_5_1";
 		defines.push_back({ "SHADER_STAGE_PIXEL", "" });
 		break;
-	case SHADERSTAGE_COMPUTE:
+	case SHADER_STAGE_COMPUTE:
 		profile = "cs_5_1";
 		defines.push_back({ "SHADER_STAGE_COMPUTE", "" });
 		break;
@@ -240,7 +247,7 @@ HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADERSTA
 	return hr;
 }
 
-HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHADERSTAGE stage) {
+HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -252,31 +259,31 @@ HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHA
 
 	switch (stage) {
 	default:
-	case SHADERSTAGE_ROOTSIG:
+	case SHADER_STAGE_ROOTSIG:
 		profile = "rootsig_1_1";
 		defines.push_back({ "" });
 		break;
-	case SHADERSTAGE_VERTEX:
+	case SHADER_STAGE_VERTEX:
 		profile = "vs_5_1";
 		defines.push_back({ "SHADER_STAGE_VERTEX", "" });
 		break;
-	case SHADERSTAGE_HULL:
+	case SHADER_STAGE_HULL:
 		profile = "hs_5_1";
 		defines.push_back({ "SHADER_STAGE_HULL", "" });
 		break;
-	case SHADERSTAGE_DOMAIN:
+	case SHADER_STAGE_DOMAIN:
 		profile = "ds_5_1";
 		defines.push_back({ "SHADER_STAGE_DOMAIN", "" });
 		break;
-	case SHADERSTAGE_GEOMETRY:
+	case SHADER_STAGE_GEOMETRY:
 		profile = "gs_5_1";
 		defines.push_back({ "SHADER_STAGE_GEOMETRY", "" });
 		break;
-	case SHADERSTAGE_PIXEL:
+	case SHADER_STAGE_PIXEL:
 		profile = "ps_5_1";
 		defines.push_back({ "SHADER_STAGE_PIXEL", "" });
 		break;
-	case SHADERSTAGE_COMPUTE:
+	case SHADER_STAGE_COMPUTE:
 		profile = "cs_5_1";
 		defines.push_back({ "SHADER_STAGE_COMPUTE", "" });
 		break;

@@ -1,13 +1,9 @@
 #pragma once
 
 #include <Texture.hpp>
+#include <jvector.hpp>
+#include "ImportCommon.hpp"
 
-struct TexMeta {
-	DXGI_FORMAT format;
-	bool linear;
-	bool mipMaps;
-	ALPHA_MODE alphaMode;
-};
-
+void ImportTexture(jwstring file, jvector<AssetMetadata> &meta);
 Texture* ImportTexture(jwstring file);
-Texture* ImportTexture(jwstring file, TexMeta &metadata);
+Texture* ImportTexture(jwstring file, AssetMetadata &metadata);

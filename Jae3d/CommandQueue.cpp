@@ -81,6 +81,7 @@ shared_ptr<CommandList> CommandQueue::CreateCommandList(ComPtr<ID3D12CommandAllo
 }
 
 uint64_t CommandQueue::Execute(shared_ptr<CommandList> commandList) {
+	commandList->SetMaterial(nullptr);
 	commandList->D3DCommandList()->Close();
 
 	ID3D12CommandAllocator* commandAllocator;

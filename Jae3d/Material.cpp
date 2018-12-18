@@ -211,28 +211,62 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 			it++;
 		} 
 	}
+
+	// re-upload data
+	for (unsigned int i = 0; i < mActive.size(); i++)
+		SetActive(mActive[i]);
 }
 
 void Material::SetFloat(jwstring param, float v, unsigned int frameIndex) {
+	if (!mParamValues.has(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.value.floatValue = v;
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat(v, mShader->GetParameter(param)->CBufferOffset(), frameIndex);
 }
 void Material::SetColor3(jwstring param, XMFLOAT3 col, unsigned int frameIndex) {
+	if (!mParamValues.has(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.value.float3Value = col;
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat3(col, mShader->GetParameter(param)->CBufferOffset(), frameIndex);
 }
 
 void Material::SetTexture(jwstring param, shared_ptr<Texture> tex, unsigned int frameIndex) {
+	if (!mParamValues.has(param)) return;
 	mParamValues.at(param).value.textureValue = tex;
+
+	if (tex) {
+		ShaderParameter* sp = mShader->GetParameter(param);
+		ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
+		for (unsigned int i = 0; i < mActive.size(); i++) {
+			mActive[i]->D3DCommandList()->SetDescriptorHeaps(1, &heap);
+			mActive[i]->D3DCommandList()->SetGraphicsRootDescriptorTable(sp->RootIndex(), tex->GetSRVGPUDescriptor());
+		}
+	}
 }
 void Material::SetCBuffer(jwstring param, shared_ptr<ConstantBuffer> cbuf, unsigned int frameIndex) {
+	if (!mParamValues.has(param)) return;
 	mParamValues.at(param).value.cbufferValue = cbuf;
+
+	if (cbuf) {
+		ShaderParameter* sp = mShader->GetParameter(param);
+		for (unsigned int i = 0; i < mActive.size(); i++)
+			mActive[i]->D3DCommandList()->SetGraphicsRootConstantBufferView(sp->RootIndex(), cbuf->GetGPUAddress(frameIndex));
+	}
 }
 
-void Material::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int frameIndex) {
+void Material::SetActive(CommandList* commandList) {
 	if (!mShader) return;
+	commandList->SetShader(mShader);
+
+	bool f = false;
+	for (unsigned int i = 0; i < mActive.size(); i++)
+		if (mActive[i] == commandList) {
+			f = true;
+			break;
+		}
+	if (!f) mActive.push_back(commandList);
+
+	auto d3dlist = commandList->D3DCommandList();
 
 	auto it = mParamValues.begin();
 	while (it.Valid()) {
@@ -242,17 +276,22 @@ void Material::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList, unsigne
 			case SHADER_PARAM_TYPE_CBUFFER:
 			{
 				shared_ptr<ConstantBuffer> cb = (*it).Value().value.cbufferValue;
-				if (cb) commandList->SetGraphicsRootConstantBufferView(sp->RootIndex(), cb->GetGPUAddress(frameIndex));
+				if (cb) d3dlist->SetGraphicsRootConstantBufferView(sp->RootIndex(), cb->GetGPUAddress(commandList->GetFrameIndex()));
 				break;
 			}
 			case SHADER_PARAM_TYPE_TEXTURE:
 			{
 				shared_ptr<Texture> tex = (*it).Value().value.textureValue;
 				if (tex) {
-					ID3D12DescriptorHeap* heaps[] = { tex->GetDescriptorHeap().Get() };
-					commandList->SetDescriptorHeaps(1, heaps);
-					commandList->SetGraphicsRootDescriptorTable(sp->RootIndex(), tex->GetGPUDescriptor());
+					ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
+					d3dlist->SetDescriptorHeaps(1, &heap);
+					d3dlist->SetGraphicsRootDescriptorTable(sp->RootIndex(), tex->GetSRVGPUDescriptor());
 				}
+				break;
+			}
+			case SHADER_PARAM_TYPE_SRV:
+			{
+
 				break;
 			}
 			}
@@ -261,5 +300,5 @@ void Material::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList, unsigne
 	}
 
 	for (int i = 0; i < mParamCbufferCount; i++)
-		commandList->SetGraphicsRootConstantBufferView(mParamCbuffers[i].rootIndex, mParamCbuffers[i].cbuffer->GetGPUAddress(frameIndex));
+		d3dlist->SetGraphicsRootConstantBufferView(mParamCbuffers[i].rootIndex, mParamCbuffers[i].cbuffer->GetGPUAddress(commandList->GetFrameIndex()));
 }

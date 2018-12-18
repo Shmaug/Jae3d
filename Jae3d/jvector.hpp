@@ -5,13 +5,23 @@
 template<typename T>
 class jvector {
 public:
-	jvector() : mSize(0), mCapacity(0) {}
+	jvector() : mSize(0), mCapacity(0), mData(nullptr) {}
+	jvector(size_t capacity) : mSize(0), mCapacity(capacity), mData(new char[capacity * sizeof(T)]) {
+		ZeroMemory(mData, capacity * sizeof(T));
+	}
 	jvector(const jvector &vec) : mSize(vec.mSize), mCapacity(vec.mSize) {
-		mData = new char[vec.mSize * sizeof(T)];
-		T* ndt = reinterpret_cast<T*>(vec.mData);
-		T* mdt = reinterpret_cast<T*>(mData);
-		for (size_t i = 0; i < vec.mSize; i++)
-			mdt[i] = ndt[i];
+		if (mSize > 0 && vec.mData) {
+			mData = new char[vec.mSize * sizeof(T)];
+			ZeroMemory(mData, vec.mSize * sizeof(T));
+			T* ndt = reinterpret_cast<T*>(vec.mData);
+			T* mdt = reinterpret_cast<T*>(mData);
+			for (size_t i = 0; i < vec.mSize; i++)
+				mdt[i] = ndt[i];
+		} else {
+			mData = nullptr;
+			mSize = 0;
+			mCapacity = 0;
+		}
 	}
 	~jvector() {
 		free();
@@ -25,6 +35,7 @@ public:
 				realloc(c, mSize);
 			else {
 				mData = new char[c * sizeof(T)];
+				ZeroMemory(mData, c * sizeof(T));
 				mSize = 0; // should already be zero
 			}
 			mCapacity = c;
@@ -55,6 +66,7 @@ public:
 		mSize = sz;
 		mCapacity = sz;
 		mData = new char[sizeof(T) * sz];
+		ZeroMemory(mData, sz * sizeof(T));
 
 		T* mdt = reinterpret_cast<T*>(mData);
 		for (size_t i = 0; i < sz; i++)
@@ -74,7 +86,7 @@ public:
 		if (index >= mSize) throw std::out_of_range("Index out of bounds!");
 		T* data = reinterpret_cast<T*>(mData);
 		data[index].~T();
-		for (size_t i = index; i < mSize; i++)
+		for (size_t i = index; i < mSize - 1; i++)
 			new(&data[i]) T(data[i + 1]);
 		mSize--;
 	}
@@ -143,16 +155,19 @@ private:
 	void realloc(size_t cap, size_t sz) {
 		if (cap != mCapacity) {
 			char* ndata = new char[cap * sizeof(T)];
+			ZeroMemory(ndata, cap * sizeof(T));
 
-			T* ndt = reinterpret_cast<T*>(ndata);
-			T* mdt = reinterpret_cast<T*>(mData);
-			for (size_t i = 0; i < mSize; i++) {
-				if (i < (cap < sz ? cap : sz))
-					new(&(ndt[i])) T(mdt[i]);
-				mdt[i].~T();
+			if (mData) {
+				T* ndt = reinterpret_cast<T*>(ndata);
+				T* mdt = reinterpret_cast<T*>(mData);
+				for (size_t i = 0; i < mSize; i++) {
+					if (i < (cap < sz ? cap : sz))
+						new(&(ndt[i])) T(mdt[i]);
+					mdt[i].~T();
+				}
+
+				delete[] mData;
 			}
-
-			delete[] mData;
 			mData = ndata;
 			mCapacity = cap;
 		} else

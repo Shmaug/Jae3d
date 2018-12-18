@@ -8,22 +8,27 @@
 
 using namespace Microsoft::WRL;
 using namespace std;
+using namespace DirectX;
 
 MeshRenderer::MeshRenderer() : MeshRenderer(L"") {}
-MeshRenderer::MeshRenderer(jwstring name) : Object(name) { 
-	mConstantBuffer = new ConstantBuffer(sizeof(ObjectBuffer), L"MeshRenderer CB", Graphics::BufferCount());
+MeshRenderer::MeshRenderer(jwstring name) : Renderer(name) { 
+	mCBuffer = shared_ptr<ConstantBuffer>(new ConstantBuffer(sizeof(XMFLOAT4X4) * 2, L"MeshRenderer CB", Graphics::BufferCount()));
 }
-MeshRenderer::~MeshRenderer() { delete mConstantBuffer; }
+MeshRenderer::~MeshRenderer() {}
 
-void MeshRenderer::Draw(shared_ptr<CommandList> commandList, unsigned int frameIndex) {
+void MeshRenderer::Draw(shared_ptr<CommandList> commandList) {
 	if (!mMesh || !mMaterial) return;
 	UpdateTransform();
 
-	XMStoreFloat4x4(&mObjectBufferData.ObjectToWorld, ObjectToWorld());
-	XMStoreFloat4x4(&mObjectBufferData.WorldToObject, WorldToObject());
-	mConstantBuffer->Write(&mObjectBufferData, sizeof(ObjectBuffer), 0, frameIndex);
+	XMFLOAT4X4 o2w;
+	XMFLOAT4X4 w2o;
 
+	XMStoreFloat4x4(&o2w, ObjectToWorld());
+	XMStoreFloat4x4(&w2o, WorldToObject());
+	mCBuffer->WriteFloat4x4(o2w, 0, commandList->GetFrameIndex());
+	mCBuffer->WriteFloat4x4(w2o, sizeof(XMFLOAT4X4), commandList->GetFrameIndex());
+
+	mMaterial->SetCBuffer(L"ObjectBuffer", mCBuffer, commandList->GetFrameIndex());
 	commandList->SetMaterial(mMaterial);
-	commandList->D3DCommandList()->SetGraphicsRootConstantBufferView(0, mConstantBuffer->GetGPUAddress(frameIndex));
 	commandList->DrawMesh(*mMesh);
 }

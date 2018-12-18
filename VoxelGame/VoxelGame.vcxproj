@@ -42,6 +42,11 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Shaders\LightCompute.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{28638D0D-8507-4B48-A74C-51CFC5AE4DD2}</ProjectGuid>
@@ -130,6 +135,9 @@
       <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;Jae3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>$(OutputPath)AssetImporter.exe -dr $(SolutionDir)Assets\Shaders -o $(OutputPath)shaders.asset -v</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

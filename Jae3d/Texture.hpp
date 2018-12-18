@@ -14,7 +14,7 @@ public:
 	JAE_API Texture(jwstring name,
 		unsigned int width, unsigned int height, unsigned int depth,
 		D3D12_RESOURCE_DIMENSION dimension, unsigned int arraySize,
-		DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, void* data, size_t dataSize, bool isDDS);
+		DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS);
 
 	JAE_API Texture(jwstring name, MemoryStream &ms);
 	JAE_API ~Texture();
@@ -22,7 +22,9 @@ public:
 	JAE_API void WriteData(MemoryStream &ms);
 	JAE_API uint64_t TypeId();
 
-	JAE_API void Upload();
+	JAE_API void Upload(D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
+	JAE_API void SetPixelData(const void* data);
 
 	unsigned int Width() const { return mWidth; }
 	unsigned int Height() const { return mHeight; }
@@ -32,9 +34,14 @@ public:
 	unsigned int MipLevels() const { return mMipLevels; }
 	DXGI_FORMAT Format() const { return mFormat; }
 	ALPHA_MODE AlphaMode() const { return mAlphaMode; }
+	bool HasDescriptors() const { return mHasDescriptorHeaps; }
 
-	_WRL::ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return msrvHeap; }
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor() const { return msrvHeap->GetGPUDescriptorHandleForHeapStart(); }
+	_WRL::ComPtr<ID3D12DescriptorHeap> GetSRVDescriptorHeap() const { return mSRVHeap; }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUDescriptor() const { return mSRVHeap->GetGPUDescriptorHandleForHeapStart(); }
+	
+	_WRL::ComPtr<ID3D12DescriptorHeap> GetUAVDescriptorHeap() const { return mUAVHeap; }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetUAVGPUDescriptor() const { return mUAVHeap->GetGPUDescriptorHandleForHeapStart(); }
+
 	_WRL::ComPtr<ID3D12Resource> GetTexture() const { return mTexture; }
 
 private:
@@ -51,7 +58,10 @@ private:
 	uint8_t* mData;
 	bool mIsDDS;
 
-	jvector<D3D12_SUBRESOURCE_DATA> mSubresources;
 	_WRL::ComPtr<ID3D12Resource> mTexture;
-	_WRL::ComPtr<ID3D12DescriptorHeap> msrvHeap;
+
+	bool mHasDescriptorHeaps;
+
+	_WRL::ComPtr<ID3D12DescriptorHeap> mSRVHeap;
+	_WRL::ComPtr<ID3D12DescriptorHeap> mUAVHeap;
 };

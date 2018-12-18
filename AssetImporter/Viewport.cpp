@@ -22,14 +22,9 @@ using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace std;
 
-Viewport::Viewport() {}
-Viewport::~Viewport() {}
-
 shared_ptr<Mesh> quadMesh;
 shared_ptr<Shader> textureShader;
 shared_ptr<Shader> meshShader;
-
-shared_ptr<Asset> shownAsset;
 
 void Viewport::Init(HWND hwnd){
 	Graphics::Initialize(hwnd, 2);
@@ -58,9 +53,9 @@ void Viewport::Init(HWND hwnd){
 ;
 
 	meshShader = shared_ptr<Shader>(new Shader(L"Mesh Shader"));
-	meshShader->CompileShaderStage(meshrootsig, "RootSig", SHADERSTAGE_ROOTSIG);
-	meshShader->CompileShaderStage(meshshader, "vsmain", SHADERSTAGE_VERTEX);
-	meshShader->CompileShaderStage(meshshader, "psmain", SHADERSTAGE_PIXEL);
+	meshShader->CompileShaderStage(meshrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
+	meshShader->CompileShaderStage(meshshader, "vsmain", SHADER_STAGE_VERTEX);
+	meshShader->CompileShaderStage(meshshader, "psmain", SHADER_STAGE_PIXEL);
 	meshShader->Upload();
 	
 	const char texrootsig[] = 
@@ -96,9 +91,9 @@ void Viewport::Init(HWND hwnd){
 ;
 
 	textureShader = shared_ptr<Shader>(new Shader(L"Texture Shader"));
-	textureShader->CompileShaderStage(texrootsig, "RootSig", SHADERSTAGE_ROOTSIG);
-	textureShader->CompileShaderStage(texshader, "vsmain", SHADERSTAGE_VERTEX);
-	textureShader->CompileShaderStage(texshader, "psmain", SHADERSTAGE_PIXEL);
+	textureShader->CompileShaderStage(texrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
+	textureShader->CompileShaderStage(texshader, "vsmain", SHADER_STAGE_VERTEX);
+	textureShader->CompileShaderStage(texshader, "psmain", SHADER_STAGE_PIXEL);
 	textureShader->Upload();
 
 	quadMesh = shared_ptr<Mesh>(new Mesh(L"Quad"));
@@ -109,6 +104,7 @@ void Viewport::Init(HWND hwnd){
 void Viewport::Resize() {
 	if (!Graphics::IsInitialized()) return;
 	Graphics::GetWindow()->Resize();
+	DoFrame();
 }
 void Viewport::DoFrame() {
 	auto commandQueue = Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -131,11 +127,11 @@ void Viewport::DoFrame() {
 	commandList->D3DCommandList()->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 	commandList->D3DCommandList()->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	if (shownAsset) {
-		switch (shownAsset->TypeId()) {
-		case AssetFile::TYPEID_TEXTURE:
+	if (shownAsset.asset) {
+		switch (shownAsset.asset->TypeId()) {
+		case ASSET_TYPE_TEXTURE:
 		{
-			shared_ptr<Texture> tex = static_pointer_cast<Texture>(shownAsset);
+			shared_ptr<Texture> tex = static_pointer_cast<Texture>(shownAsset.asset);
 
 			switch (tex->AlphaMode()) {
 			case ALPHA_MODE_TRANSPARENCY:
@@ -150,15 +146,19 @@ void Viewport::DoFrame() {
 			}
 
 			XMFLOAT2 scale = tex->Width() > tex->Height() ? XMFLOAT2(1.0f, (float)tex->Height() / tex->Width()) : XMFLOAT2((float)tex->Width() / tex->Height(), 1.0f);
+			if (window->GetWidth() > window->GetHeight())
+				scale.x /= (float)window->GetWidth() / window->GetHeight();
+			else
+				scale.y *= (float)window->GetWidth() / window->GetHeight();
 			commandList->SetShader(textureShader);
 			d3dCommandList->SetGraphicsRoot32BitConstants(1, 2, &scale, 0);
-			ID3D12DescriptorHeap* heaps[] = { tex->GetDescriptorHeap().Get() };
-			d3dCommandList->SetDescriptorHeaps(1, heaps);
-			d3dCommandList->SetGraphicsRootDescriptorTable(0, tex->GetGPUDescriptor());
+			ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
+			d3dCommandList->SetDescriptorHeaps(1, &heap);
+			d3dCommandList->SetGraphicsRootDescriptorTable(0, tex->GetSRVGPUDescriptor());
 			commandList->DrawMesh(*quadMesh);
 			break;
 		}
-		case AssetFile::TYPEID_MESH:
+		case ASSET_TYPE_MESH:
 		{
 			commandList->SetBlendState(BLEND_STATE_DEFAULT);
 
@@ -170,53 +170,28 @@ void Viewport::DoFrame() {
 			XMVECTOR det = XMMatrixDeterminant(o2w);
 
 			XMMATRIX v = XMMatrixLookToLH(cp, fwd, up);
-			XMMATRIX p = XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(70.0f), 1.0f, .01f, 100.0f);
+			XMMATRIX p = XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(70.0f), (float)window->GetWidth() / window->GetHeight(), .01f, 100.0f);
 
 			XMFLOAT4X4 w2o;
 			XMFLOAT4X4 mvp;
 			XMStoreFloat4x4(&w2o, XMMatrixInverse(&det, o2w));
 			XMStoreFloat4x4(&mvp, v * p);
 
-			shared_ptr<Mesh> mesh = static_pointer_cast<Mesh>(shownAsset);
+			shared_ptr<Mesh> mesh = static_pointer_cast<Mesh>(shownAsset.asset);
 			commandList->SetShader(meshShader);
 			d3dCommandList->SetGraphicsRoot32BitConstants(0, 16, &w2o, 0);
 			d3dCommandList->SetGraphicsRoot32BitConstants(0, 16, &mvp, 16);
 			commandList->DrawMesh(*mesh);
 			break;
 		}
-		case AssetFile::TYPEID_FONT:
+		case ASSET_TYPE_FONT:
 		{
-			/*
-			shared_ptr<Texture> tex = static_pointer_cast<Font>(shownAsset)->GetTexture();
-
-			switch (tex->AlphaMode()) {
-			case ALPHA_MODE_TRANSPARENCY:
-				commandList->SetBlendState(BLEND_STATE_ALPHA);
-				break;
-			case ALPHA_MODE_PREMULTIPLIED:
-				commandList->SetBlendState(BLEND_STATE_PREMUL);
-				break;
-			default:
-				commandList->SetBlendState(BLEND_STATE_DEFAULT);
-				break;
-			}
-
-			XMFLOAT2 scale = tex->Width() > tex->Height() ? XMFLOAT2(1.0f, (float)tex->Height() / tex->Width()) : XMFLOAT2((float)tex->Width() / tex->Height(), 1.0f);
-			commandList->SetShader(textureShader);
-			d3dCommandList->SetGraphicsRoot32BitConstants(1, 2, &scale, 0);
-			ID3D12DescriptorHeap* heaps[] = { tex->GetDescriptorHeap().Get() };
-			d3dCommandList->SetDescriptorHeaps(1, heaps);
-			d3dCommandList->SetGraphicsRootDescriptorTable(0, tex->GetGPUDescriptor());
-			commandList->DrawMesh(*quadMesh);
-
-			/*/
 			float w = (float)Graphics::GetWindow()->GetWidth();
 			float h = (float)Graphics::GetWindow()->GetHeight();
 
 			auto sb = Graphics::GetSpriteBatch();
-			sb->DrawText(static_pointer_cast<Font>(shownAsset), XMFLOAT4(0, h * .3f, w, h), 1.0f, {1,1,1,1}, L"the quick brown fox jumped\nover the lazy brown dog.");
+			sb->DrawText(static_pointer_cast<Font>(shownAsset.asset), XMFLOAT4(0, h * .3f, w, h), 1.0f, {1,1,1,1}, L"the quick brown fox jumped\nover the lazy brown dog.");
 			sb->Flush(commandList);
-			//*/
 		}
 		}
 	}
@@ -233,17 +208,19 @@ void ShowFont(shared_ptr<Font> font) {
 	font->GetTexture()->Upload();
 }
 
-void Viewport::Show(std::shared_ptr<Asset> asset) {
-	switch (asset->TypeId()) {
-	case AssetFile::TYPEID_TEXTURE:
-		ShowTexture(static_pointer_cast<Texture>(asset));
-		break;
-	case AssetFile::TYPEID_MESH:
-		ShowMesh(static_pointer_cast<Mesh>(asset));
-		break;
-	case AssetFile::TYPEID_FONT:
-		ShowFont(static_pointer_cast<Font>(asset));
-		break;
+void Viewport::Show(AssetMetadata &asset) {
+	if (asset.asset) {
+		switch (asset.asset->TypeId()) {
+		case ASSET_TYPE_TEXTURE:
+			ShowTexture(static_pointer_cast<Texture>(asset.asset));
+			break;
+		case ASSET_TYPE_MESH:
+			ShowMesh(static_pointer_cast<Mesh>(asset.asset));
+			break;
+		case ASSET_TYPE_FONT:
+			ShowFont(static_pointer_cast<Font>(asset.asset));
+			break;
+		}
 	}
 	shownAsset = asset;
 	DoFrame();

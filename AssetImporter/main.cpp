@@ -31,6 +31,7 @@
 #include "Label.hpp"
 #include "Button.hpp"
 #include "FileTree.hpp"
+#include "Properties.hpp"
 #include "Viewport.hpp"
 #include "CDialogEventHandler.hpp"
 
@@ -48,10 +49,10 @@ HFONT boldFont, font;
 jvector<std::shared_ptr<UIControl>> controls;
 std::shared_ptr<FileTree> fileTree;
 std::shared_ptr<Viewport> viewport;
+std::shared_ptr<Properties> properties;
+HWND vphwnd = 0;
 
-std::shared_ptr<Asset> loadedAsset;
-
-void LoadFile(jwstring file, jvector<Asset*> &assets) {
+void LoadFile(jwstring file, jvector<AssetMetadata> &meta) {
 	if (PathFileExistsW(file.c_str()) != 1) {
 		wprintf(L"Could not find %s\n", file.c_str());
 		return;
@@ -59,47 +60,35 @@ void LoadFile(jwstring file, jvector<Asset*> &assets) {
 
 	jwstring ext = GetExtW(file);
 
-	if (ext == L"obj") {
-		int count;
-		Asset** arr = ImportMesh(file, count);
-		for (int i = 0; i < count; i++)
-			assets.push_back(arr[i]);
-		delete[] arr;
-	} else if (ext == L"fbx") {
-		int count;
-		Asset** arr = ImportMesh(file, count);
-		for (int i = 0; i < count; i++)
-			assets.push_back(arr[i]);
-		delete[] arr;
-	} else if (ext == L"blend") {
-		int count;
-		Asset** arr = ImportMesh(file, count);
-		for (int i = 0; i < count; i++)
-			assets.push_back(arr[i]);
-		delete[] arr;
-	}
+	if (ext == L"obj")
+		ImportMesh(file, meta);
+	else if (ext == L"fbx")
+		ImportMesh(file, meta);
+	else if (ext == L"blend")
+		ImportMesh(file, meta);
+	
 	else if (ext == L"png")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 	else if (ext == L"gif")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 	else if (ext == L"bmp")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 	else if (ext == L"tif" || ext == L"tiff")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 	else if (ext == L"jpg" || ext == L"jpeg")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 	else if (ext == L"tga")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 	else if (ext == L"dds")
-		assets.push_back((Asset*)ImportTexture(file));
+		ImportTexture(file, meta);
 
 	else if (ext == L"cso")
-		assets.push_back((Asset*)ReadShader(file));
+		ReadShader(file, meta);
 	else if (ext == L"hlsl")
-		assets.push_back((Asset*)CompileShader(file));
+		CompileShader(file, meta);
 
 	else if (ext == L"ttf")
-		assets.push_back((Asset*)ImportFont(file));
+		ImportFont(file, meta);
 }
 void LoadDirectory(jwstring dir, jvector<jwstring>* files, bool recursive) {
 	jwstring d = dir + L"\\*";
@@ -143,12 +132,11 @@ void UILoadFolder() {
 		fileTree->AddFolder(s);
 }
 void UIClickFile(jwstring path) {
-	jvector<Asset*> assets;
+	jvector<AssetMetadata> assets;
 	LoadFile(path, assets);
 	if (!assets.empty()) {
-		viewport->Show(std::shared_ptr<Asset>(assets[0]));
-		for (int i = 1; i < assets.size(); i++)
-			delete assets[i];
+		viewport->Show(assets[0]);
+		properties->Show(assets[0]);
 	}
 }
 
@@ -171,28 +159,9 @@ LRESULT CALLBACK ViewportProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		break;
 	}
 
-	case WM_NCHITTEST:
-	{
-		LRESULT ht = DefWindowProcW(hwnd, message, wParam, lParam);
-		switch (ht) {
-		case HTBOTTOMLEFT:  return HTBOTTOM;
-		case HTTOPLEFT:     return HTBORDER;
-		case HTTOP:			return HTBORDER;
-		case HTTOPRIGHT:    return HTRIGHT;
-		case HTLEFT:        return HTBORDER;
-		}
-		return ht;
-	}
-
 	case WM_SIZE:
 	{
-		LONG w = r.right - r.left;
-		LONG h = r.bottom - r.top;
-		LONG s = std::max(std::max(w, h), 128L);
-		if (w < s || h < s)
-			SetWindowPos(hwnd, 0, 0, 0, s, s, SWP_NOMOVE | SWP_NOZORDER);
-		else
-			viewport->Resize();
+		viewport->Resize();
 		break;
 	}
 
@@ -221,12 +190,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		controls.push_back(std::shared_ptr<Button>(new Button({ 80, 0, 0, 0 }, { 80, 20, 0, 0 }, L"Load Folder", UILoadFolder)));
 		controls.push_back(std::shared_ptr<Label>(new Label({ 0, 20, 0, 0 }, { 100, 40, 0, 0 }, L"File Tree", Fonts::font18)));
 		fileTree = std::shared_ptr<FileTree>(new FileTree({ 20, 60, 0, 0 }, { 350, -80, 0, 1 }, UIClickFile));
+		controls.push_back(std::shared_ptr<Label>(new Label({ -370, 20, 1, 0 }, { 100, 40, 0, 0 }, L"Properties", Fonts::font18)));
+		properties = std::shared_ptr<Properties>(new Properties({ -370, 60, 1, 0 }, { 350, -80, 0, .5f }, UILoadFile));
 		controls.push_back(fileTree);
+		controls.push_back(properties);
 
-		LONG vpx = 375;
+		LONG vpx = fileTree->CalcRect(clientRect).right + 5;
 		LONG vpy = clientRect.top + 60;
-		LONG vpw = 256;
-		LONG vph = 256;
+		LONG vpw = properties->CalcRect(clientRect).left - fileTree->CalcRect(clientRect).right - 10;
+		LONG vph = (clientRect.bottom - clientRect.top - 80) * 3 / 4;
+
+		controls.push_back(std::shared_ptr<Label>(new Label({ (double)vpx, 20, 0, 0 }, { 100, 40, 0, 0 }, L"Viewport", Fonts::font18)));
 
 		WNDCLASSEXW dlgClass = {};
 		dlgClass.cbSize = sizeof(WNDCLASSEXW);
@@ -243,7 +217,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		dlgClass.hIconSm = LoadIcon(HINST, NULL);
 		HRESULT hr = RegisterClassExW(&dlgClass);
 		assert(SUCCEEDED(hr));
-		HWND vphwnd = CreateWindowExW(NULL, L"Jae Asset Packer Viewport", L"", WS_CHILD | WS_SIZEBOX, vpx, vpy, vpw, vph, hwnd, NULL, HINST, nullptr);
+		vphwnd = CreateWindowExW(NULL, L"Jae Asset Packer Viewport", L"", WS_CHILD, vpx, vpy, vpw, vph, hwnd, NULL, HINST, nullptr);
 		assert(vphwnd);
 
 		viewport = std::shared_ptr<Viewport>(new Viewport());
@@ -255,39 +229,42 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	case WM_SIZE:
 	{
-		int width = clientRect.right - clientRect.left;
-		int height = clientRect.bottom - clientRect.top;
-
-		// resize
+		if (vphwnd) {
+			LONG vpx = fileTree->CalcRect(clientRect).right + 5;
+			LONG vpy = clientRect.top + 60;
+			LONG vpw = properties->CalcRect(clientRect).left - fileTree->CalcRect(clientRect).right - 10;
+			LONG vph = (clientRect.bottom - clientRect.top - 80) * 3 / 4;
+			SetWindowPos(vphwnd, hwnd, vpx, vpy, vpw, vph, SWP_NOZORDER);
+		}
+		break;
 	}
-	break;
 
 	case WM_MOUSEMOVE:
-		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, false, false, 1 });
 		InvalidateRect(hwnd, NULL, false);
 		break;
 	case WM_LBUTTONDOWN:
 		leftButtonDown = true;
-		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, true, false, 1 });
 		InvalidateRect(hwnd, NULL, false);
 		break;
 	case WM_LBUTTONUP:
 		leftButtonDown = false;
-		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, false, false, 1 });
 		InvalidateRect(hwnd, NULL, false);
 		break;
 	case WM_RBUTTONDOWN:
 		rightButtonDown = true;
-		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, false, true, 1 });
 		InvalidateRect(hwnd, NULL, false);
 		break;
 	case WM_RBUTTONUP:
 		rightButtonDown = false;
-		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 1 });
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, false, false, 1 });
 		InvalidateRect(hwnd, NULL, false);
 		break;
 	case WM_LBUTTONDBLCLK:
-		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, 2 });
+		UpdateControls(message, clientRect, { cursor, leftButtonDown, rightButtonDown, true, false, 2 });
 		InvalidateRect(hwnd, NULL, false);
 		break;
 
@@ -450,23 +427,21 @@ int cmdMain(int argc, char** argv) {
 
 	if (!input.empty()) {
 		wprintf(L"Reading %s\n", input.c_str());
-		int c;
-		Asset** a = AssetFile::Read(input, c);
-		for (int i = 0; i < c; i++) {
+		jvector<Asset*> a = AssetFile::Read(input);
+		for (int i = 0; i < a.size(); i++) {
 			switch (a[i]->TypeId()) {
-			case AssetFile::TYPEID_MESH:
+			case ASSET_TYPE_MESH:
 				wprintf(L"%d vertices, %d tris\n", ((Mesh*)a[i])->VertexCount(), ((Mesh*)a[i])->IndexCount() / 3);
 				break;
-			case AssetFile::TYPEID_SHADER:
+			case ASSET_TYPE_SHADER:
 				wprintf(L"%s\n", a[i]->mName.c_str());
 				break;
-			case AssetFile::TYPEID_TEXTURE:
+			case ASSET_TYPE_TEXTURE:
 				wprintf(L"%dx%d\n", ((Texture*)a[i])->Width(), ((Texture*)a[i])->Height());
 				break;
 			}
 			delete a[i];
 		}
-		delete[] a;
 		wprintf(L"Successfully read %s\n", input.c_str());
 		return 0;
 	}
@@ -475,21 +450,22 @@ int cmdMain(int argc, char** argv) {
 	if (files.empty()) wprintf(L"Please specify input files [-f] or input directories [-d/-dr]");
 
 	// print file names
-	jvector<Asset*> assets;
 	wprintf(L"Loading %d files\n", (int)files.size());
 	for (int i = 0; i < files.size(); i++)
 		wprintf(L"   %s\n", files[i].c_str());
 	wprintf(L"\n");
+
+	jvector<AssetMetadata> assetmeta;
 	for (int i = 0; i < files.size(); i++)
-		LoadFile(files[i], assets);
+		LoadFile(files[i], assetmeta);
 
 	wprintf(L"\n");
 
-	AssetFile::Write(output.c_str(), assets.data(), assets.size(), compress);
+	jvector<Asset*> assets(assetmeta.size());
+	for (int i = 0; i < assetmeta.size(); i++)
+		assets.push_back(assetmeta[i].asset.get());
 
-	for (int i = 0; i < assets.size(); i++)
-		delete assets[i];
-	assets.clear();
+	AssetFile::Write(output.c_str(), assets, compress);
 
 	return 0;
 }

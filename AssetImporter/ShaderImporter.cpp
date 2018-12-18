@@ -262,7 +262,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 	while (std::getline(infile, line)) {
 		linenum++;
 		PARSEMODE mode = PARSEMODE_NONE;
-		SHADERSTAGE stage;
+		SHADER_STAGE stage;
 		jwstring paramType;
 		jwstring paramName;
 
@@ -314,25 +314,25 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			case PARSEMODE_PRAGMA: // reading pragma type
 			{
 				if (word == L"rootsig") {
-					stage = SHADERSTAGE_ROOTSIG;
+					stage = SHADER_STAGE_ROOTSIG;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"vertex") {
-					stage = SHADERSTAGE_VERTEX;
+					stage = SHADER_STAGE_VERTEX;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"hull") {
-					stage = SHADERSTAGE_HULL;
+					stage = SHADER_STAGE_HULL;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"domain") {
-					stage = SHADERSTAGE_DOMAIN;
+					stage = SHADER_STAGE_DOMAIN;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"geometry") {
-					stage = SHADERSTAGE_GEOMETRY;
+					stage = SHADER_STAGE_GEOMETRY;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"pixel") {
-					stage = SHADERSTAGE_PIXEL;
+					stage = SHADER_STAGE_PIXEL;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"compute") {
-					stage = SHADERSTAGE_COMPUTE;
+					stage = SHADER_STAGE_COMPUTE;
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"Parameter") {
 					mode = PARSEMODE_PARAMTYPE;
@@ -353,6 +353,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			case PARSEMODE_PARAMTYPE: // reading parameter type
 			{
 				paramType = word;
+				if (paramType == L"StaticSampler") rootParamIndex++;
 				mode = PARSEMODE_PARAMNAME;
 				break;
 			}
@@ -399,6 +400,16 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 	}
 }
 
+void CompileShader(jwstring path, jvector<AssetMetadata> &meta) {
+	AssetMetadata m(path);
+	m.asset = std::shared_ptr<Asset>(CompileShader(path));
+	meta.push_back(m);
+}
+void ReadShader(jwstring path, jvector<AssetMetadata> &meta) {
+	AssetMetadata m(path);
+	m.asset = std::shared_ptr<Asset>(ReadShader(path));
+	meta.push_back(m);
+}
 Shader* CompileShader(jwstring path) {
 	Shader* shader = new Shader(GetNameW(path));
 
@@ -414,22 +425,22 @@ Shader* CompileShader(jwstring path) {
 Shader* ReadShader(jwstring path) {
 	Shader* shader = new Shader(GetNameW(path));
 
-	SHADERSTAGE stage;
+	SHADER_STAGE stage;
 	jwstring end = GetNameW(path).substr(-3);
 	if (end == L"_rs")
-		stage = SHADERSTAGE_ROOTSIG;
+		stage = SHADER_STAGE_ROOTSIG;
 	else if (end == L"_vs")
-		stage = SHADERSTAGE_VERTEX;
+		stage = SHADER_STAGE_VERTEX;
 	else if (end == L"_hs")
-		stage = SHADERSTAGE_HULL;
+		stage = SHADER_STAGE_HULL;
 	else if (end == L"_ds")
-		stage = SHADERSTAGE_DOMAIN;
+		stage = SHADER_STAGE_DOMAIN;
 	else if (end == L"_gs")
-		stage = SHADERSTAGE_GEOMETRY;
+		stage = SHADER_STAGE_GEOMETRY;
 	else if (end == L"_ps")
-		stage = SHADERSTAGE_PIXEL;
+		stage = SHADER_STAGE_PIXEL;
 	else if (end == L"_cs")
-		stage = SHADERSTAGE_COMPUTE;
+		stage = SHADER_STAGE_COMPUTE;
 
 	shader->ReadShaderStage(path, stage);
 	return shader;

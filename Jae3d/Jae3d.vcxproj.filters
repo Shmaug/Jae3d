@@ -116,6 +116,15 @@
     <ClCompile Include="SpriteBatch.cpp">
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Light.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="SRVBuffer.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.hpp">
@@ -222,6 +231,18 @@
     </ClInclude>
     <ClInclude Include="Common.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.hpp">
+      <Filter>Header Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="SRVBuffer.hpp">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.hpp">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.hpp">
+      <Filter>Header Files\Objects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

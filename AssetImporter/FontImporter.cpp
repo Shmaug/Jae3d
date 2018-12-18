@@ -15,9 +15,17 @@
 
 using namespace std;
 
-Font* ImportFont(jwstring path) {
-	unsigned int ptsize = 24;
+void ImportFont(jwstring path, jvector<AssetMetadata> &meta) {
+	AssetMetadata metadata(path);
+	metadata.asset = shared_ptr<Asset>(ImportFont(path, metadata));
+	meta.push_back(metadata);
+}
 
+Font* ImportFont(jwstring path) {
+	AssetMetadata metadata(path);
+	return ImportFont(path, metadata);
+}
+Font* ImportFont(jwstring path, AssetMetadata &meta) {
 	FT_Library library;
 	auto err = FT_Init_FreeType(&library);
 	if (err) {
@@ -51,10 +59,9 @@ Font* ImportFont(jwstring path) {
 	unsigned int descent;
 	unsigned int height;
 	unsigned int lineskip;
-	unsigned int font_size_family;
 
 	if (FT_IS_SCALABLE(face)) {
-		err = FT_Set_Char_Size(face, 0, ptsize * 96, 0, 0);
+		err = FT_Set_Char_Size(face, 0, meta.fontSize * meta.fontDpi, 0, 0);
 		if (err) {
 			cerr << "Couldn't set font size\n";
 			FT_Done_Face(face);
@@ -68,16 +75,15 @@ Font* ImportFont(jwstring path) {
 		height = ascent - descent + /* baseline */ 1;
 		lineskip = FT_CEIL(FT_MulFix(face->height, scale));
 	} else {
-		if (ptsize >= (unsigned int)face->num_fixed_sizes)
-			ptsize = (unsigned int)face->num_fixed_sizes - 1;
-		font_size_family = ptsize;
+		if (meta.fontSize >= (unsigned int)face->num_fixed_sizes)
+			meta.fontSize = (unsigned int)face->num_fixed_sizes - 1;
 		err = FT_Set_Pixel_Sizes(face,
-			static_cast<FT_UInt>(face->available_sizes[ptsize].width),
-			static_cast<FT_UInt>(face->available_sizes[ptsize].height));
+			static_cast<FT_UInt>(face->available_sizes[meta.fontSize].width),
+			static_cast<FT_UInt>(face->available_sizes[meta.fontSize].height));
 
-		ascent = face->available_sizes[ptsize].height;
+		ascent = face->available_sizes[meta.fontSize].height;
 		descent = 0;
-		height = face->available_sizes[ptsize].height;
+		height = face->available_sizes[meta.fontSize].height;
 		lineskip = FT_CEIL(ascent);
 	}
 
@@ -205,5 +211,5 @@ Font* ImportFont(jwstring path) {
 	FT_Done_Face(face);
 	FT_Done_FreeType(library);
 
-	return new Font(GetNameW(path), ptsize, height, ascent, descent, lineskip, 96, tex, glyphs, kernings);
+	return new Font(GetNameW(path), meta.fontSize, height, ascent, descent, lineskip, meta.fontDpi, tex, glyphs, kernings);
 }

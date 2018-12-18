@@ -26,5 +26,6 @@
     <None Include="..\Assets\Shaders\Common.hlsli" />
     <None Include="..\Assets\Shaders\default.hlsl" />
     <None Include="..\Assets\Shaders\textured.hlsl" />
+    <None Include="..\Assets\Shaders\LightCompute.hlsl" />
   </ItemGroup>
 </Project>

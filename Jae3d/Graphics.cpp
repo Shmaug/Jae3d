@@ -6,6 +6,8 @@
 #include "CommandList.hpp"
 #include "SpriteBatch.hpp"
 
+#include "Light.hpp"
+
 using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace std;

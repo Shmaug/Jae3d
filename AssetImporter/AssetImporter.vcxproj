@@ -167,6 +167,7 @@
     <ClCompile Include="Label.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshImporter.cpp" />
+    <ClCompile Include="Properties.cpp" />
     <ClCompile Include="ShaderImporter.cpp" />
     <ClCompile Include="TextureImporter.cpp" />
     <ClCompile Include="UIControl.cpp" />
@@ -177,7 +178,9 @@
     <ClInclude Include="CDialogEventHandler.hpp" />
     <ClInclude Include="FileTree.hpp" />
     <ClInclude Include="FontImporter.hpp" />
+    <ClInclude Include="ImportCommon.hpp" />
     <ClInclude Include="Label.hpp" />
+    <ClInclude Include="Properties.hpp" />
     <ClInclude Include="UIControl.hpp" />
     <ClInclude Include="MeshImporter.hpp" />
     <ClInclude Include="ShaderImporter.hpp" />
