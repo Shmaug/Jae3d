@@ -9,58 +9,69 @@
 
 #include "Renderer.hpp"
 #include "Light.hpp"
+#include "Octree.hpp"
 
 class CommandList;
+class Shader;
+class Mesh;
 
 class Scene : std::enable_shared_from_this<Scene> {
 public:
-	JAE_API void Draw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
+	JAE_API Scene();
+	JAE_API ~Scene();
 
+	JAE_API void Draw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
+	JAE_API void DebugDraw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
+	JAE_API void CollectLights(DirectX::BoundingFrustum &frustum, jvector<Light*> &lights);
+
+	// Creates an object in this scene
 	template<class T>
 	std::shared_ptr<T> AddObject(jwstring name) {
 		static_assert(std::is_base_of<Object, T>::value, "T must be an Object!");
 
-		std::shared_ptr<T> obj = std::shared_ptr<T>(new T(name));
+		std::shared_ptr<T> object = std::shared_ptr<T>(new T(name));
+		object->mScene = this;
 
-		mObjects.push_back(obj);
-		if (std::is_base_of<Light, T>::value) mLights.push_back(std::dynamic_pointer_cast<Light>(obj));
-		if (std::is_base_of<Renderer, T>::value) mRenderers.push_back(std::dynamic_pointer_cast<Renderer>(obj));
+		mObjects.push_back(object);
+		if (Renderer* r = dynamic_cast<Renderer*>(object.get())) mRenderers.push_back(r);
+		if (Light* l = dynamic_cast<Light*>(object.get())) mLights.push_back(l);
 
-		return obj;
+		return object;
 	}
 
+	// Adds an object to this scene
+	// does NOT check for duplicates
 	template<class T>
-	void AddObject(std::shared_ptr<T> obj) {
+	void AddObject(std::shared_ptr<T> object) {
 		static_assert(std::is_base_of<Object, T>::value, "T must be an Object!");
 
-		mObjects.push_back(obj);
-		if (std::is_base_of<Light, T>::value) mLights.push_back(std::dynamic_pointer_cast<Light>(obj));
-		if (std::is_base_of<Renderer, T>::value) mRenderers.push_back(std::dynamic_pointer_cast<Renderer>(obj));
-		return obj;
+		object->mScene = this;
+		mObjects.push_back(object);
+		if (Renderer* r = dynamic_cast<Renderer*>(object.get())) mRenderers.push_back(r);
+		if (Light* l = dynamic_cast<Light*>(object.get())) mLights.push_back(l);
 	}
 
 	template<class T>
 	bool RemoveObject(std::shared_ptr<T> object) {
 		static_assert(std::is_base_of<Object, T>::value, "T must be an Object!");
 
-		bool r = false;
-
-		if (std::is_base_of<Light, T>::value)
-			for (int i = 0; i < mLights.size(); i++)
-				if (mLights[i] == object) {
-					mLights.remove(i);
-					i--;
-					r = true;
-				}
-
-		if (std::is_base_of<Renderer, T>::value)
+		if (Renderer* r = dynamic_cast<Renderer*>(object.get())) {
 			for (int i = 0; i < mRenderers.size(); i++)
-				if (mRenderers[i] == object) {
+				if (mRenderers[i] == r) {
 					mRenderers.remove(i);
 					i--;
-					r = true;
 				}
+		}
 
+		if (Light* l = dynamic_cast<Light*>(object.get())) {
+			for (int i = 0; i < mLights.size(); i++)
+				if (mLights[i] == l) {
+					mLights.remove(i);
+					i--;
+				}
+		}
+
+		bool r = false;
 		for (int i = 0; i < mObjects.size(); i++)
 			if (mObjects[i] == object) {
 				mObjects.remove(i);
@@ -71,11 +82,12 @@ public:
 		return r;
 	}
 
-	JAE_API jvector<std::shared_ptr<Light>> CollectLights(std::shared_ptr<Camera> camera);
-
 private:
 	jvector<std::shared_ptr<Object>> mObjects;
-	jvector<std::shared_ptr<Light>> mLights;
-	jvector<std::shared_ptr<Renderer>> mRenderers;
+	jvector<Renderer*> mRenderers;
+	jvector<Light*> mLights;
+
+	std::shared_ptr<Shader> mDebugShader;
+	std::shared_ptr<Mesh> mDebugCube;
 };
 

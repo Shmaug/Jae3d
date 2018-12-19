@@ -8,14 +8,16 @@ struct CameraBuffer {
 	float4 Viewport;
 };
 struct Light {
-	float4 position; // position (xyz) range (w)
-	float4 color; // color-intensity premultiplied (rgb) intensity (a)
+	float4 Position; // position (xyz) range (w)
+	float4 Color; // color-intensity premultiplied (rgb) intensity (a)
 };
 struct LightBuffer {
-	Light lights[64];
-	uint lightCount;
-	float4 groundColor;
-	float4 skyColor;
+	Light Lights[64];
+	uint LightCount;
+	uint2 LightIndexBufferSize;
+	uint pad;
+	float4 GroundColor;
+	float4 SkyColor;
 };
 
 RWTexture2D<uint2> LightIndexBuffer : register(u0);
@@ -44,7 +46,7 @@ bool Sphere(float3 ro, float3 rd, float3 pos, float radius) {
 
 [numthreads(8, 8, 1)]
 void main(uint3 index : SV_DispatchThreadID) {
-	float4 clip = float4((float2)index.xy / Camera.Viewport.xy * 2 - 1, 0, 1);
+	float4 clip = float4((float2)index.xy / Lighting.LightIndexBufferSize.xy * 2 - 1, 0, 1);
 	clip.y = -clip.y;
 	float4 vp = mul(Camera.InvProj, clip);
 	vp /= vp.w;
@@ -52,8 +54,8 @@ void main(uint3 index : SV_DispatchThreadID) {
 	float3 ro = Camera.Position.xyz;
 
 	uint2 v = 0;
-	for (unsigned int i = 0; i < Lighting.lightCount; i++) {
-		if (Sphere(ro, rd, Lighting.lights[i].position.xyz, Lighting.lights[i].position.w)) {
+	for (unsigned int i = 0; i < Lighting.LightCount; i++) {
+		if (Sphere(ro, rd, Lighting.Lights[i].Position.xyz, Lighting.Lights[i].Position.w)) {
 			if (i < 32)
 				v.x |= 1 << i;
 			else

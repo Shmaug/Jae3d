@@ -2,9 +2,9 @@
 
 #include <IJaeGame.hpp>
 
-class VoxelGame : public IJaeGame {
+class TestGame : public IJaeGame {
 public:
-	~VoxelGame();
+	~TestGame();
 
 	void Initialize();
 	void OnResize();

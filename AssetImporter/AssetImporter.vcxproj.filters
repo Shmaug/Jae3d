@@ -94,5 +94,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="..\Assets\Core\Colored.hlsl" />
+    <None Include="..\Assets\Core\LightCompute.hlsl" />
+    <None Include="..\Assets\Core\Core.hlsli" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include "Object.hpp"
+#include <DirectXCollision.h>
 
 class CommandList;
 

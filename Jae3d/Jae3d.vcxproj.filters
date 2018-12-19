@@ -21,12 +21,6 @@
     <Filter Include="Header Files\Core">
       <UniqueIdentifier>{02b05201-648e-4534-b855-a90d1e769721}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Objects">
-      <UniqueIdentifier>{5d3ec2e3-8965-42aa-adca-60e4232c87b1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Objects">
-      <UniqueIdentifier>{7497578b-1096-45b3-994e-a89b015c64d2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Assets">
       <UniqueIdentifier>{e3918e13-a82a-4199-95d2-29f76a79e501}</UniqueIdentifier>
     </Filter>
@@ -38,6 +32,18 @@
     </Filter>
     <Filter Include="Source Files\dds">
       <UniqueIdentifier>{02da8ced-8757-49f2-912d-0a89016975d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Util">
+      <UniqueIdentifier>{95910aeb-5cca-4168-bc64-a13a55eb40ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Util">
+      <UniqueIdentifier>{0c7176e0-2c2b-47dc-9c63-beb6b5259d45}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene">
+      <UniqueIdentifier>{5d3ec2e3-8965-42aa-adca-60e4232c87b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene">
+      <UniqueIdentifier>{7497578b-1096-45b3-994e-a89b015c64d2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -57,13 +63,13 @@
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
-      <Filter>Source Files\Objects</Filter>
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Object.cpp">
-      <Filter>Source Files\Objects</Filter>
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="MeshRenderer.cpp">
-      <Filter>Source Files\Objects</Filter>
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Mesh.cpp">
       <Filter>Source Files\Assets</Filter>
@@ -73,9 +79,6 @@
     </ClCompile>
     <ClCompile Include="Shader.cpp">
       <Filter>Source Files\Assets</Filter>
-    </ClCompile>
-    <ClCompile Include="jae.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CommandList.cpp">
       <Filter>Source Files\Graphics</Filter>
@@ -88,21 +91,6 @@
     </ClCompile>
     <ClCompile Include="ConstantBuffer.cpp">
       <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="AssetFile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="IOUtil.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="jstring.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="jwstring.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MemoryStream.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dds\DDSTextureLoader.cpp">
       <Filter>Source Files\dds</Filter>
@@ -117,18 +105,33 @@
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Light.cpp">
-      <Filter>Source Files\Objects</Filter>
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="SRVBuffer.cpp">
-      <Filter>Source Files\Graphics</Filter>
+    <ClCompile Include="jae.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="jstring.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="jwstring.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="AssetFile.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="IOUtil.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryStream.cpp">
+      <Filter>Source Files\Util</Filter>
     </ClCompile>
     <ClCompile Include="Scene.cpp">
-      <Filter>Source Files\Core</Filter>
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.hpp">
-      <Filter>Header Files\Objects</Filter>
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Input.hpp">
       <Filter>Header Files\Core</Filter>
@@ -149,10 +152,10 @@
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Object.hpp">
-      <Filter>Header Files\Objects</Filter>
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="MeshRenderer.hpp">
-      <Filter>Header Files\Objects</Filter>
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="AssetDatabase.hpp">
       <Filter>Header Files\Assets</Filter>
@@ -162,9 +165,6 @@
     </ClInclude>
     <ClInclude Include="Shader.hpp">
       <Filter>Header Files\Assets</Filter>
-    </ClInclude>
-    <ClInclude Include="jae.hpp">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CommandList.hpp">
       <Filter>Header Files\Graphics</Filter>
@@ -180,27 +180,6 @@
     </ClInclude>
     <ClInclude Include="IJaeGame.hpp">
       <Filter>Header Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="jvector.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MemoryStream.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AssetFile.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="d3dx12.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IOUtil.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="jmap.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="jstring.hpp">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Asset.hpp">
       <Filter>Header Files\Assets</Filter>
@@ -223,26 +202,50 @@
     <ClInclude Include="Font.hpp">
       <Filter>Header Files\Assets</Filter>
     </ClInclude>
-    <ClInclude Include="Util.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SpriteBatch.hpp">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Common.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Light.hpp">
-      <Filter>Header Files\Objects</Filter>
-    </ClInclude>
-    <ClInclude Include="SRVBuffer.hpp">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene.hpp">
-      <Filter>Header Files\Core</Filter>
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Renderer.hpp">
-      <Filter>Header Files\Objects</Filter>
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="jvector.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="jmap.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="jstring.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="IOUtil.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="jae.hpp">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.hpp">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryStream.hpp">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetFile.hpp">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.hpp">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Octree.hpp">
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -250,5 +253,8 @@
     <None Include="dds\GenerateMips_main.inc">
       <Filter>Header Files\dds</Filter>
     </None>
+    <None Include="CoreAssets\Common.hlsli" />
+    <None Include="CoreAssets\LightCompute.hlsl" />
+    <None Include="CoreAssets\Colored.hlsl" />
   </ItemGroup>
 </Project>

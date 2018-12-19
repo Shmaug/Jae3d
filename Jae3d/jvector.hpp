@@ -7,12 +7,12 @@ class jvector {
 public:
 	jvector() : mSize(0), mCapacity(0), mData(nullptr) {}
 	jvector(size_t capacity) : mSize(0), mCapacity(capacity), mData(new char[capacity * sizeof(T)]) {
-		ZeroMemory(mData, capacity * sizeof(T));
+		memset(mData, 0, capacity * sizeof(T));
 	}
 	jvector(const jvector &vec) : mSize(vec.mSize), mCapacity(vec.mSize) {
 		if (mSize > 0 && vec.mData) {
 			mData = new char[vec.mSize * sizeof(T)];
-			ZeroMemory(mData, vec.mSize * sizeof(T));
+			memset(mData, 0, vec.mSize * sizeof(T));
 			T* ndt = reinterpret_cast<T*>(vec.mData);
 			T* mdt = reinterpret_cast<T*>(mData);
 			for (size_t i = 0; i < vec.mSize; i++)
@@ -35,7 +35,7 @@ public:
 				realloc(c, mSize);
 			else {
 				mData = new char[c * sizeof(T)];
-				ZeroMemory(mData, c * sizeof(T));
+				memset(mData, 0, c * sizeof(T));
 				mSize = 0; // should already be zero
 			}
 			mCapacity = c;
@@ -66,17 +66,25 @@ public:
 		mSize = sz;
 		mCapacity = sz;
 		mData = new char[sizeof(T) * sz];
-		ZeroMemory(mData, sz * sizeof(T));
+		memset(mData, 0, sz * sizeof(T));
 
 		T* mdt = reinterpret_cast<T*>(mData);
 		for (size_t i = 0; i < sz; i++)
 			new (&(mdt[i])) T(data[i]);
 	}
 
+	int find(const T &item) {
+		T* data = reinterpret_cast<T*>(mData);
+		for (int i = 0; i < mSize; i++)
+			if (data[i] == item)
+				return i;
+		return -1;
+	}
+
 	// add an item, expands if necessary
-	// calls copy assignment =
+	// calls copy constructor
 	void push_back(const T &item) {
-		if (mSize + 1 >= mCapacity) reserve(next_pow2(mCapacity * 2));
+		if (mSize + 1 >= mCapacity) reserve(next_pow2(mSize + 1));
 		new(&(reinterpret_cast<T*>(mData)[mSize])) T(item);
 		mSize++;
 	}
@@ -104,6 +112,7 @@ public:
 		if (mData) {
 			destruct(0, mSize);
 			delete[] mData;
+			mData = nullptr;
 		}
 		mSize = 0;
 		mCapacity = 0;
@@ -155,7 +164,7 @@ private:
 	void realloc(size_t cap, size_t sz) {
 		if (cap != mCapacity) {
 			char* ndata = new char[cap * sizeof(T)];
-			ZeroMemory(ndata, cap * sizeof(T));
+			memset(ndata, 0, cap * sizeof(T));
 
 			if (mData) {
 				T* ndt = reinterpret_cast<T*>(ndata);

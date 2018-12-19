@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="VoxelGame.cpp" />
+    <ClCompile Include="TestGame.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="VoxelGame.hpp" />
+    <ClInclude Include="TestGame.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Jae3d\Jae3d.vcxproj">
@@ -30,28 +30,22 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Assets\Shaders\Common.hlsli" />
     <None Include="..\Assets\Shaders\PBR.hlsli" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Assets\Shaders\default.hlsl">
+    <None Include="..\Assets\Shaders\Default.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Assets\Shaders\textured.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Assets\Shaders\LightCompute.hlsl">
+    <None Include="..\Assets\Shaders\Textured.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{28638D0D-8507-4B48-A74C-51CFC5AE4DD2}</ProjectGuid>
-    <RootNamespace>VoxelGame</RootNamespace>
+    <RootNamespace>TestGame</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <ProjectName>Test</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -78,7 +72,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -115,9 +109,10 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <LibraryPath>$(LibraryPath);</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(SolutionDir);$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(IncludePath);$(SolutionDir)Jae3d;</IncludePath>
+    <ExecutablePath>$(ExecutablePath);</ExecutablePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -133,10 +128,10 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;Jae3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutputPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>$(OutputPath)AssetImporter.exe -dr $(SolutionDir)Assets\Shaders -o $(OutputPath)shaders.asset -v</Command>
+      <Command>$(OutputPath)AssetImporter.exe -dr $(SolutionDir)Assets\Shaders -o $(OutputPath)shaders.asset -v -i $(SolutionDir)Assets\Core</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -183,7 +178,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;Jae3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutputPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

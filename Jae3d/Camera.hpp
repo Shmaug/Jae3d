@@ -1,7 +1,7 @@
 #pragma once
 
 #include <DirectXMath.h>
-#include <wrl.h>
+#include <DirectXCollision.h>
 
 #include "Util.hpp"
 #include <d3d12.h>
@@ -16,9 +16,6 @@ class Scene;
 class Light;
 
 class Camera : public Object {
-protected:
-	JAE_API bool UpdateTransform();
-
 public:
 	JAE_API Camera(jwstring name);
 	JAE_API ~Camera();
@@ -34,14 +31,18 @@ public:
 	void PixelWidth(unsigned int w) { mPixelWidth = w; mTransformDirty = true; }
 	void PixelHeight(unsigned int h) { mPixelHeight = h; mTransformDirty = true; }
 
-	void CalculateScreenLights(jvector<std::shared_ptr<Light>> &lights, unsigned int frameIndex);
+	void CalculateScreenLights(Scene* scene, unsigned int frameIndex);
 
-	DirectX::XMMATRIX View() { if (mTransformDirty) UpdateTransform(); return mView; }
-	DirectX::XMMATRIX Projection() { if (mTransformDirty) UpdateTransform(); return mProjection; }
-	DirectX::XMMATRIX ViewProjection() { if (mTransformDirty) UpdateTransform(); return mViewProjection; }
+	DirectX::XMFLOAT4X4 View() { UpdateTransform(); return mView; }
+	DirectX::XMFLOAT4X4 Projection() { UpdateTransform(); return mProjection; }
+	DirectX::XMFLOAT4X4 ViewProjection() { UpdateTransform(); return mViewProjection; }
+	DirectX::BoundingFrustum Frustum() { UpdateTransform(); return mFrustum; }
+
+	JAE_API bool UpdateTransform();
 
 private:
 	friend class CommandList;
+
 	void WriteCBuffer(unsigned int frameIndex);
 
 	float mFieldOfView;
@@ -50,11 +51,12 @@ private:
 	unsigned int mPixelWidth;
 	unsigned int mPixelHeight;
 
-	DirectX::XMMATRIX mView;
-	DirectX::XMMATRIX mProjection;
-	DirectX::XMMATRIX mViewProjection;
-	DirectX::XMMATRIX mInverseView;
-	DirectX::XMMATRIX mInverseProj;
+	DirectX::XMFLOAT4X4 mView;
+	DirectX::XMFLOAT4X4 mProjection;
+	DirectX::XMFLOAT4X4 mViewProjection;
+	DirectX::XMFLOAT4X4 mInverseProj;
+
+	DirectX::BoundingFrustum mFrustum;
 
 	unsigned int mLightCount;
 	std::shared_ptr<ConstantBuffer> mCBuffer;

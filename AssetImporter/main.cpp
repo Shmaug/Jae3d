@@ -52,7 +52,7 @@ std::shared_ptr<Viewport> viewport;
 std::shared_ptr<Properties> properties;
 HWND vphwnd = 0;
 
-void LoadFile(jwstring file, jvector<AssetMetadata> &meta) {
+void LoadFile(jwstring file, jvector<AssetMetadata> &meta, jvector<jwstring> shaderIncludePaths) {
 	if (PathFileExistsW(file.c_str()) != 1) {
 		wprintf(L"Could not find %s\n", file.c_str());
 		return;
@@ -85,7 +85,7 @@ void LoadFile(jwstring file, jvector<AssetMetadata> &meta) {
 	else if (ext == L"cso")
 		ReadShader(file, meta);
 	else if (ext == L"hlsl")
-		CompileShader(file, meta);
+		CompileShader(file, meta, shaderIncludePaths);
 
 	else if (ext == L"ttf")
 		ImportFont(file, meta);
@@ -133,7 +133,7 @@ void UILoadFolder() {
 }
 void UIClickFile(jwstring path) {
 	jvector<AssetMetadata> assets;
-	LoadFile(path, assets);
+	LoadFile(path, assets, jvector<jwstring>());
 	if (!assets.empty()) {
 		viewport->Show(assets[0]);
 		properties->Show(assets[0]);
@@ -387,6 +387,8 @@ int cmdMain(int argc, char** argv) {
 	jwstring input;
 	bool compress = true;
 
+	jvector<jwstring> includePaths;
+
 	int mode = 0;
 	for (int i = 1; i < argc; i++) {
 		jwstring str = utf8toUtf16(jstring(argv[i]));
@@ -403,6 +405,8 @@ int cmdMain(int argc, char** argv) {
 				mode = 3;
 			} else if (str == L"-uc") {
 				compress = false;
+			} else if (str == L"-i") {
+				mode = 5;
 			}
 		} else {
 			switch (mode) {
@@ -420,6 +424,9 @@ int cmdMain(int argc, char** argv) {
 				break;
 			case 4:
 				LoadDirectory(str, &files, true);
+				break;
+			case 5:
+				includePaths.push_back(GetFullPathW(str));
 				break;
 			}
 		}
@@ -457,7 +464,7 @@ int cmdMain(int argc, char** argv) {
 
 	jvector<AssetMetadata> assetmeta;
 	for (int i = 0; i < files.size(); i++)
-		LoadFile(files[i], assetmeta);
+		LoadFile(files[i], assetmeta, includePaths);
 
 	wprintf(L"\n");
 

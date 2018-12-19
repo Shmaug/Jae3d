@@ -3,7 +3,7 @@
 #pragma vertex vsmain
 #pragma pixel psmain
 
-#include "Common.hlsli"
+#include <Core.hlsli>
 #include "PBR.hlsli"
 
 #pragma Parameter tex CombinedTex

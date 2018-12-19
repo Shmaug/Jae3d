@@ -11,21 +11,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="VoxelGame.cpp">
+    <None Include="..\Assets\Shaders\PBR.hlsli" />
+    <None Include="..\Assets\Shaders\Default.hlsl" />
+    <None Include="..\Assets\Shaders\Textured.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TestGame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="VoxelGame.hpp">
+    <ClInclude Include="TestGame.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-    <None Include="..\Assets\Shaders\PBR.hlsli" />
-    <None Include="..\Assets\Shaders\Common.hlsli" />
-    <None Include="..\Assets\Shaders\default.hlsl" />
-    <None Include="..\Assets\Shaders\textured.hlsl" />
-    <None Include="..\Assets\Shaders\LightCompute.hlsl" />
   </ItemGroup>
 </Project>

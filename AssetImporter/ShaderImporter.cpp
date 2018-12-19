@@ -3,6 +3,9 @@
 #include <string>
 #include <sstream>
 
+#include <shlwapi.h>
+#pragma comment (lib, "shlwapi.lib")
+
 #include <cassert>
 #include <comdef.h>
 #include <unordered_map>
@@ -255,7 +258,7 @@ void SetParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName,
 	}
 }
 
-void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jwstring path) {
+void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jwstring path, jvector<jwstring> includePaths) {
 	int cbo = 0;
 	int linenum = 0;
 	std::wstring line;
@@ -300,14 +303,21 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			switch (mode) {
 			case PARSEMODE_INCLUDE: // parse pragmas from #included file
 			{
-				jwstring dir = path;
-				const size_t last_slash_idx = path.rfind(L'\\');
-				if (std::string::npos != last_slash_idx)
-					dir = path.substr(0, last_slash_idx + 1);
-				jwstring inc = GetFullPathW(dir + word.substr(1, word.length() - 2));
+				jwstring inc;
+				if (word[0] == '"') {
+					jwstring dir = GetDirectoryW(path);
+					inc = GetFullPathW(dir + L"\\" + word.substr(1, word.length() - 2));
+				} else if (word[0] == '<') {
+					// System include
+					for (unsigned int i = 0; i < includePaths.size(); i++) {
+						inc = GetFullPathW(includePaths[i] + L"\\" + word.substr(1, word.length() - 2));
+						if (PathFileExistsW(inc.c_str()))
+							break;
+					}
+				}
 				wifstream incstr(inc.c_str());
 				if (incstr.is_open())
-					ParseShader(shader, incstr, rootParamIndex, inc);
+					ParseShader(shader, incstr, rootParamIndex, inc, includePaths);
 				mode = PARSEMODE_PRAGMA;
 				break;
 			}
@@ -342,7 +352,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			case PARSEMODE_SHADERSTAGE: // reading entry point
 			{
 				mode = PARSEMODE_PRAGMA;
-				HRESULT hr = shader->CompileShaderStage(path, word, stage);
+				HRESULT hr = shader->CompileShaderStage(path, word, stage, includePaths);
 				if (FAILED(hr)) {
 					_com_error err(hr);
 					wprintf(L"%s\n", err.ErrorMessage());
@@ -400,9 +410,9 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 	}
 }
 
-void CompileShader(jwstring path, jvector<AssetMetadata> &meta) {
+void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jwstring> includePaths) {
 	AssetMetadata m(path);
-	m.asset = std::shared_ptr<Asset>(CompileShader(path));
+	m.asset = std::shared_ptr<Asset>(CompileShader(path, includePaths));
 	meta.push_back(m);
 }
 void ReadShader(jwstring path, jvector<AssetMetadata> &meta) {
@@ -410,14 +420,14 @@ void ReadShader(jwstring path, jvector<AssetMetadata> &meta) {
 	m.asset = std::shared_ptr<Asset>(ReadShader(path));
 	meta.push_back(m);
 }
-Shader* CompileShader(jwstring path) {
+Shader* CompileShader(jwstring path, jvector<jwstring> includePaths) {
 	Shader* shader = new Shader(GetNameW(path));
 
 	wprintf(L"Compiling %s\n", shader->mName.c_str());
 
 	int rootParamIndex = 0;
 	wifstream is(path.c_str());
-	ParseShader(shader, is, rootParamIndex, path);
+	ParseShader(shader, is, rootParamIndex, path, includePaths);
 
 	return shader;
 }

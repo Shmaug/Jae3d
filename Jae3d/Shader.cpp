@@ -6,6 +6,11 @@
 #include <iostream>
 #include <exception>
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <shlwapi.h>
+#pragma comment(lib, "shlwapi.lib")
+
 #include "Graphics.hpp"
 #include "Mesh.hpp"
 #include "Window.hpp"
@@ -15,6 +20,50 @@
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
+
+class CustomInclude : public ID3DInclude {
+public:
+	jwstring mDir;
+	jvector<jwstring> mPaths;
+	CustomInclude(jwstring dir, jvector<jwstring> paths) : mDir(dir), mPaths(paths) {}
+
+	HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override {
+		jstring filePath = pFileName;
+		if (IncludeType == D3D_INCLUDE_SYSTEM) {
+			for (unsigned int i = 0; i < mPaths.size(); i++) {
+				jstring p = utf16toUtf8(mPaths[i]) + "\\" + filePath;
+				if (PathFileExistsA(p.c_str())) {
+					filePath = p;
+					break;
+				}
+			}
+		}else if (IncludeType == D3D_INCLUDE_LOCAL){
+			filePath = utf16toUtf8(mDir) + "\\" + filePath;
+		} else
+			return E_FAIL;
+
+		if (PathFileExistsA(filePath.c_str()) == false)
+			return E_FAIL;
+
+		auto file = std::ifstream(filePath.c_str(), std::ios::binary);
+		file.seekg(0, std::ios::end);
+		auto p = file.tellg();
+		file.seekg(0, std::ios::beg);
+
+		*pBytes = UINT(p - file.tellg());
+		char* data = new char[*pBytes];
+
+		file.read(data, *pBytes);
+
+		*ppData = data;
+		return S_OK;
+	}
+
+	HRESULT Close(LPCVOID pData) override {
+		delete[] pData;
+		return S_OK;
+	}
+};
 
 Shader::Shader(jwstring name) : Asset(name) {}
 Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
@@ -190,7 +239,7 @@ void Shader::Upload() {
 HRESULT Shader::ReadShaderStage(jwstring path, SHADER_STAGE stage) {
 	return D3DReadFileToBlob(path.c_str(), &mBlobs[stage]);
 }
-HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_STAGE stage) {
+HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> includePaths) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -234,8 +283,9 @@ HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_ST
 
 	defines.push_back({ NULL, NULL });
 
+	CustomInclude inc(GetDirectoryW(GetFullPathW(file)), includePaths);
 	ID3DBlob *errorBlob = nullptr;
-	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, utf16toUtf8(entryPoint).c_str(), profile, flags, 0, &mBlobs[stage], &errorBlob);
+	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), &inc, utf16toUtf8(entryPoint).c_str(), profile, flags, 0, &mBlobs[stage], &errorBlob);
 
 	if (errorBlob) {
 		char msg[128];

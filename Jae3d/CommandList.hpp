@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.hpp"
+#include <stack>
 
 #ifdef DrawText
 #undef DrawText
@@ -32,11 +33,16 @@ public:
 
 	inline _WRL::ComPtr<ID3D12GraphicsCommandList2> D3DCommandList() const { return mCommandList; }
 
+	inline void PushState() { mStateStack.push(mState); }
+	inline void PopState() { mState = mStateStack.top(); mStateStack.pop(); }
+
 private:
 	std::shared_ptr<Material> mActiveMaterial;
 	std::shared_ptr<Shader> mActiveShader;
 	std::shared_ptr<Camera> mActiveCamera;
 	ShaderState mState;
+
+	std::stack<ShaderState> mStateStack;
 
 	_WRL::ComPtr<ID3D12GraphicsCommandList2> mCommandList;
 

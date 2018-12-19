@@ -1,4 +1,4 @@
-#include "VoxelGame.hpp"
+#include "TestGame.hpp"
 
 #include <jae.hpp>
 #include <Profiler.hpp>
@@ -37,14 +37,15 @@ unsigned int frameTimeIndex;
 
 float yaw;
 float pitch;
-
+bool debugDraw = false;
+bool wireframe = false;
 bool cursorVisible = true;
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
-	HWND hWnd = JaeCreateWindow(L"Voxel Game", 1600, 900, 3);
+	HWND hWnd = JaeCreateWindow(L"Jae3d Test", 1600, 900, 3);
 	Graphics::GetWindow()->SetVSync(false);
 	
-	VoxelGame* game = new VoxelGame();
+	TestGame* game = new TestGame();
 	game->Initialize();
 
 	JaeMsgLoop(game);
@@ -55,18 +56,18 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	return 0;
 }
 
-void VoxelGame::Initialize() {
-	AssetDatabase::LoadAssets(L"common.asset");
+void TestGame::Initialize() {
+	AssetDatabase::LoadAssets(L"core.asset");
 	AssetDatabase::LoadAssets(L"models.asset");
 	AssetDatabase::LoadAssets(L"shaders.asset");
 	AssetDatabase::LoadAssets(L"textures.asset");
 
-	scene = shared_ptr<Scene>(new Scene());
+	scene = make_shared<Scene>();
 
 	arial = AssetDatabase::GetAsset<Font>(L"arial");
 	arial->GetTexture()->Upload();
 
-	camera = shared_ptr<Camera>(new Camera(L"Camera"));
+	camera = scene->AddObject<Camera>(L"Camera");
 	camera->LocalPosition(0, 1.668f, -2.0f);
 	camera->FieldOfView(60);
 	camera->PixelWidth(Graphics::GetWindow()->GetWidth());
@@ -132,48 +133,55 @@ void VoxelGame::Initialize() {
 	rifle->LocalScale(.6f, .6f, .6f);
 	rifle->LocalPosition(.21f, -.3f, .2f);
 
-	auto rifle2 = scene->AddObject<MeshRenderer>(L"Rifle");
-	rifle2->mMesh = rifleMesh;
-	rifle2->mMaterial = rifleMaterial;
-	rifle2->LocalScale(.6f, .6f, .6f);
-	rifle2->LocalPosition(0, 2, 0);
-
-	auto barrel = scene->AddObject<MeshRenderer>(L"Barrel");
-	barrel->mMesh = barrelMesh;
-	barrel->mMaterial = barrelMaterial;
-	barrel->LocalPosition(0, .574f, 0);
-	barrel->LocalScale(2.75f, 2.75f, 2.75f);
+	for (unsigned int x = 0; x < 16; x++) {
+		for (unsigned int y = 0; y < 16; y++) {
+			auto barrel = scene->AddObject<MeshRenderer>(L"Barrel");
+			barrel->mMesh = barrelMesh;
+			barrel->mMaterial = barrelMaterial;
+			barrel->LocalPosition((x - 7.5f) * 1.5f, .574f, (y - 7.5f) * 1.5f);
+			barrel->LocalScale(2.75f, 2.75f, 2.75f);
+		}
+	}
 
 	auto dragon = scene->AddObject<MeshRenderer>(L"Dragon");
 	dragon->mMesh = dragonMesh;
 	dragon->mMaterial = defaultMaterial;
-	dragon->LocalPosition(1, 0, 1);
-	dragon->LocalRotation(XMQuaternionRotationRollPitchYaw(0.f, XMConvertToRadians(25.f), 0.f));
+	dragon->LocalScale(2, 2, 2);
 
 	for (unsigned int x = 0; x < 8; x++) {
 		for (unsigned int y = 0; y < 8; y++) {
 			auto light = scene->AddObject<Light>(L"Light");
-			light->LocalPosition(3.0f * (float)(x - 3.5f), .5f, 3.0f * (float)(y - 3.5f));
+			light->LocalPosition(3.0f * (float)(x - 3.5f), 1.25f, 3.0f * (float)(y - 3.5f));
 			light->mColor = { (float)x * .125f, (float)y * .125f, (float)(x + y) * .125f };
-			light->mIntensity = 3.0f;
+			light->mIntensity = 5.0f;
 			light->mRange = 2.0f;
 		}
 	}
 }
-VoxelGame::~VoxelGame() {}
+TestGame::~TestGame() {}
 
-void VoxelGame::OnResize() {
+void TestGame::OnResize() {
 	auto window = Graphics::GetWindow();
 	camera->PixelWidth(window->GetWidth());
 	camera->PixelHeight(window->GetHeight());
 }
 
-void VoxelGame::Update(double total, double delta) {
+void TestGame::Update(double total, double delta) {
 	auto window = Graphics::GetWindow();
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
 		window->SetFullscreen(!window->IsFullscreen());
 	if (Input::OnKeyDown(KeyCode::F4) && Input::KeyDown(KeyCode::AltKey))
 		window->Close();
+
+	if (Input::OnKeyDown(KeyCode::F1))
+		wireframe = !wireframe;
+	if (Input::OnKeyDown(KeyCode::F2))
+		debugDraw = !debugDraw;
+
+	if (Input::KeyDown(KeyCode::H))
+		Sleep(10);
+	if (Input::KeyDown(KeyCode::J))
+		Sleep(5);
 
 #pragma region camera controls
 	if (Input::OnKeyDown(KeyCode::AltKey))
@@ -197,9 +205,10 @@ void VoxelGame::Update(double total, double delta) {
 		}
 	}
 
-	XMVECTOR right = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), camera->LocalRotation());
-	XMVECTOR up    = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), camera->LocalRotation());
-	XMVECTOR fwd   = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), camera->LocalRotation());
+	XMVECTOR rotation = XMLoadFloat4(&camera->LocalRotation());
+	XMVECTOR right = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), rotation);
+	XMVECTOR up    = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), rotation);
+	XMVECTOR fwd   = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), rotation);
 	XMVECTOR d = XMVectorZero();
 	if (Input::KeyDown(KeyCode::W))
 		d += fwd;
@@ -217,12 +226,12 @@ void VoxelGame::Update(double total, double delta) {
 		float s = 1.4f;
 		if (Input::KeyDown(KeyCode::ShiftKey))
 			s *= 2;
-		camera->LocalPosition(camera->LocalPosition() + XMVector3Normalize(d) * s * (float)delta);
+		camera->LocalPosition(XMLoadFloat3(&camera->LocalPosition()) + XMVector3Normalize(d) * s * (float)delta);
 	}
 #pragma endregion
 }
 
-void VoxelGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE dsv) {
+void TestGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE dsv) {
 	auto window = Graphics::GetWindow();
 	float w = (float)window->GetWidth();
 	float h = (float)window->GetHeight();
@@ -237,9 +246,13 @@ void VoxelGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR
 	commandList->D3DCommandList()->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 	commandList->D3DCommandList()->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
+	if (wireframe) commandList->SetFillMode(D3D12_FILL_MODE_WIREFRAME);
 	scene->Draw(commandList, camera);
 
+	if (debugDraw) scene->DebugDraw(commandList, camera);
+
 	#pragma region performance overlay
+	commandList->SetFillMode(D3D12_FILL_MODE_SOLID);
 	shared_ptr<SpriteBatch> sb = Graphics::GetSpriteBatch();
 	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender() * .5f), .5f, {1,1,1,1}, L"FPS: %d.%d\n", (int)mfps, (int)((mfps - floor(mfps)) * 10.0f + .5f));
 	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender()), .5f, { 1,1,1,1 }, pbuf);
@@ -259,7 +272,7 @@ void VoxelGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR
 	#pragma endregion
 }
 
-void VoxelGame::DoFrame(){
+void TestGame::DoFrame(){
 	static std::chrono::high_resolution_clock clock;
 	static auto start = clock.now();
 	static auto t0 = clock.now();

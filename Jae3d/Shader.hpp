@@ -23,7 +23,7 @@ public:
 	// Read a compiled shader stage 
 	JAE_API HRESULT ReadShaderStage(jwstring path, SHADER_STAGE stage);
 	// Compile a shader stage from a file
-	JAE_API HRESULT CompileShaderStage(jwstring path, jwstring entryPoint, SHADER_STAGE stage);
+	JAE_API HRESULT CompileShaderStage(jwstring path, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> includePaths);
 	// Compile a shader stage from memory
 	JAE_API HRESULT CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage);
 

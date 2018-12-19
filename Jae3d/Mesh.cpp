@@ -17,6 +17,9 @@ Mesh::Mesh(jwstring name, MemoryStream &ms) : Asset(name), mDataUploaded(false) 
 	mSemantics = (MESH_SEMANTIC)ms.Read<uint32_t>();
 	VertexCount(ms.Read<uint32_t>());
 
+	XMFLOAT3 min;
+	XMFLOAT3 max;
+
 	for (unsigned int i = 0; i < VertexCount(); i++) {
 		mVertices[i] = ms.Read<XMFLOAT3>();
 		if (HasSemantic(MESH_SEMANTIC_NORMAL)) mNormals[i] = ms.Read<XMFLOAT3>();
@@ -30,7 +33,22 @@ Mesh::Mesh(jwstring name, MemoryStream &ms) : Asset(name), mDataUploaded(false) 
 		if (HasSemantic(MESH_SEMANTIC_TEXCOORD1)) mTexcoord1[i] = ms.Read<XMFLOAT4>();
 		if (HasSemantic(MESH_SEMANTIC_TEXCOORD2)) mTexcoord2[i] = ms.Read<XMFLOAT4>();
 		if (HasSemantic(MESH_SEMANTIC_TEXCOORD3)) mTexcoord3[i] = ms.Read<XMFLOAT4>();
+		if (i == 0) {
+			min = mVertices[i];
+			max = mVertices[i];
+		} else {
+			min.x = fmin(mVertices[i].x, min.x);
+			min.y = fmin(mVertices[i].y, min.y);
+			min.z = fmin(mVertices[i].z, min.z);
+			max.x = fmax(mVertices[i].x, max.x);
+			max.y = fmax(mVertices[i].y, max.y);
+			max.z = fmax(mVertices[i].z, max.z);
+		}
 	}
+
+	mBounds = BoundingBox(
+		XMFLOAT3((min.x + max.x) * .5f, (min.y + max.y) * .5f, (min.z + max.z) * .5f),
+		XMFLOAT3(max.x - min.x, max.y - min.y, max.z - min.z));
 
 	uint32_t indexCount = ms.Read<uint32_t>();
 	m32BitIndices = ms.Read<uint8_t>();
@@ -173,6 +191,97 @@ unsigned int Mesh::AddVertex(XMFLOAT3 &v) {
 	if (HasSemantic(MESH_SEMANTIC_TEXCOORD3)) mTexcoord3.push_back(DirectX::XMFLOAT4());
 	if (mVertices.size() > 65535) Use32BitIndices(true);
 	return (unsigned int)mVertices.size() - 1;
+}
+
+void Mesh::AddIndices(unsigned int count, unsigned int* indices) {
+	if (m32BitIndices) {
+		mIndices32.reserve(mIndices32.size() + count);
+		for (unsigned int i = 0; i < count; i++)
+			mIndices32.push_back((uint32_t)indices[i]);
+	} else {
+		mIndices16.reserve(mIndices16.size() + count);
+		for (unsigned int i = 0; i < count; i++)
+			mIndices16.push_back((uint16_t)indices[i]);
+	}
+}
+
+void Mesh::HasSemantic(MESH_SEMANTIC s, bool v) {
+	if (s == MESH_SEMANTIC_POSITION || HasSemantic(s) == v) return;
+	if (v) {
+		mSemantics = (MESH_SEMANTIC)(mSemantics | s);
+		switch (s) {
+		case MESH_SEMANTIC_NORMAL:
+			mNormals.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_TANGENT:
+			mTangents.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_BINORMAL:
+			mBinormals.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_COLOR0:
+			mColor0.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_COLOR1:
+			mColor1.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_BLENDINDICES:
+			mBlendIndices.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_BLENDWEIGHT:
+			mBlendWeights.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_TEXCOORD0:
+			mTexcoord0.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_TEXCOORD1:
+			mTexcoord1.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_TEXCOORD2:
+			mTexcoord2.resize(VertexCount());
+			break;
+		case MESH_SEMANTIC_TEXCOORD3:
+			mTexcoord3.resize(VertexCount());
+			break;
+		}
+	} else {
+		mSemantics = (MESH_SEMANTIC)(mSemantics & ~s);
+		switch (s) {
+		case MESH_SEMANTIC_NORMAL:
+			mNormals.free();
+			break;
+		case MESH_SEMANTIC_TANGENT:
+			mTangents.free();
+			break;
+		case MESH_SEMANTIC_BINORMAL:
+			mBinormals.free();
+			break;
+		case MESH_SEMANTIC_COLOR0:
+			mColor0.free();
+			break;
+		case MESH_SEMANTIC_COLOR1:
+			mColor1.free();
+			break;
+		case MESH_SEMANTIC_BLENDINDICES:
+			mBlendIndices.free();
+			break;
+		case MESH_SEMANTIC_BLENDWEIGHT:
+			mBlendWeights.free();
+			break;
+		case MESH_SEMANTIC_TEXCOORD0:
+			mTexcoord0.free();
+			break;
+		case MESH_SEMANTIC_TEXCOORD1:
+			mTexcoord1.free();
+			break;
+		case MESH_SEMANTIC_TEXCOORD2:
+			mTexcoord2.free();
+			break;
+		case MESH_SEMANTIC_TEXCOORD3:
+			mTexcoord3.free();
+			break;
+		}
+	}
 }
 
 void Mesh::LoadCube(float s) {
@@ -336,6 +445,25 @@ void Mesh::UploadStatic() {
 
 	auto device = Graphics::GetDevice();
 
+	XMFLOAT3 min;
+	XMFLOAT3 max;
+	for (unsigned int i = 0; i < mVertices.size(); i++){
+		if (i == 0) {
+			min = mVertices[i];
+			max = mVertices[i];
+		} else {
+			min.x = fmin(mVertices[i].x, min.x);
+			min.y = fmin(mVertices[i].y, min.y);
+			min.z = fmin(mVertices[i].z, min.z);
+			max.x = fmax(mVertices[i].x, max.x);
+			max.y = fmax(mVertices[i].y, max.y);
+			max.z = fmax(mVertices[i].z, max.z);
+		}
+	}
+	mBounds = BoundingBox(
+		XMFLOAT3((min.x + max.x) * .5f, (min.y + max.y) * .5f, (min.z + max.z) * .5f),
+		XMFLOAT3((max.x - min.x) * .5f, (max.y - min.y) * .5f, (max.z - min.z) * .5f));
+
 	#pragma region vertex buffer
 	size_t vsize = VertexSize();
 
@@ -414,52 +542,6 @@ void Mesh::UploadStatic() {
 	mDataMapped = false;
 }
 
-void Mesh::UploadDynamic(size_t vsize, size_t isize) {
-	ReleaseGpu();
-
-	auto device = Graphics::GetDevice();
-
-#pragma region vertex buffer
-	ThrowIfFailed(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(vsize),
-		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-		IID_PPV_ARGS(&mVertexBuffer)));
-
-	CD3DX12_RANGE vreadRange(0, 0);
-	mVertexBuffer->Map(0, &vreadRange, &mMappedVertexBuffer);
-
-	mVertexBufferView.BufferLocation = mVertexBuffer->GetGPUVirtualAddress();
-	mVertexBufferView.SizeInBytes = (UINT)vsize;
-	mVertexBufferView.StrideInBytes = (UINT)vsize;
-#pragma endregion
-
-#pragma region index buffer
-	ThrowIfFailed(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(isize),
-		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-		IID_PPV_ARGS(&mIndexBuffer)));
-
-	void* idata;
-	CD3DX12_RANGE ireadRange(0, 0);
-	mIndexBuffer->Map(0, &ireadRange, &idata);
-
-	mIndexCount = 0;
-	mIndexBufferView.BufferLocation = mIndexBuffer->GetGPUVirtualAddress();
-	mIndexBufferView.SizeInBytes = (UINT)isize;
-	mIndexBufferView.Format = Use32BitIndices() ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
-#pragma endregion
-
-	mVertexBuffer->SetName(L"Vertex Buffer");
-	mIndexBuffer->SetName(L"Index Buffer");
-
-	mDataUploaded = true;
-	mDataMapped = true;
-}
-
 void Mesh::ReleaseGpu() {
 	if (mDataMapped) {
 		CD3DX12_RANGE readRange(0, 0);
@@ -471,10 +553,10 @@ void Mesh::ReleaseGpu() {
 	mIndexBuffer.Reset();
 	mDataUploaded = false;
 }
-void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList, D3D_PRIMITIVE_TOPOLOGY topology) {
 	if (!mDataUploaded) return;
 	if (mIndexCount == 0) return;
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetPrimitiveTopology(topology);
 	commandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
 	commandList->IASetIndexBuffer(&mIndexBufferView);
 	commandList->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.hpp"
+#include <DirectXCollision.h>
 #include "Asset.hpp"
 
 class Mesh : public Asset {
@@ -13,10 +14,6 @@ public:
 	JAE_API void LoadQuad(float size);
 	// Copies the mesh to the GPU
 	JAE_API void UploadStatic();
-	// Keeps the mesh mapped to the GPU for frequent updating
-	// vertexSize the size in bytes to allocate for vertices
-	// indexSize the size in bytes to allocate for indices
-	JAE_API void UploadDynamic(size_t vertexSize, size_t indexSize);
 	JAE_API void ReleaseGpu();
 
 	JAE_API void WriteData(MemoryStream &ms);
@@ -43,86 +40,10 @@ public:
 	unsigned int IndexCount() const { return(unsigned int)(m32BitIndices ? mIndices32.size() : mIndices16.size()); }
 	JAE_API void VertexCount(unsigned int size, bool shrink = true);
 
+	JAE_API void AddIndices(unsigned int count, unsigned int* indices);
 	JAE_API unsigned int AddVertex(DirectX::XMFLOAT3 &v);
 
-	void HasSemantic(MESH_SEMANTIC s, bool v) {
-		if (s == MESH_SEMANTIC_POSITION || HasSemantic(s) == v) return;
-		if (v) {
-			mSemantics = (MESH_SEMANTIC)(mSemantics | s);
-			switch (s) {
-			case MESH_SEMANTIC_NORMAL:
-				mNormals.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_TANGENT:
-				mTangents.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_BINORMAL:
-				mBinormals.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_COLOR0:
-				mColor0.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_COLOR1:
-				mColor1.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_BLENDINDICES:
-				mBlendIndices.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_BLENDWEIGHT:
-				mBlendWeights.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_TEXCOORD0:
-				mTexcoord0.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_TEXCOORD1:
-				mTexcoord1.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_TEXCOORD2:
-				mTexcoord2.resize(VertexCount());
-				break;
-			case MESH_SEMANTIC_TEXCOORD3:
-				mTexcoord3.resize(VertexCount());
-				break;
-			}
-		} else {
-			mSemantics = (MESH_SEMANTIC)(mSemantics & ~s);
-			switch (s) {
-			case MESH_SEMANTIC_NORMAL:
-				mNormals.free();
-				break;
-			case MESH_SEMANTIC_TANGENT:
-				mTangents.free();
-				break;
-			case MESH_SEMANTIC_BINORMAL:
-				mBinormals.free();
-				break;
-			case MESH_SEMANTIC_COLOR0:
-				mColor0.free();
-				break;
-			case MESH_SEMANTIC_COLOR1:
-				mColor1.free();
-				break;
-			case MESH_SEMANTIC_BLENDINDICES:
-				mBlendIndices.free();
-				break;
-			case MESH_SEMANTIC_BLENDWEIGHT:
-				mBlendWeights.free();
-				break;
-			case MESH_SEMANTIC_TEXCOORD0:
-				mTexcoord0.free();
-				break;
-			case MESH_SEMANTIC_TEXCOORD1:
-				mTexcoord1.free();
-				break;
-			case MESH_SEMANTIC_TEXCOORD2:
-				mTexcoord2.free();
-				break;
-			case MESH_SEMANTIC_TEXCOORD3:
-				mTexcoord3.free();
-				break;
-			}
-		}
-	}
+	JAE_API void HasSemantic(MESH_SEMANTIC s, bool v);
 	bool HasSemantic(MESH_SEMANTIC s) const { if (s == MESH_SEMANTIC_POSITION) return true; return mSemantics & s; }
 	MESH_SEMANTIC Semantics() const { return mSemantics; }
 
@@ -180,11 +101,13 @@ public:
 		}
 	}
 
-	DirectX::XMFLOAT3* GetVertices() const { return mVertices.data(); }
-	DirectX::XMFLOAT3* GetNormals() const { return mNormals.data(); }
-	DirectX::XMFLOAT3* GetTangents() const { return mTangents.data(); }
-	DirectX::XMFLOAT3* GetBinormals() const { return mBinormals.data(); }
-	DirectX::XMFLOAT4* GetTexcoords(const int channel) const {
+	inline DirectX::BoundingBox Bounds() const { return mBounds; }
+
+	inline DirectX::XMFLOAT3* GetVertices() const { return mVertices.data(); }
+	inline DirectX::XMFLOAT3* GetNormals() const { return mNormals.data(); }
+	inline DirectX::XMFLOAT3* GetTangents() const { return mTangents.data(); }
+	inline DirectX::XMFLOAT3* GetBinormals() const { return mBinormals.data(); }
+	inline DirectX::XMFLOAT4* GetTexcoords(const int channel) const {
 		switch (channel) {
 		default:
 		case 0: return mTexcoord0.data();
@@ -193,24 +116,28 @@ public:
 		case 3: return mTexcoord3.data();
 		}
 	}
-	DirectX::XMFLOAT4* GetColors(const int channel) const {
+	inline DirectX::XMFLOAT4* GetColors(const int channel) const {
 		switch (channel) {
 		default:
 		case 0: return mColor0.data();
 		case 1: return mColor1.data();
 		}
 	}
-	DirectX::XMUINT4*  GetBlendIndices() const { return mBlendIndices.data(); }
-	DirectX::XMFLOAT4* GetBlendWeights() const { return mBlendWeights.data(); }
+	inline DirectX::XMUINT4*  GetBlendIndices() const { return mBlendIndices.data(); }
+	inline DirectX::XMFLOAT4* GetBlendWeights() const { return mBlendWeights.data(); }
 
 	uint16_t* GetIndices16() const { return mIndices16.data(); }
 	uint32_t* GetIndices32() const { return mIndices32.data(); }
 #pragma endregion
 
+	JAE_API void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 private:
 	bool m32BitIndices = false;
 	bool mDataUploaded = false;
 	bool mDataMapped = false;
+
+	DirectX::BoundingBox mBounds;
 
 	MESH_SEMANTIC mSemantics = MESH_SEMANTIC_POSITION;
 
@@ -229,9 +156,6 @@ private:
 	jvector<DirectX::XMFLOAT4> mBlendWeights;
 	jvector<uint16_t> mIndices16;
 	jvector<uint32_t> mIndices32;
-
-	friend class CommandList;
-	JAE_API void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
 	JAE_API size_t VertexSize();
 	JAE_API void WriteVertexArray(BYTE* dst);

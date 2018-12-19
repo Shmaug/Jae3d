@@ -12,14 +12,16 @@ struct ObjectBuffer {
 };
 
 struct Light {
-	float4 position; // position (xyz) range (w)
-	float4 color; // color-intensity premultiplied (rgb) intensity (a)
+	float4 Position; // position (xyz) range (w)
+	float4 Color; // color-intensity premultiplied (rgb) intensity (a)
 };
 struct LightBuffer {
-	Light lights[64];
-	uint lightCount;
-	float4 groundColor;
-	float4 skyColor;
+	Light Lights[64];
+	uint LightCount;
+	uint2 LightIndexBufferSize;
+	uint pad;
+	float4 GroundColor;
+	float4 SkyColor;
 };
 
 ConstantBuffer<ObjectBuffer> Object : register(b0);
@@ -40,5 +42,5 @@ ConstantBuffer<LightBuffer> Lighting : register(b2);
 	"CBV(b1),"
 
 uint2 GetLightMask(float4 screenPos) {
-	return LightIndexBuffer.Load(int3(screenPos.xy, 0)).xy;
+	return LightIndexBuffer.Load(int3((screenPos.xy / Camera.Viewport.xy) * Lighting.LightIndexBufferSize.xy, 0)).xy;
 }

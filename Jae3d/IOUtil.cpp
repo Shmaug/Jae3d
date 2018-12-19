@@ -70,6 +70,11 @@ jwstring GetNameExtW(jwstring path) {
 	if (k == jwstring::npos) return L"";
 	return path.substr((int)k + 1);
 }
+jwstring GetDirectoryW(jwstring file) {
+	size_t k = file.rfind(L'\\');
+	if (k == jwstring::npos) return L"";
+	return file.substr(0, (int)k);
+}
 
 jwstring utf8toUtf16(const jstring &str) {
 	if (str.empty()) return jwstring();

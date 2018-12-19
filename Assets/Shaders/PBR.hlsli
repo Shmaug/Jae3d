@@ -190,22 +190,22 @@ float LightAttenuation(float x, float r) {
 }
 
 float3 ShadeLight(Surface sfc, float3 view, Light light) {
-	float3 ldir = light.position.xyz - sfc.worldPos;
+	float3 ldir = light.Position.xyz - sfc.worldPos;
 	float dist = length(ldir);
-	float3 lcol = light.color.rgb;
+	float3 lcol = light.Color.rgb;
 
-	return max(0, UnityBRDF(sfc.albedo, sfc.roughness, sfc.metallic, sfc.normal, -view, ldir / dist, lcol * LightAttenuation(dist, light.position.w)));
+	return max(0, UnityBRDF(sfc.albedo, sfc.roughness, sfc.metallic, sfc.normal, -view, ldir / dist, lcol * LightAttenuation(dist, light.Position.w)));
 }
 
 float3 ShadePoint(Surface sfc, float4 screenPos, float3 view) {
 	uint2 index = GetLightMask(screenPos);
 
-	float3 ambient = lerp(Lighting.groundColor.rgb, Lighting.skyColor.rgb, sfc.normal.y * sfc.normal.y);
+	float3 ambient = lerp(Lighting.GroundColor.rgb, Lighting.SkyColor.rgb, sfc.normal.y * sfc.normal.y);
 
 	float3 light = UnityGI(sfc.albedo, sfc.roughness, sfc.metallic, sfc.normal, view, ambient, ambient);
-	for (unsigned int i = 0; i < Lighting.lightCount; i++)
+	for (unsigned int i = 0; i < Lighting.LightCount; i++)
 		if ((i < 32 && index.x & (1 << i)) || (i >= 32 && (index.y & (1 << (i - 32)))))
-			light += ShadeLight(sfc, view, Lighting.lights[i]);
+			light += ShadeLight(sfc, view, Lighting.Lights[i]);
 
 	return light;
 }

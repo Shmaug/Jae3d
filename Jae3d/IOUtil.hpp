@@ -15,6 +15,7 @@ JAE_API jwstring GetFullPathW(jwstring str);
 JAE_API jwstring GetExtW(jwstring path);
 JAE_API jwstring GetNameW(jwstring path);
 JAE_API jwstring GetNameExtW(jwstring path);
+JAE_API jwstring GetDirectoryW(jwstring file);
 
 JAE_API jwstring utf8toUtf16(const jstring &str);
 JAE_API jstring utf16toUtf8(const jwstring &wstr);

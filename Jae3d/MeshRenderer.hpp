@@ -26,6 +26,8 @@ public:
 	std::shared_ptr<Material> mMaterial;
 	std::shared_ptr<Mesh> mMesh;
 
+	DirectX::BoundingOrientedBox Bounds();
+
 private:
 	std::shared_ptr<ConstantBuffer> mCBuffer;
 };

@@ -22,6 +22,7 @@ void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator, unsigned int f
 	mActiveCamera = nullptr;
 	mActiveMaterial = nullptr;
 	mFrameIndex = frameIndex;
+	mState = ShaderState();
 }
 
 void CommandList::TransitionResource(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to) {
