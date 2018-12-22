@@ -21,9 +21,6 @@
     <Filter Include="Header Files\Core">
       <UniqueIdentifier>{02b05201-648e-4534-b855-a90d1e769721}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Assets">
-      <UniqueIdentifier>{e3918e13-a82a-4199-95d2-29f76a79e501}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Assets">
       <UniqueIdentifier>{4d80ad57-1cd9-420d-aec0-fe9b0dc94e90}</UniqueIdentifier>
     </Filter>
@@ -44,6 +41,9 @@
     </Filter>
     <Filter Include="Header Files\Scene">
       <UniqueIdentifier>{7497578b-1096-45b3-994e-a89b015c64d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Assets">
+      <UniqueIdentifier>{e3918e13-a82a-4199-95d2-29f76a79e501}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -253,8 +253,9 @@
     <None Include="dds\GenerateMips_main.inc">
       <Filter>Header Files\dds</Filter>
     </None>
-    <None Include="CoreAssets\Common.hlsli" />
-    <None Include="CoreAssets\LightCompute.hlsl" />
-    <None Include="CoreAssets\Colored.hlsl" />
+    <None Include="..\Assets\Core\Core.hlsli" />
+    <None Include="..\Assets\Core\Colored.hlsl" />
+    <None Include="..\Assets\Core\SpriteTextured.hlsl" />
+    <None Include="..\Assets\Core\SpriteColored.hlsl" />
   </ItemGroup>
 </Project>

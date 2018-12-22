@@ -4,6 +4,7 @@
 #pragma pixel psmain
 
 #include <Core.hlsli>
+#include "Lighting.hlsli"
 #include "PBR.hlsli"
 
 #define RootSig \
@@ -11,14 +12,14 @@
 	      "DENY_DOMAIN_SHADER_ROOT_ACCESS |" \
           "DENY_GEOMETRY_SHADER_ROOT_ACCESS |" \
           "DENY_HULL_SHADER_ROOT_ACCESS )," \
-RootSigCommon \
+RootSigCore \
+RootSigLighting \
 RootSigPBR
 
 struct v2f {
 	float4 pos : SV_Position;
 	float3 normal : NORMAL;
 	float3 worldPos : TEXCOORD0;
-	float4 screenPos : TEXCOORD1;
 };
 
 v2f vsmain(float3 vertex : POSITION, float3 normal : NORMAL) {
@@ -28,7 +29,6 @@ v2f vsmain(float3 vertex : POSITION, float3 normal : NORMAL) {
 	float3 wn = mul(float4(normal, 1), Object.WorldToObject).xyz;
 
 	o.pos = mul(Camera.ViewProjection, wp);
-	o.screenPos = o.pos;
 	o.normal = wn;
 	o.worldPos = wp.xyz;
 

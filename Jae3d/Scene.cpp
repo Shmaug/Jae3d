@@ -19,15 +19,13 @@ Scene::~Scene() {
 	mLights.free();
 }
 
-void Scene::Draw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera) {
-	camera->CalculateScreenLights(this, commandList->GetFrameIndex());
-	commandList->SetCamera(camera);
-
-	for (int i = 0; i < mRenderers.size(); i++)
-		if (mRenderers[i]->Bounds().Intersects(camera->Frustum()))
-			mRenderers[i]->Draw(commandList);
+void Scene::Draw(std::shared_ptr<CommandList> commandList, BoundingFrustum cullFrustum) {
+	for (int i = 0; i < mRenderers.size(); i++) {
+		if (!mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
+		mRenderers[i]->Draw(commandList);
+	}
 }
-void Scene::DebugDraw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera) {
+void Scene::DebugDraw(std::shared_ptr<CommandList> commandList, BoundingFrustum cullFrustum) {
 	if (!mDebugCube) {
 		mDebugCube = std::shared_ptr<Mesh>(new Mesh(L"Cube"));
 		mDebugCube->LoadCube(1.0);
@@ -62,12 +60,13 @@ void Scene::DebugDraw(std::shared_ptr<CommandList> commandList, std::shared_ptr<
 	commandList->SetBlendState(BLEND_STATE_ALPHA);
 	commandList->SetFillMode(D3D12_FILL_MODE_WIREFRAME);
 
-	XMMATRIX vp = XMLoadFloat4x4(&camera->ViewProjection());
+	XMMATRIX vp = XMLoadFloat4x4(&commandList->GetCamera()->ViewProjection());
 
 	static XMFLOAT4 white(1.f, 1.f, 1.f, .5f);
 	commandList->D3DCommandList()->SetGraphicsRoot32BitConstants(0, 4, &white, 16);
 
 	for (unsigned int i = 0; i < mRenderers.size(); i++){
+		if (!mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
 		DirectX::BoundingOrientedBox box = mRenderers[i]->Bounds();
 		XMFLOAT4X4 m;
 		XMStoreFloat4x4(&m, XMMatrixAffineTransformation(XMLoadFloat3(&box.Extents), XMVectorZero(), XMLoadFloat4(&box.Orientation), XMLoadFloat3(&box.Center)) * vp);

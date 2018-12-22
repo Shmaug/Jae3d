@@ -8,7 +8,7 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 
 ConstantBuffer::ConstantBuffer() : mName(L"") {}
-ConstantBuffer::ConstantBuffer(int size, jwstring name, unsigned int count) : mName(name), mCBufferCount(count) {
+ConstantBuffer::ConstantBuffer(size_t size, jwstring name, unsigned int count) : mName(name), mCBufferCount(count) {
 	if (count == 0) mCBufferCount = Graphics::BufferCount();
 
 	ComPtr<ID3D12Device> device = Graphics::GetDevice();

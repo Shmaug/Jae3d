@@ -22,4 +22,8 @@ public:
 	JAE_API static DirectX::XMINT2 MouseDelta();
 
 	JAE_API static void FrameEnd();
+
+private:
+	friend class Window;
+	JAE_API static void MousePos(DirectX::XMINT2 p);
 };

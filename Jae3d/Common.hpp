@@ -11,9 +11,11 @@
 
 #include <d3d12.h>
 #include <DirectXMath.h>
+#include "d3dx12.hpp"
+
+#include <variant>
 #include <memory>
 
-#include "d3dx12.hpp"
 
 class Asset;
 class Mesh;
@@ -130,9 +132,8 @@ enum ALPHA_MODE {
 	ALPHA_MODE_UNUSED = 3,
 };
 
-// Stores all types of material parameters
+// Stores all types of material parameters and their values
 struct MaterialValue {
-	// Range
 	union Range {
 		DirectX::XMFLOAT2 floatRange;
 		DirectX::XMINT2 intRange;
@@ -141,32 +142,27 @@ struct MaterialValue {
 		Range() : uintRange(DirectX::XMUINT2()) {};
 		~Range() {};
 	};
-	// Value
-	union Value {
-		float floatValue;
-		DirectX::XMFLOAT2 float2Value;
-		DirectX::XMFLOAT3 float3Value;
-		DirectX::XMFLOAT4 float4Value;
-		int intValue;
-		DirectX::XMINT2 int2Value;
-		DirectX::XMINT3 int3Value;
-		DirectX::XMINT4 int4Value;
-		unsigned int uintValue;
-		DirectX::XMUINT2 uint2Value;
-		DirectX::XMUINT3 uint3Value;
-		DirectX::XMUINT4 uint4Value;
+	using Value = std::variant<
+		float,
+		DirectX::XMFLOAT2,
+		DirectX::XMFLOAT3,
+		DirectX::XMFLOAT4,
+		int,
+		DirectX::XMINT2,
+		DirectX::XMINT3,
+		DirectX::XMINT4,
+		unsigned int,
+		DirectX::XMUINT2,
+		DirectX::XMUINT3,
+		DirectX::XMUINT4,
+		std::shared_ptr<Texture>,
+		std::shared_ptr<ConstantBuffer>>;
 
-		std::shared_ptr<Texture> textureValue;
-		std::shared_ptr<ConstantBuffer> cbufferValue;
-
-		Value() : uint4Value(DirectX::XMUINT4()) {};
-		~Value() {};
-	};
 	Range range;
 	Value value;
 	int cbufferIndex;
 
-	MaterialValue() : cbufferIndex(-1) { range.floatRange = DirectX::XMFLOAT2(); value.floatValue = 0.0f; }
+	MaterialValue() : cbufferIndex(-1) { range.floatRange = DirectX::XMFLOAT2(); value = 0.0f; }
 	MaterialValue(const MaterialValue &mv) : cbufferIndex(mv.cbufferIndex) {
 		memcpy(&range, &mv.range, sizeof(Range));
 		memcpy(&value, &mv.value, sizeof(Value));
@@ -181,124 +177,17 @@ struct MaterialValue {
 		return *this;
 	}
 };
+// Stores numeric material parameters in a cuffer at rootIndex
 struct MaterialParameterCBuffer {
 	int rootIndex;
 	std::shared_ptr<ConstantBuffer> cbuffer;
 	MaterialParameterCBuffer() : rootIndex(-1), cbuffer(nullptr) {}
 	MaterialParameterCBuffer(int rootIndex, std::shared_ptr<ConstantBuffer> cbuffer) : rootIndex(rootIndex), cbuffer(cbuffer) {}
 };
-
-struct MeshBone {
-	jwstring mName;
-	DirectX::XMFLOAT4X4 mBoneToMesh;
-
-	MeshBone() : mName(L""), mBoneToMesh(DirectX::XMFLOAT4X4()) {}
-	MeshBone(const MeshBone &b) : mName(b.mName), mBoneToMesh(b.mBoneToMesh) {}
-	MeshBone(jwstring name, DirectX::XMFLOAT4X4 m) : mName(name), mBoneToMesh(m) {}
-
-	MeshBone& operator=(const MeshBone &rhs) {
-		if (&rhs == this) return *this;
-		mName = rhs.mName;
-		mBoneToMesh = rhs.mBoneToMesh;
-		return *this;
-	}
-};
-
-struct FontGlyph {
-	wchar_t character;
-	unsigned int advance;
-	int ox;
-	int oy;
-	// texture rect
-	unsigned int tx0;
-	unsigned int ty0;
-	unsigned int tw;
-	unsigned int th;
-
-	FontGlyph() : character(L'\0') {};
-	~FontGlyph() {};
-};
-
-struct FontKerning {
-	wchar_t from;
-	wchar_t to;
-	int offset;
-};
-
-struct ShaderState {
-	MESH_SEMANTIC input;
-	D3D12_RENDER_TARGET_BLEND_DESC blendState;
-	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
-	D3D12_FILL_MODE fillMode;
-	bool ztest;
-	bool zwrite;
-
-	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE), ztest(true), zwrite(true), fillMode(D3D12_FILL_MODE_SOLID) {}
-	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState), topology(s.topology), ztest(s.ztest), zwrite(s.zwrite), fillMode(s.fillMode) {}
-	~ShaderState() {}
-
-	ShaderState& operator =(const ShaderState &rhs) {
-		input = rhs.input;
-		blendState = rhs.blendState;
-		topology = rhs.topology;
-		ztest = rhs.ztest;
-		zwrite = rhs.zwrite;
-		fillMode = rhs.fillMode;
-		return *this;
-	}
-	bool operator ==(const ShaderState &rhs) {
-		return input == rhs.input &&
-			topology == rhs.topology &&
-			ztest == rhs.ztest &&
-			zwrite == rhs.zwrite && 
-			fillMode == rhs.fillMode &&
-			blendState.BlendEnable == rhs.blendState.BlendEnable &&
-			blendState.BlendOp == rhs.blendState.BlendOp &&
-			blendState.BlendOpAlpha == rhs.blendState.BlendOpAlpha &&
-			blendState.DestBlend == rhs.blendState.DestBlend &&
-			blendState.DestBlendAlpha == rhs.blendState.DestBlendAlpha &&
-			blendState.LogicOp == rhs.blendState.LogicOp &&
-			blendState.LogicOpEnable == rhs.blendState.LogicOpEnable &&
-			blendState.RenderTargetWriteMask == rhs.blendState.RenderTargetWriteMask &&
-			blendState.SrcBlend == rhs.blendState.SrcBlend &&
-			blendState.SrcBlendAlpha == rhs.blendState.SrcBlendAlpha;
-	}
-};
-
-template <class T>
-inline void hash_combine(std::size_t &s, const T &v) {
-	std::hash<T> h;
-	s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
-}
-
-namespace std {
-	template<>
-	struct hash<ShaderState> {
-		size_t operator()(const ShaderState &s) const noexcept {
-			size_t h = 0;
-			hash_combine(h, s.input);
-			hash_combine(h, s.topology);
-			hash_combine(h, s.ztest);
-			hash_combine(h, s.zwrite);
-			hash_combine(h, s.fillMode);
-			hash_combine(h, s.blendState.BlendEnable);
-			hash_combine(h, s.blendState.BlendOp);
-			hash_combine(h, s.blendState.BlendOpAlpha);
-			hash_combine(h, s.blendState.DestBlend);
-			hash_combine(h, s.blendState.DestBlendAlpha);
-			hash_combine(h, s.blendState.LogicOp);
-			hash_combine(h, s.blendState.LogicOpEnable);
-			hash_combine(h, s.blendState.RenderTargetWriteMask);
-			hash_combine(h, s.blendState.SrcBlend);
-			hash_combine(h, s.blendState.SrcBlendAlpha);
-			return h;
-		}
-	};
-}
-
+// Stores information about a shader parameter and a default value if it is a numeric type
 struct ShaderParameter {
 public:
-	// Stores just integral types
+	// Stores just numeric types for default values (set in shader)
 	struct ShaderValue {
 		union {
 			DirectX::XMFLOAT2 floatRange;
@@ -426,11 +315,14 @@ public:
 		defaultValue = rhs.defaultValue;
 		return *this;
 	}
+
 private:
 	SHADER_PARAM_TYPE type;
 	unsigned int rootIndex;
-	unsigned int cbufferOffset; // for integral parameters stored in a cbuffer
-	ShaderValue defaultValue; // for integral types
+	// for numeric parameters stored in a cbuffer
+	unsigned int cbufferOffset;
+	// for numeric types
+	ShaderValue defaultValue; 
 };
 struct ShaderParameterBuffer {
 	int rootIndex;
@@ -438,3 +330,110 @@ struct ShaderParameterBuffer {
 	ShaderParameterBuffer() : rootIndex(-1), size(0) {}
 	ShaderParameterBuffer(int rootIndex, int size) : rootIndex(rootIndex), size(size) {}
 };
+
+struct MeshBone {
+	jwstring mName;
+	DirectX::XMFLOAT4X4 mBoneToMesh;
+
+	MeshBone() : mName(L""), mBoneToMesh(DirectX::XMFLOAT4X4()) {}
+	MeshBone(const MeshBone &b) : mName(b.mName), mBoneToMesh(b.mBoneToMesh) {}
+	MeshBone(jwstring name, DirectX::XMFLOAT4X4 m) : mName(name), mBoneToMesh(m) {}
+
+	MeshBone& operator=(const MeshBone &rhs) {
+		if (&rhs == this) return *this;
+		mName = rhs.mName;
+		mBoneToMesh = rhs.mBoneToMesh;
+		return *this;
+	}
+};
+
+struct FontGlyph {
+	wchar_t character;
+	unsigned int advance;
+	int ox;
+	int oy;
+	// texture rect
+	unsigned int tx0;
+	unsigned int ty0;
+	unsigned int tw;
+	unsigned int th;
+
+	FontGlyph() : character(L'\0') {};
+	~FontGlyph() {};
+};
+struct FontKerning {
+	wchar_t from;
+	wchar_t to;
+	int offset;
+};
+
+struct ShaderState {
+	MESH_SEMANTIC input;
+	D3D12_RENDER_TARGET_BLEND_DESC blendState;
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
+	D3D12_FILL_MODE fillMode;
+	bool ztest;
+	bool zwrite;
+
+	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE), ztest(true), zwrite(true), fillMode(D3D12_FILL_MODE_SOLID) {}
+	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState), topology(s.topology), ztest(s.ztest), zwrite(s.zwrite), fillMode(s.fillMode) {}
+	~ShaderState() {}
+
+	ShaderState& operator =(const ShaderState &rhs) {
+		input = rhs.input;
+		blendState = rhs.blendState;
+		topology = rhs.topology;
+		ztest = rhs.ztest;
+		zwrite = rhs.zwrite;
+		fillMode = rhs.fillMode;
+		return *this;
+	}
+	bool operator ==(const ShaderState &rhs) {
+		return input == rhs.input &&
+			topology == rhs.topology &&
+			ztest == rhs.ztest &&
+			zwrite == rhs.zwrite && 
+			fillMode == rhs.fillMode &&
+			blendState.BlendEnable == rhs.blendState.BlendEnable &&
+			blendState.BlendOp == rhs.blendState.BlendOp &&
+			blendState.BlendOpAlpha == rhs.blendState.BlendOpAlpha &&
+			blendState.DestBlend == rhs.blendState.DestBlend &&
+			blendState.DestBlendAlpha == rhs.blendState.DestBlendAlpha &&
+			blendState.LogicOp == rhs.blendState.LogicOp &&
+			blendState.LogicOpEnable == rhs.blendState.LogicOpEnable &&
+			blendState.RenderTargetWriteMask == rhs.blendState.RenderTargetWriteMask &&
+			blendState.SrcBlend == rhs.blendState.SrcBlend &&
+			blendState.SrcBlendAlpha == rhs.blendState.SrcBlendAlpha;
+	}
+};
+
+template <class T>
+inline void hash_combine(std::size_t &s, const T &v) {
+	std::hash<T> h;
+	s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
+}
+
+namespace std {
+	template<>
+	struct hash<ShaderState> {
+		size_t operator()(const ShaderState &s) const noexcept {
+			size_t h = 0;
+			hash_combine(h, s.input);
+			hash_combine(h, s.topology);
+			hash_combine(h, s.ztest);
+			hash_combine(h, s.zwrite);
+			hash_combine(h, s.fillMode);
+			hash_combine(h, s.blendState.BlendEnable);
+			hash_combine(h, s.blendState.BlendOp);
+			hash_combine(h, s.blendState.BlendOpAlpha);
+			hash_combine(h, s.blendState.DestBlend);
+			hash_combine(h, s.blendState.DestBlendAlpha);
+			hash_combine(h, s.blendState.LogicOp);
+			hash_combine(h, s.blendState.LogicOpEnable);
+			hash_combine(h, s.blendState.RenderTargetWriteMask);
+			hash_combine(h, s.blendState.SrcBlend);
+			hash_combine(h, s.blendState.SrcBlendAlpha);
+			return h;
+		}
+	};
+}

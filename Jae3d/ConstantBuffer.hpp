@@ -14,7 +14,7 @@ public:
 	jwstring mName;
 
 	JAE_API ConstantBuffer();
-	JAE_API ConstantBuffer(int size, jwstring name, unsigned int count = 0);
+	JAE_API ConstantBuffer(size_t size, jwstring name, unsigned int count);
 	JAE_API ~ConstantBuffer();
 
 	JAE_API void Write(const void* ptr, size_t size, unsigned int pos, unsigned int frameIndex);

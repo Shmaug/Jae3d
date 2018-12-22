@@ -62,39 +62,39 @@ public:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
 			return mTangents.data();
 			break;
-		case SEMANTIC_BINORMAL:
+		case MESH_SEMANTIC_BINORMAL:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
 			return mBinormals.data();
 			break;
-		case SEMANTIC_COLOR0:
+		case MESH_SEMANTIC_COLOR0:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mColor0.data();
 			break;
-		case SEMANTIC_COLOR1:
+		case MESH_SEMANTIC_COLOR1:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mColor1.data();
 			break;
-		case SEMANTIC_BLENDINDICES:
+		case MESH_SEMANTIC_BLENDINDICES:
 			static_assert(std::is_same(T, DirectX::XMUINT4), "T must be XMUINT4");
 			return mBlendIndices.data();
 			break;
-		case SEMANTIC_BLENDWEIGHT:
+		case MESH_SEMANTIC_BLENDWEIGHT:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mBlendWeights.data();
 			break;
-		case SEMANTIC_TEXCOORD0:
+		case MESH_SEMANTIC_TEXCOORD0:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mTexcoord0.data();
 			break;
-		case SEMANTIC_TEXCOORD1:
+		case MESH_SEMANTIC_TEXCOORD1:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mTexcoord1.data();
 			break;
-		case SEMANTIC_TEXCOORD2:
+		case MESH_SEMANTIC_TEXCOORD2:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mTexcoord2.data();
 			break;
-		case SEMANTIC_TEXCOORD3:
+		case MESH_SEMANTIC_TEXCOORD3:
 			static_assert(std::is_same(T, DirectX::XMFLOAT4), "T must be XMFLOAT4");
 			return mTexcoord3.data();
 			break;

@@ -3,6 +3,7 @@
 #include <wrl.h>
 #include "Graphics.hpp"
 #include "CommandList.hpp"
+#include "AssetDatabase.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
 
@@ -332,61 +333,9 @@ void SpriteBatch::SpriteContext::AddLines(LineDraw &lines) {
 }
 
 void SpriteBatch::CreateShader() {
-	const char texrootsig[] =
-" #define RootSig "
-" \"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | DENY_DOMAIN_SHADER_ROOT_ACCESS | DENY_GEOMETRY_SHADER_ROOT_ACCESS | DENY_HULL_SHADER_ROOT_ACCESS ),"
-" RootConstants(num32BitConstants=16, b0, visibility=SHADER_VISIBILITY_VERTEX),"
-" DescriptorTable(SRV(t0), visibility=SHADER_VISIBILITY_PIXEL),"
-" StaticSampler(s0, filter=FILTER_MIN_MAG_MIP_LINEAR, visibility=SHADER_VISIBILITY_PIXEL)\""
-;
-	const char texshader[] =
-" struct CB { float4x4 proj; }; "
-" ConstantBuffer<CB> C : register(b0); "
-" Texture2D<float4> Tex : register(t0); "
-" sampler Samp : register(s0); "
-" struct v2f { float4 pos : SV_Position; float4 color : COLOR0; float2 tex : TEXCOORD0; };"
-" v2f vsmain(float3 vertex : POSITION, float4 color : COLOR0, float2 tex : TEXCOORD0) {"
-"	v2f o;"
-"	o.pos = mul(C.proj, float4(vertex, 1));"
-"	o.tex = tex;"
-"	o.color = color;"
-"	return o;"
-" }"
-" float4 psmain(float4 pos : SV_Position, float4 color : COLOR0, float2 tex : TEXCOORD0) : SV_Target {"
-" 	return Tex.Sample(Samp, tex) * color;"
-" }"
-;
-	
-	mTexturedShader = std::shared_ptr<Shader>(new Shader(L"Textured Sprite Shader"));
-	mTexturedShader->CompileShaderStage(texrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
-	mTexturedShader->CompileShaderStage(texshader, "vsmain", SHADER_STAGE_VERTEX);
-	mTexturedShader->CompileShaderStage(texshader, "psmain", SHADER_STAGE_PIXEL);
+	mTexturedShader = AssetDatabase::GetAsset<Shader>(L"SpriteTextured");
 	mTexturedShader->Upload();
-
-		const char colrootsig[] =
-" #define RootSig "
-" \"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | DENY_DOMAIN_SHADER_ROOT_ACCESS | DENY_GEOMETRY_SHADER_ROOT_ACCESS | DENY_HULL_SHADER_ROOT_ACCESS ),"
-" RootConstants(num32BitConstants=16, b0, visibility=SHADER_VISIBILITY_VERTEX)\""
-;
-	const char colshader[] =
-" struct CB { float4x4 proj; }; "
-" ConstantBuffer<CB> C : register(b0); "
-" struct v2f { float4 pos : SV_Position; float4 color : COLOR0; };"
-" v2f vsmain(float3 vertex : POSITION, float4 color : COLOR0) {"
-"	v2f o;"
-"	o.pos = mul(C.proj, float4(vertex, 1));"
-"	o.color = color;"
-"	return o;"
-" }"
-" float4 psmain(float4 pos : SV_Position, float4 color : COLOR0) : SV_Target {"
-" 	return color;"
-" }"
-;
-	
-	mColoredShader = std::shared_ptr<Shader>(new Shader(L"Colored Sprite Shader"));
-	mColoredShader->CompileShaderStage(colrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
-	mColoredShader->CompileShaderStage(colshader, "vsmain", SHADER_STAGE_VERTEX);
-	mColoredShader->CompileShaderStage(colshader, "psmain", SHADER_STAGE_PIXEL);
+	mColoredShader = AssetDatabase::GetAsset<Shader>(L"SpriteColored");
 	mColoredShader->Upload();
 }
 

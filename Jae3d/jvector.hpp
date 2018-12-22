@@ -83,10 +83,10 @@ public:
 
 	// add an item, expands if necessary
 	// calls copy constructor
-	void push_back(const T &item) {
+	T& push_back(const T &item) {
 		if (mSize + 1 >= mCapacity) reserve(next_pow2(mSize + 1));
-		new(&(reinterpret_cast<T*>(mData)[mSize])) T(item);
 		mSize++;
+		return *new(&(reinterpret_cast<T*>(mData)[mSize - 1])) T(item);
 	}
 
 	// remove an item at index and shift the data to fill

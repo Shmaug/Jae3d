@@ -20,9 +20,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TestGame.cpp" />
+    <ClCompile Include="TiledLighting.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestGame.hpp" />
+    <ClInclude Include="TiledLighting.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Jae3d\Jae3d.vcxproj">
@@ -30,6 +32,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Assets\Shaders\Lighting.hlsli" />
     <None Include="..\Assets\Shaders\PBR.hlsli" />
   </ItemGroup>
   <ItemGroup>
@@ -37,6 +40,11 @@
       <FileType>Document</FileType>
     </None>
     <None Include="..\Assets\Shaders\Textured.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Shaders\LightCompute.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

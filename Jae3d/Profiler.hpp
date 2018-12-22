@@ -7,24 +7,14 @@
 namespace Profiler {
 	class ProfilerSample {
 	public:
-		jvector<ProfilerSample*> children;
+		jvector<ProfilerSample> children;
 		ProfilerSample *parent;
 		jwstring name;
 		double startTime;
 		double endTime;
 
-		ProfilerSample(jwstring name, double startTime) : name(name), startTime(startTime) {
-			parent = nullptr;
-		}
-
-		~ProfilerSample();
-	};
-
-	struct ProfilerFrame {
-		jvector<ProfilerSample*> samples;
-		long index;
-		double startTime;
-		double endTime;
+		ProfilerSample() : name(L""), startTime(0), parent(nullptr) {}
+		ProfilerSample(jwstring name, double startTime) : name(name), startTime(startTime), parent(nullptr) {}
 	};
 
 	JAE_API void BeginSample(jwstring name);

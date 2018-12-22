@@ -20,8 +20,8 @@ public:
 	JAE_API Scene();
 	JAE_API ~Scene();
 
-	JAE_API void Draw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
-	JAE_API void DebugDraw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
+	JAE_API void Draw(std::shared_ptr<CommandList> commandList, DirectX::BoundingFrustum cullFrustum);
+	JAE_API void DebugDraw(std::shared_ptr<CommandList> commandList, DirectX::BoundingFrustum cullFrustum);
 	JAE_API void CollectLights(DirectX::BoundingFrustum &frustum, jvector<Light*> &lights);
 
 	// Creates an object in this scene

@@ -64,73 +64,73 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 				// set value to the shader's default values
 				switch (sp.Type()) {
 				case SHADER_PARAM_TYPE_CBUFFER:
-					v.value.cbufferValue = shared_ptr<ConstantBuffer>(nullptr);
+					v.value = shared_ptr<ConstantBuffer>(nullptr);
 					break;
 				case SHADER_PARAM_TYPE_SRV:
 				case SHADER_PARAM_TYPE_UAV:
 				case SHADER_PARAM_TYPE_SAMPLER:
 					break;
 				case SHADER_PARAM_TYPE_TEXTURE:
-					v.value.textureValue = shared_ptr<Texture>(nullptr);
+					v.value = shared_ptr<Texture>(nullptr);
 					break;
 
 				case SHADER_PARAM_TYPE_FLOATRANGE:
-					v.value.floatValue = sp.GetDefaultValue().floatValue;
+					v.value = sp.GetDefaultValue().floatValue;
 					v.range.floatRange = sp.GetDefaultValue().floatRange;
 					break;
 				case SHADER_PARAM_TYPE_INTRANGE:
-					v.value.intValue = sp.GetDefaultValue().intValue;
+					v.value = sp.GetDefaultValue().intValue;
 					v.range.intRange = sp.GetDefaultValue().intRange;
 					break;
 				case SHADER_PARAM_TYPE_UINTRANGE:
-					v.value.uintValue = sp.GetDefaultValue().uintValue;
+					v.value = sp.GetDefaultValue().uintValue;
 					v.range.uintRange = sp.GetDefaultValue().uintRange;
 					break;
 
 				case SHADER_PARAM_TYPE_COLOR3:
-					v.value.float3Value = sp.GetDefaultValue().float3Value;
+					v.value = sp.GetDefaultValue().float3Value;
 					break;
 				case SHADER_PARAM_TYPE_COLOR4:
-					v.value.float4Value = sp.GetDefaultValue().float4Value;
+					v.value = sp.GetDefaultValue().float4Value;
 					break;
 
 				case SHADER_PARAM_TYPE_FLOAT:
-					v.value.floatValue = sp.GetDefaultValue().floatValue;
+					v.value = sp.GetDefaultValue().floatValue;
 					break;
 				case SHADER_PARAM_TYPE_FLOAT2:
-					v.value.float2Value = sp.GetDefaultValue().float2Value;
+					v.value = sp.GetDefaultValue().float2Value;
 					break;
 				case SHADER_PARAM_TYPE_FLOAT3:
-					v.value.float3Value = sp.GetDefaultValue().float3Value;
+					v.value = sp.GetDefaultValue().float3Value;
 					break;
 				case SHADER_PARAM_TYPE_FLOAT4:
-					v.value.float4Value = sp.GetDefaultValue().float4Value;
+					v.value = sp.GetDefaultValue().float4Value;
 					break;
 
 				case SHADER_PARAM_TYPE_INT:
-					v.value.intValue = sp.GetDefaultValue().intValue;
+					v.value = sp.GetDefaultValue().intValue;
 					break;
 				case SHADER_PARAM_TYPE_INT2:
-					v.value.int2Value = sp.GetDefaultValue().int2Value;
+					v.value = sp.GetDefaultValue().int2Value;
 					break;
 				case SHADER_PARAM_TYPE_INT3:
-					v.value.int3Value = sp.GetDefaultValue().int3Value;
+					v.value = sp.GetDefaultValue().int3Value;
 					break;
 				case SHADER_PARAM_TYPE_INT4:
-					v.value.int4Value = sp.GetDefaultValue().int4Value;
+					v.value = sp.GetDefaultValue().int4Value;
 					break;
 
 				case SHADER_PARAM_TYPE_UINT:
-					v.value.uintValue = sp.GetDefaultValue().uintValue;
+					v.value = sp.GetDefaultValue().uintValue;
 					break;
 				case SHADER_PARAM_TYPE_UINT2:
-					v.value.uint2Value = sp.GetDefaultValue().uint2Value;
+					v.value = sp.GetDefaultValue().uint2Value;
 					break;
 				case SHADER_PARAM_TYPE_UINT3:
-					v.value.uint3Value = sp.GetDefaultValue().uint3Value;
+					v.value = sp.GetDefaultValue().uint3Value;
 					break;
 				case SHADER_PARAM_TYPE_UINT4:
-					v.value.uint4Value = sp.GetDefaultValue().uint4Value;
+					v.value = sp.GetDefaultValue().uint4Value;
 					break;
 				}
 			}
@@ -145,59 +145,59 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 				break;
 
 			case SHADER_PARAM_TYPE_FLOATRANGE:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat(v.value.floatValue, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat(get<float>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_INTRANGE:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt(v.value.intValue, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt(get<int>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_UINTRANGE:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt(v.value.uintValue, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt(get<unsigned int>(v.value), sp.CBufferOffset(), -1);
 				break;
 
 			case SHADER_PARAM_TYPE_COLOR3:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat3(v.value.float3Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat3(get<XMFLOAT3>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_COLOR4:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat4(v.value.float4Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat4(get<XMFLOAT4>(v.value), sp.CBufferOffset(), -1);
 				break;
 
 			case SHADER_PARAM_TYPE_FLOAT:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat(v.value.floatValue, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat(get<float>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_FLOAT2:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat2(v.value.float2Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat2(get<XMFLOAT2>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_FLOAT3:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat3(v.value.float3Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat3(get<XMFLOAT3>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_FLOAT4:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat4(v.value.float4Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteFloat4(get<XMFLOAT4>(v.value), sp.CBufferOffset(), -1);
 				break;
 
 			case SHADER_PARAM_TYPE_INT:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt(v.value.intValue, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt(get<int>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_INT2:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt2(v.value.int2Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt2(get<XMINT2>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_INT3:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt3(v.value.int3Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt3(get<XMINT3>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_INT4:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt4(v.value.int4Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteInt4(get<XMINT4>(v.value), sp.CBufferOffset(), -1);
 				break;
 
 			case SHADER_PARAM_TYPE_UINT:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt(v.value.uintValue, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt(get<unsigned int>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_UINT2:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt2(v.value.uint2Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt2(get<XMUINT2>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_UINT3:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt3(v.value.uint3Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt3(get<XMUINT3>(v.value), sp.CBufferOffset(), -1);
 				break;
 			case SHADER_PARAM_TYPE_UINT4:
-				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt4(v.value.uint4Value, sp.CBufferOffset(), -1);
+				mParamCbuffers[v.cbufferIndex].cbuffer->WriteUInt4(get<XMUINT4>(v.value), sp.CBufferOffset(), -1);
 				break;
 			}
 
@@ -220,19 +220,19 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 void Material::SetFloat(jwstring param, float v, unsigned int frameIndex) {
 	if (!mParamValues.has(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
-	mv.value.floatValue = v;
+	mv.value = v;
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat(v, mShader->GetParameter(param)->CBufferOffset(), frameIndex);
 }
 void Material::SetColor3(jwstring param, XMFLOAT3 col, unsigned int frameIndex) {
 	if (!mParamValues.has(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
-	mv.value.float3Value = col;
+	mv.value = col;
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat3(col, mShader->GetParameter(param)->CBufferOffset(), frameIndex);
 }
 
 void Material::SetTexture(jwstring param, shared_ptr<Texture> tex, unsigned int frameIndex) {
 	if (!mParamValues.has(param)) return;
-	mParamValues.at(param).value.textureValue = tex;
+	mParamValues.at(param).value = tex;
 
 	if (tex) {
 		ShaderParameter* sp = mShader->GetParameter(param);
@@ -245,7 +245,7 @@ void Material::SetTexture(jwstring param, shared_ptr<Texture> tex, unsigned int 
 }
 void Material::SetCBuffer(jwstring param, shared_ptr<ConstantBuffer> cbuf, unsigned int frameIndex) {
 	if (!mParamValues.has(param)) return;
-	mParamValues.at(param).value.cbufferValue = cbuf;
+	mParamValues.at(param).value = cbuf;
 
 	if (cbuf) {
 		ShaderParameter* sp = mShader->GetParameter(param);
@@ -275,13 +275,13 @@ void Material::SetActive(CommandList* commandList) {
 			switch (sp->Type()) {
 			case SHADER_PARAM_TYPE_CBUFFER:
 			{
-				shared_ptr<ConstantBuffer> cb = (*it).Value().value.cbufferValue;
+				shared_ptr<ConstantBuffer> cb = get<shared_ptr<ConstantBuffer>>((*it).Value().value);
 				if (cb) d3dlist->SetGraphicsRootConstantBufferView(sp->RootIndex(), cb->GetGPUAddress(commandList->GetFrameIndex()));
 				break;
 			}
 			case SHADER_PARAM_TYPE_TEXTURE:
 			{
-				shared_ptr<Texture> tex = (*it).Value().value.textureValue;
+				shared_ptr<Texture> tex = get<shared_ptr<Texture>>((*it).Value().value);
 				if (tex) {
 					ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
 					d3dlist->SetDescriptorHeaps(1, &heap);

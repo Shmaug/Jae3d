@@ -5,6 +5,7 @@ bool Input::mLockMouse;
 
 bool state[260]; // 0-254 are keys, 255-259 are mouse buttons
 bool lastState[260];
+DirectX::XMINT2 mouse;
 DirectX::XMINT2 delta;
 float wheelDelta;
 

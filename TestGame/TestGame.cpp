@@ -22,6 +22,8 @@
 #include <SpriteBatch.hpp>
 #include <Font.hpp>
 
+#include "TiledLighting.hpp"
+
 using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace std;
@@ -29,6 +31,7 @@ using namespace std;
 shared_ptr<Camera> camera;
 shared_ptr<Scene> scene;
 shared_ptr<Font> arial;
+shared_ptr<TiledLighting> lighting;
 
 wchar_t pbuf[1024];
 
@@ -63,6 +66,7 @@ void TestGame::Initialize() {
 	AssetDatabase::LoadAssets(L"textures.asset");
 
 	scene = make_shared<Scene>();
+	lighting = make_shared<TiledLighting>();
 
 	arial = AssetDatabase::GetAsset<Font>(L"arial");
 	arial->GetTexture()->Upload();
@@ -235,6 +239,7 @@ void TestGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_
 	auto window = Graphics::GetWindow();
 	float w = (float)window->GetWidth();
 	float h = (float)window->GetHeight();
+	unsigned int i = commandList->GetFrameIndex();
 
 	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, w, h);
 	D3D12_RECT sr = { 0, 0, window->GetWidth(), window->GetHeight() };
@@ -246,10 +251,25 @@ void TestGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_
 	commandList->D3DCommandList()->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
 	commandList->D3DCommandList()->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	if (wireframe) commandList->SetFillMode(D3D12_FILL_MODE_WIREFRAME);
-	scene->Draw(commandList, camera);
+	commandList->SetCamera(camera);
 
-	if (debugDraw) scene->DebugDraw(commandList, camera);
+	Profiler::BeginSample(L"Calculate Tiled Lighting");
+	uint64_t lfence = lighting->CalculateScreenLights(camera, scene, i);
+
+	Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->WaitForFenceValue(lfence);
+
+	commandList->SetGlobalCBuffer(L"LightBuffer", lighting->GetBuffer());
+	commandList->SetGlobalTexture(L"LightIndexBuffer", lighting->GetTexture(i));
+	Profiler::EndSample();
+
+	if (wireframe) commandList->SetFillMode(D3D12_FILL_MODE_WIREFRAME);
+
+	Profiler::BeginSample(L"Draw Scene");
+	scene->Draw(commandList, camera->Frustum());
+	Profiler::EndSample();
+
+	Profiler::BeginSample(L"Draw Scene Debug");
+	if (debugDraw) scene->DebugDraw(commandList, camera->Frustum());
 
 	#pragma region performance overlay
 	commandList->SetFillMode(D3D12_FILL_MODE_SOLID);
@@ -270,6 +290,8 @@ void TestGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_
 
 	sb->Flush(commandList);
 	#pragma endregion
+	Profiler::EndSample();
+
 }
 
 void TestGame::DoFrame(){

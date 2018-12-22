@@ -31,12 +31,11 @@ public:
 	void PixelWidth(unsigned int w) { mPixelWidth = w; mTransformDirty = true; }
 	void PixelHeight(unsigned int h) { mPixelHeight = h; mTransformDirty = true; }
 
-	void CalculateScreenLights(Scene* scene, unsigned int frameIndex);
-
 	DirectX::XMFLOAT4X4 View() { UpdateTransform(); return mView; }
 	DirectX::XMFLOAT4X4 Projection() { UpdateTransform(); return mProjection; }
 	DirectX::XMFLOAT4X4 ViewProjection() { UpdateTransform(); return mViewProjection; }
 	DirectX::BoundingFrustum Frustum() { UpdateTransform(); return mFrustum; }
+	std::shared_ptr<ConstantBuffer> CBuffer() { return mCBuffer; }
 
 	JAE_API bool UpdateTransform();
 
@@ -58,9 +57,6 @@ private:
 
 	DirectX::BoundingFrustum mFrustum;
 
-	unsigned int mLightCount;
 	std::shared_ptr<ConstantBuffer> mCBuffer;
-	std::shared_ptr<Texture>* mLightIndexTexture;
-	std::shared_ptr<ConstantBuffer> mLightBuffer;
 };
 

@@ -119,6 +119,8 @@ void ReadInput(MSG msg) {
 LRESULT CALLBACK JaeWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	if (!Graphics::IsInitialized()) return ::DefWindowProcW(hwnd, message, wParam, lParam);
 
+	if (g_Game) g_Game->WindowEvent(hwnd, message, wParam, lParam);
+
 	switch (message) {
 		case WM_PAINT:
 			if (g_Game && Graphics::FrameReady())
@@ -127,11 +129,6 @@ LRESULT CALLBACK JaeWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 
 		case WM_SYSKEYDOWN:
 		case WM_SYSKEYUP:
-			break;
-
-		// The default window procedure will play a system notification sound 
-		// when pressing the Alt+Enter keyboard combination if this message is 
-		// not handled.
 		case WM_SYSCHAR:
 			break;
 
@@ -211,20 +208,15 @@ HWND JaeCreateWindow(LPCWSTR title, int width, int height, unsigned int bufferCo
 void JaeMsgLoop(IJaeGame* game) {
 	g_Game = game;
 	// Main loop
-	bool run = true;
 	MSG msg = {};
-	while (run) {
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+	while (GetMessage(&msg, NULL, 0, 0) > 0) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
 
-			if (msg.message == WM_QUIT) {
-				run = false;
-				break;
-			}
-			if (msg.message == WM_INPUT)
-				ReadInput(msg);
-		}
+		if (msg.message == WM_QUIT)
+			break;
+		if (msg.message == WM_INPUT)
+			ReadInput(msg);
 	}
 }
 

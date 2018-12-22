@@ -45,11 +45,7 @@ void CommandList::SetMaterial(shared_ptr<Material> material) {
 
 	if (material) {
 		material->SetActive(this);
-		if (mActiveCamera) {
-			material->SetCBuffer(L"CameraBuffer", mActiveCamera->mCBuffer, mFrameIndex);
-			material->SetCBuffer(L"LightBuffer", mActiveCamera->mLightBuffer, mFrameIndex);
-			material->SetTexture(L"LightIndexBuffer", mActiveCamera->mLightIndexTexture[mFrameIndex], mFrameIndex);
-		}
+		SetGlobals();
 	}
 
 	if (mActiveMaterial) {
@@ -66,13 +62,54 @@ void CommandList::SetCamera(shared_ptr<Camera> camera) {
 
 	if (camera) {
 		camera->WriteCBuffer(mFrameIndex);
-		if (mActiveMaterial) {
-			mActiveMaterial->SetCBuffer(L"CameraBuffer", camera->mCBuffer, mFrameIndex);
-			mActiveMaterial->SetCBuffer(L"LightBuffer", camera->mLightBuffer, mFrameIndex);
-			mActiveMaterial->SetTexture(L"LightIndexBuffer", camera->mLightIndexTexture[mFrameIndex], mFrameIndex);
-		}
+		SetGlobalCBuffer(L"CameraBuffer", camera->mCBuffer);
 	}
 	mActiveCamera = camera;
+}
+
+void CommandList::SetGlobalTexture(jwstring param, std::shared_ptr<Texture> tex) {
+	if (mGlobals.has(param)) {
+		GlobalParam& p = mGlobals.at(param);
+		p.type = SHADER_PARAM_TYPE_TEXTURE;
+		p.value = tex;
+	} else {
+		GlobalParam p;
+		p.type = SHADER_PARAM_TYPE_TEXTURE;
+		p.value = tex;
+		mGlobals.emplace(param, p);
+	}
+
+	if (mActiveMaterial) mActiveMaterial->SetTexture(param, tex, mFrameIndex);
+}
+void CommandList::SetGlobalCBuffer(jwstring param, std::shared_ptr<ConstantBuffer> cbuf) {
+	if (mGlobals.has(param)) {
+		GlobalParam& p = mGlobals.at(param);
+		p.type = SHADER_PARAM_TYPE_CBUFFER;
+		p.value = cbuf;
+	} else {
+		GlobalParam p;
+		p.type = SHADER_PARAM_TYPE_CBUFFER;
+		p.value = cbuf;
+		mGlobals.emplace(param, p);
+	}
+
+	if (mActiveMaterial) mActiveMaterial->SetCBuffer(param, cbuf, mFrameIndex);
+}
+void CommandList::SetGlobals() {
+	if (!mActiveMaterial) return;
+
+	auto it = mGlobals.begin();
+	while (it.Valid()) {
+		switch ((*it).Value().type) {
+		case SHADER_PARAM_TYPE_CBUFFER:
+			mActiveMaterial->SetCBuffer((*it).Key(), get<shared_ptr<ConstantBuffer>>((*it).Value().value), mFrameIndex);
+			break;
+		case SHADER_PARAM_TYPE_TEXTURE:
+			mActiveMaterial->SetTexture((*it).Key(), get<shared_ptr<Texture>>((*it).Value().value), mFrameIndex);
+			break;
+		}
+		it++;
+	}
 }
 
 void CommandList::SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend) {

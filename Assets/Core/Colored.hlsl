@@ -3,19 +3,21 @@
 #pragma vertex vsmain
 #pragma pixel psmain
 
+#include "Core.hlsli"
+
 #define RootSig \
 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)," \
-"RootConstants(num32bitconstants=36, b0)"
+RootSigCore \
+"RootConstants(num32bitconstants=4, b2)"
 
-struct DataBuffer {
-	float4x4 MVP;
+struct MaterialBuffer {
 	float4 Color;
 };
-ConstantBuffer<DataBuffer> Data : register(b0);
+ConstantBuffer<MaterialBuffer> Material : register(b2);
 
 float4 vsmain(float3 vertex : POSITION) : SV_Position {
-	return mul(Data.MVP, float4(vertex, 1));
+	return mul(Camera.ViewProjection, mul(Object.ObjectToWorld, float4(vertex, 1)));
 }
 float4 psmain(float4 pos : SV_Position) : SV_Target{
-	return Data.Color;
+	return Material.Color;
 }

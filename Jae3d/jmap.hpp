@@ -69,7 +69,7 @@ public:
 		mData = new KeyValuePair*[mDataSize];
 		ZeroMemory(mData, sizeof(size_t) * mDataSize);
 	}
-	jmap(jmap &m) : mDataSize(m.mDataSize) {
+	jmap(const jmap &m) : mDataSize(m.mDataSize) {
 		mData = new KeyValuePair*[mDataSize];
 		ZeroMemory(mData, sizeof(size_t) * mDataSize);
 		for (int i = 0; i < mDataSize; i++) {
@@ -135,7 +135,7 @@ public:
 		return jmap_iterator(this, (size_t)-1, nullptr);
 	}
 
-	jmap& operator=(jmap& m) {
+	jmap& operator=(const jmap& m) {
 		clear();
 		delete[] mData;
 

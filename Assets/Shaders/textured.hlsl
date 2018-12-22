@@ -4,6 +4,7 @@
 #pragma pixel psmain
 
 #include <Core.hlsli>
+#include "Lighting.hlsli"
 #include "PBR.hlsli"
 
 #pragma Parameter tex CombinedTex
@@ -15,7 +16,8 @@
 	      "DENY_DOMAIN_SHADER_ROOT_ACCESS |" \
           "DENY_GEOMETRY_SHADER_ROOT_ACCESS |" \
           "DENY_HULL_SHADER_ROOT_ACCESS )," \
-RootSigCommon \
+RootSigCore \
+RootSigLighting \
 RootSigPBR \
 "DescriptorTable(SRV(t2), visibility=SHADER_VISIBILITY_PIXEL)," \
 "DescriptorTable(SRV(t3), visibility=SHADER_VISIBILITY_PIXEL)," \

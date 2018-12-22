@@ -14,14 +14,22 @@
     <None Include="..\Assets\Shaders\PBR.hlsli" />
     <None Include="..\Assets\Shaders\Default.hlsl" />
     <None Include="..\Assets\Shaders\Textured.hlsl" />
+    <None Include="..\Assets\Shaders\Lighting.hlsli" />
+    <None Include="..\Assets\Shaders\LightCompute.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TestGame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TiledLighting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestGame.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TiledLighting.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

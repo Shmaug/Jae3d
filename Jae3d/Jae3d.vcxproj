@@ -326,15 +326,22 @@
     <ClInclude Include="Util.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CoreAssets\Common.hlsli" />
+    <None Include="..\Assets\Core\Core.hlsli" />
     <None Include="dds\GenerateMips_main.inc" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CoreAssets\Colored.hlsl">
+    <None Include="..\Assets\Core\Colored.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="CoreAssets\LightCompute.hlsl">
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Core\SpriteTextured.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Core\SpriteColored.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
