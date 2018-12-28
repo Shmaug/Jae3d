@@ -80,6 +80,17 @@ jwstring jwstring::upper() const {
 	_wcsupr_s(j.mCStr, j.mCapacity);
 	return j;
 }
+bool jwstring::startswith(const wchar_t* str) const {
+	for (int i = 0; i < mLength; i++)
+		if (str[i] == L'\0')
+			return true;
+		else if (str[i] != mCStr[i])
+			return false;
+	return true;
+}
+bool jwstring::startswith(jwstring str) const {
+	return startswith(str.mCStr);
+}
 
 size_t jwstring::find(const wchar_t c) const {
 	const wchar_t* i = wcschr(mCStr, c);

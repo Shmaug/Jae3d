@@ -124,6 +124,9 @@ void CommandList::SetDepthTest(bool depthTest) {
 void CommandList::SetFillMode(D3D12_FILL_MODE fillMode) {
 	mState.fillMode = fillMode;
 }
+void CommandList::SetCullMode(D3D12_CULL_MODE cullMode) {
+	mState.cullMode = cullMode;
+}
 
 void CommandList::DrawUserMesh(MESH_SEMANTIC input, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology) {
 	assert(mActiveShader);

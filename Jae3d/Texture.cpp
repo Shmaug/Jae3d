@@ -242,9 +242,10 @@ void Texture::SetPixelData(const void* data) {
 		memcpy(mData, data, mDataSize);
 	else
 		ZeroMemory(mData, mDataSize);
+	mIsDDS = false;
 }
 
-void Texture::Upload(D3D12_RESOURCE_FLAGS flags) {
+void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 	if (mDataSize == 0 || !mData) return;
 	auto device = Graphics::GetDevice();
 
@@ -313,49 +314,51 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags) {
 	commandList->TransitionResource(mTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	commandQueue->WaitForFenceValue(commandQueue->Execute(commandList));
 
-	D3D12_RESOURCE_DESC desc = mTexture->GetDesc();
+	mHasDescriptorHeaps = makeHeaps;
+	if (makeHeaps) {
+		D3D12_RESOURCE_DESC desc = mTexture->GetDesc();
 
-	D3D12_SRV_DIMENSION srvdim;
-	D3D12_UAV_DIMENSION uavdim;
-	switch (desc.Dimension) {
-	default:
-	case (D3D12_RESOURCE_DIMENSION_UNKNOWN):
-		srvdim = D3D12_SRV_DIMENSION_UNKNOWN;
-		uavdim =  D3D12_UAV_DIMENSION_UNKNOWN;
-		break;
-	case (D3D12_RESOURCE_DIMENSION_BUFFER):
-		srvdim =  D3D12_SRV_DIMENSION_BUFFER;
-		uavdim = D3D12_UAV_DIMENSION_BUFFER;
-		break;
-	case (D3D12_RESOURCE_DIMENSION_TEXTURE1D):
-		srvdim =  D3D12_SRV_DIMENSION_TEXTURE1D;
-		uavdim = D3D12_UAV_DIMENSION_TEXTURE1D;
-		break;
-	case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
-		srvdim =  D3D12_SRV_DIMENSION_TEXTURE2D;
-		uavdim = D3D12_UAV_DIMENSION_TEXTURE2D;
-		break;
-	case (D3D12_RESOURCE_DIMENSION_TEXTURE3D):
-		srvdim =  D3D12_SRV_DIMENSION_TEXTURE3D;
-		uavdim = D3D12_UAV_DIMENSION_TEXTURE3D;
-		break;
-	}
+		D3D12_SRV_DIMENSION srvdim;
+		D3D12_UAV_DIMENSION uavdim;
+		switch (desc.Dimension) {
+		default:
+		case (D3D12_RESOURCE_DIMENSION_UNKNOWN):
+			srvdim = D3D12_SRV_DIMENSION_UNKNOWN;
+			uavdim = D3D12_UAV_DIMENSION_UNKNOWN;
+			break;
+		case (D3D12_RESOURCE_DIMENSION_BUFFER):
+			srvdim = D3D12_SRV_DIMENSION_BUFFER;
+			uavdim = D3D12_UAV_DIMENSION_BUFFER;
+			break;
+		case (D3D12_RESOURCE_DIMENSION_TEXTURE1D):
+			srvdim = D3D12_SRV_DIMENSION_TEXTURE1D;
+			uavdim = D3D12_UAV_DIMENSION_TEXTURE1D;
+			break;
+		case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
+			srvdim = D3D12_SRV_DIMENSION_TEXTURE2D;
+			uavdim = D3D12_UAV_DIMENSION_TEXTURE2D;
+			break;
+		case (D3D12_RESOURCE_DIMENSION_TEXTURE3D):
+			srvdim = D3D12_SRV_DIMENSION_TEXTURE3D;
+			uavdim = D3D12_UAV_DIMENSION_TEXTURE3D;
+			break;
+		}
 
-	mHasDescriptorHeaps = true;
-	mSRVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+		mSRVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.ViewDimension = srvdim;
-	srvDesc.Format = desc.Format;
-	srvDesc.Texture2D.MipLevels = desc.MipLevels;
-	device->CreateShaderResourceView(mTexture.Get(), &srvDesc, mSRVHeap->GetCPUDescriptorHandleForHeapStart());
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = srvdim;
+		srvDesc.Format = desc.Format;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		device->CreateShaderResourceView(mTexture.Get(), &srvDesc, mSRVHeap->GetCPUDescriptorHandleForHeapStart());
 
-	if (flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-		mUAVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-		uavDesc.ViewDimension = uavdim;
-		uavDesc.Format = desc.Format;
-		device->CreateUnorderedAccessView(mTexture.Get(), 0, &uavDesc, mUAVHeap->GetCPUDescriptorHandleForHeapStart());
+		if (flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+			mUAVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+			uavDesc.ViewDimension = uavdim;
+			uavDesc.Format = desc.Format;
+			device->CreateUnorderedAccessView(mTexture.Get(), 0, &uavDesc, mUAVHeap->GetCPUDescriptorHandleForHeapStart());
+		}
 	}
 }

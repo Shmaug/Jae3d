@@ -49,7 +49,8 @@ public:
 	JAE_API static unsigned int CurrentFrameIndex();
 
 	JAE_API static _WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
-	
+	JAE_API static UINT DescriptorIncrement(D3D12_DESCRIPTOR_HEAP_TYPE type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 	JAE_API static bool CheckTearingSupport();
 	JAE_API static DXGI_FORMAT GetDisplayFormat();
 	JAE_API static DXGI_FORMAT GetDepthFormat();

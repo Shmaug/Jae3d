@@ -33,6 +33,7 @@ public:
 
 	JAE_API void SetTexture(jwstring param, std::shared_ptr<Texture> tex, unsigned int frameIndex);
 	JAE_API void SetCBuffer(jwstring param, std::shared_ptr<ConstantBuffer> tex, unsigned int frameIndex);
+	JAE_API void SetDescriptorTable(jwstring param, std::shared_ptr<DescriptorTable> tbl, unsigned int frameIndex);
 
 private:
 	jvector<CommandList*> mActive;

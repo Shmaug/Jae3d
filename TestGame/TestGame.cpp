@@ -18,6 +18,7 @@
 #include <Shader.hpp>
 #include <Material.hpp>
 #include <Texture.hpp>
+#include <DescriptorTable.hpp>
 #include <ConstantBuffer.hpp>
 #include <SpriteBatch.hpp>
 #include <Font.hpp>
@@ -105,24 +106,28 @@ void TestGame::Initialize() {
 	dragonMesh->UploadStatic();
 
 	uvgridTexture->Upload();
-	barrelTexture->Upload();
-	barrelNormalTexture->Upload();
-	barrelMetallicTexture->Upload();
-	rifleTexture->Upload();
-	rifleNormalTexture->Upload();
-	rifleMetallicTexture->Upload();
+	barrelTexture->Upload(D3D12_RESOURCE_FLAG_NONE, false);
+	barrelNormalTexture->Upload(D3D12_RESOURCE_FLAG_NONE, false);
+	barrelMetallicTexture->Upload(D3D12_RESOURCE_FLAG_NONE, false);
+	rifleTexture->Upload(D3D12_RESOURCE_FLAG_NONE, false);
+	rifleNormalTexture->Upload(D3D12_RESOURCE_FLAG_NONE, false);
+	rifleMetallicTexture->Upload(D3D12_RESOURCE_FLAG_NONE, false);
 
 	rifleMaterial->SetFloat(L"roughness", 1.0f, -1);
 	rifleMaterial->SetFloat(L"metallic", 1.0f, -1);
 	barrelMaterial->SetFloat(L"roughness", 1.0f, -1);
 	barrelMaterial->SetFloat(L"metallic", 1.0f, -1);
 
-	barrelMaterial->SetTexture(L"CombinedTex", barrelTexture, -1);
-	barrelMaterial->SetTexture(L"NormalTex", barrelNormalTexture, -1);
-	barrelMaterial->SetTexture(L"MetallicTex", barrelMetallicTexture, -1);
-	rifleMaterial->SetTexture(L"CombinedTex", rifleTexture, -1);
-	rifleMaterial->SetTexture(L"NormalTex", rifleNormalTexture, -1);
-	rifleMaterial->SetTexture(L"MetallicTex", rifleMetallicTexture, -1);
+	shared_ptr<DescriptorTable> barrelTable = shared_ptr<DescriptorTable>(new DescriptorTable(3));
+	barrelTable->SetSRV(0, barrelTexture);
+	barrelTable->SetSRV(1, barrelNormalTexture);
+	barrelTable->SetSRV(2, barrelMetallicTexture);
+	barrelMaterial->SetDescriptorTable(L"MaterialTextures", barrelTable, -1);
+	shared_ptr<DescriptorTable> rifleTable = shared_ptr<DescriptorTable>(new DescriptorTable(3));
+	rifleTable->SetSRV(0, rifleTexture);
+	rifleTable->SetSRV(1, rifleNormalTexture);
+	rifleTable->SetSRV(2, rifleMetallicTexture);
+	rifleMaterial->SetDescriptorTable(L"MaterialTextures", rifleTable, -1);
 
 	auto cube = scene->AddObject<MeshRenderer>(L"Cube");
 	cube->mMesh = cubeMesh;

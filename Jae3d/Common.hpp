@@ -22,6 +22,7 @@ class Mesh;
 class Shader;
 class Texture;
 class ConstantBuffer;
+class DescriptorTable;
 class CommandList;
 class Camera;
 class Material;
@@ -101,6 +102,7 @@ enum SHADER_PARAM_TYPE {
 	SHADER_PARAM_TYPE_UAV,
 	SHADER_PARAM_TYPE_SAMPLER,
 	SHADER_PARAM_TYPE_TEXTURE,
+	SHADER_PARAM_TYPE_TABLE,
 	
 	SHADER_PARAM_TYPE_FLOATRANGE,
 	SHADER_PARAM_TYPE_INTRANGE,
@@ -156,14 +158,16 @@ struct MaterialValue {
 		DirectX::XMUINT3,
 		DirectX::XMUINT4,
 		std::shared_ptr<Texture>,
-		std::shared_ptr<ConstantBuffer>>;
+		std::shared_ptr<ConstantBuffer>,
+		std::shared_ptr<DescriptorTable>>;
 
 	Range range;
 	Value value;
 	int cbufferIndex;
+	int tableSize;
 
-	MaterialValue() : cbufferIndex(-1) { range.floatRange = DirectX::XMFLOAT2(); value = 0.0f; }
-	MaterialValue(const MaterialValue &mv) : cbufferIndex(mv.cbufferIndex) {
+	MaterialValue() : cbufferIndex(-1), tableSize(-1) { range.floatRange = DirectX::XMFLOAT2(); value = 0.0f; }
+	MaterialValue(const MaterialValue &mv) : cbufferIndex(mv.cbufferIndex), tableSize(mv.tableSize) {
 		memcpy(&range, &mv.range, sizeof(Range));
 		memcpy(&value, &mv.value, sizeof(Value));
 	}
@@ -174,6 +178,7 @@ struct MaterialValue {
 		memcpy(&range, &rhs.range, sizeof(Range));
 		memcpy(&value, &rhs.value, sizeof(Value));
 		cbufferIndex = rhs.cbufferIndex;
+		tableSize = rhs.tableSize;
 		return *this;
 	}
 };
@@ -184,6 +189,7 @@ struct MaterialParameterCBuffer {
 	MaterialParameterCBuffer() : rootIndex(-1), cbuffer(nullptr) {}
 	MaterialParameterCBuffer(int rootIndex, std::shared_ptr<ConstantBuffer> cbuffer) : rootIndex(rootIndex), cbuffer(cbuffer) {}
 };
+
 // Stores information about a shader parameter and a default value if it is a numeric type
 struct ShaderParameter {
 public:
@@ -219,12 +225,17 @@ public:
 		}
 	};
 
-	ShaderParameter() : type(SHADER_PARAM_TYPE_FLOAT), rootIndex(0), cbufferOffset(0) {}
+	ShaderParameter() : type(SHADER_PARAM_TYPE_FLOAT), rootIndex(0), cbufferOffset(-1) {}
+
 	ShaderParameter(SHADER_PARAM_TYPE type, unsigned int rootIndex, unsigned int cbufferOffset, ShaderValue value)
-		: type(type), rootIndex(rootIndex), cbufferOffset(cbufferOffset), defaultValue(value) {}
+		: type(type), rootIndex(rootIndex), tableSize(-1), cbufferOffset(cbufferOffset), defaultValue(value) {}
+	ShaderParameter(SHADER_PARAM_TYPE type, unsigned int rootIndex, unsigned int tableSize)
+		: type(type), rootIndex(rootIndex), tableSize(tableSize), cbufferOffset(-1), defaultValue(0) {}
+
 	SHADER_PARAM_TYPE Type() const { return type; }
 	unsigned int RootIndex() const { return rootIndex; }
-	unsigned int CBufferOffset() const { return cbufferOffset; }
+	int CBufferOffset() const { return cbufferOffset; }
+	int TableSize() const { return tableSize; }
 	ShaderValue GetDefaultValue() const { return defaultValue; }
 
 	jwstring ToString() {
@@ -245,6 +256,9 @@ public:
 			break;
 		case SHADER_PARAM_TYPE_TEXTURE:
 			c += swprintf_s(buf, 256, L"Root Texture");
+			break;
+		case SHADER_PARAM_TYPE_TABLE:
+			c += swprintf_s(buf, 256, L"Root Table [%d]", tableSize);
 			break;
 
 		case SHADER_PARAM_TYPE_FLOATRANGE:
@@ -313,14 +327,16 @@ public:
 		rootIndex = rhs.rootIndex;
 		cbufferOffset = rhs.cbufferOffset;
 		defaultValue = rhs.defaultValue;
+		tableSize = rhs.tableSize;
 		return *this;
 	}
 
 private:
 	SHADER_PARAM_TYPE type;
 	unsigned int rootIndex;
+	int tableSize;
 	// for numeric parameters stored in a cbuffer
-	unsigned int cbufferOffset;
+	int cbufferOffset;
 	// for numeric types
 	ShaderValue defaultValue; 
 };
@@ -372,17 +388,19 @@ struct ShaderState {
 	D3D12_RENDER_TARGET_BLEND_DESC blendState;
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
 	D3D12_FILL_MODE fillMode;
+	D3D12_CULL_MODE cullMode;
 	bool ztest;
 	bool zwrite;
 
-	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE), ztest(true), zwrite(true), fillMode(D3D12_FILL_MODE_SOLID) {}
-	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState), topology(s.topology), ztest(s.ztest), zwrite(s.zwrite), fillMode(s.fillMode) {}
+	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE), ztest(true), zwrite(true), fillMode(D3D12_FILL_MODE_SOLID), cullMode(D3D12_CULL_MODE_BACK) {}
+	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState), topology(s.topology), ztest(s.ztest), zwrite(s.zwrite), fillMode(s.fillMode), cullMode(s.cullMode) {}
 	~ShaderState() {}
 
 	ShaderState& operator =(const ShaderState &rhs) {
 		input = rhs.input;
 		blendState = rhs.blendState;
 		topology = rhs.topology;
+		cullMode = rhs.cullMode;
 		ztest = rhs.ztest;
 		zwrite = rhs.zwrite;
 		fillMode = rhs.fillMode;
@@ -394,6 +412,7 @@ struct ShaderState {
 			ztest == rhs.ztest &&
 			zwrite == rhs.zwrite && 
 			fillMode == rhs.fillMode &&
+			cullMode == rhs.cullMode &&
 			blendState.BlendEnable == rhs.blendState.BlendEnable &&
 			blendState.BlendOp == rhs.blendState.BlendOp &&
 			blendState.BlendOpAlpha == rhs.blendState.BlendOpAlpha &&
@@ -423,6 +442,7 @@ namespace std {
 			hash_combine(h, s.ztest);
 			hash_combine(h, s.zwrite);
 			hash_combine(h, s.fillMode);
+			hash_combine(h, s.cullMode);
 			hash_combine(h, s.blendState.BlendEnable);
 			hash_combine(h, s.blendState.BlendOp);
 			hash_combine(h, s.blendState.BlendOpAlpha);

@@ -92,6 +92,8 @@ public:
 	JAE_API jwstring substr(size_t pos, size_t length) const;
 	JAE_API jwstring lower() const;
 	JAE_API jwstring upper() const;
+	JAE_API bool startswith(jwstring str) const;
+	JAE_API bool startswith(const wchar_t* str) const;
 
 	JAE_API size_t find(const wchar_t c) const;
 	JAE_API size_t rfind(const wchar_t c) const;

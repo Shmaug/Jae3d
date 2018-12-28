@@ -178,6 +178,10 @@ shared_ptr<SpriteBatch> Graphics::GetSpriteBatch() { return mSpriteBatch; }
 UINT Graphics::GetMSAASamples() {
 	return mWindow->GetMSAASamples();
 }
+
+UINT Graphics::DescriptorIncrement(D3D12_DESCRIPTOR_HEAP_TYPE type) {
+	return mDevice->GetDescriptorHandleIncrementSize(type);
+}
 #pragma endregion
 
 #pragma region runtime

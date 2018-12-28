@@ -22,7 +22,7 @@ public:
 	JAE_API void WriteData(MemoryStream &ms);
 	JAE_API uint64_t TypeId();
 
-	JAE_API void Upload(D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+	JAE_API void Upload(D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE, bool makeHeaps = true);
 
 	JAE_API void SetPixelData(const void* data);
 
@@ -34,6 +34,7 @@ public:
 	unsigned int MipLevels() const { return mMipLevels; }
 	DXGI_FORMAT Format() const { return mFormat; }
 	ALPHA_MODE AlphaMode() const { return mAlphaMode; }
+
 	bool HasDescriptors() const { return mHasDescriptorHeaps; }
 
 	_WRL::ComPtr<ID3D12DescriptorHeap> GetSRVDescriptorHeap() const { return mSRVHeap; }
@@ -61,7 +62,6 @@ private:
 	_WRL::ComPtr<ID3D12Resource> mTexture;
 
 	bool mHasDescriptorHeaps;
-
 	_WRL::ComPtr<ID3D12DescriptorHeap> mSRVHeap;
 	_WRL::ComPtr<ID3D12DescriptorHeap> mUAVHeap;
 };

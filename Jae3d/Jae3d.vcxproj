@@ -264,6 +264,7 @@
     <ClCompile Include="CommandQueue.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="dds\DDSTextureLoader.cpp" />
+    <ClCompile Include="DescriptorTable.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="dds\LoaderHelpers.hpp" />
     <ClInclude Include="dds\pch.hpp" />
     <ClInclude Include="dds\PlatformHelpers.hpp" />
+    <ClInclude Include="DescriptorTable.hpp" />
     <ClInclude Include="Font.hpp" />
     <ClInclude Include="Graphics.hpp" />
     <ClInclude Include="Input.hpp" />

@@ -380,7 +380,7 @@ struct AssetMetadata {
 		jwstring metaPath = assetPath + L".meta";
 		std::wifstream infile(metaPath.c_str());
 		if (!infile.is_open()) {
-			std::cerr << "No metadata for " << assetPath.c_str() << "\n";
+			std::cerr << "No metadata for " << utf16toUtf8(assetPath.c_str()).c_str() << "\n";
 			return;
 		}
 		int linenum = 0;

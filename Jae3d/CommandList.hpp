@@ -29,6 +29,7 @@ public:
 	JAE_API void SetDepthWrite(bool depthWrite);
 	JAE_API void SetDepthTest(bool depthTest);
 	JAE_API void SetFillMode(D3D12_FILL_MODE fillMode);
+	JAE_API void SetCullMode(D3D12_CULL_MODE cullMode);
 
 	// Draws a mesh with the active shader. Same as calling DrawUserMesh() with the mesh's input and topology, and then calling mesh->Draw()
 	JAE_API void DrawMesh(Mesh &mesh);

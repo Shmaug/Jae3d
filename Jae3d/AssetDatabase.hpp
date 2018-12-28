@@ -15,7 +15,7 @@ public:
 	template<class T>
 	static std::shared_ptr<T> GetAsset(jwstring name) {
 		static_assert(std::is_base_of<Asset, T>::value, "T must be an Asset!");
-		return std::static_pointer_cast<T>(assets.at(name));
+		return std::static_pointer_cast<T>(assets.at(name.lower()));
 	}
 };
 

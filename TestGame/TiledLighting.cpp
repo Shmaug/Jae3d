@@ -34,7 +34,7 @@ uint64_t TiledLighting::CalculateScreenLights(shared_ptr<Camera> camera, shared_
 			L"Light Index Texture", w, h, 1,
 			D3D12_RESOURCE_DIMENSION_TEXTURE2D, 1, DXGI_FORMAT_R32G32_UINT, ALPHA_MODE_OTHER, 1,
 			data, w * h * sizeof(uint32_t) * 2, false));
-		mLightIndexTexture[frameIndex]->Upload(D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		mLightIndexTexture[frameIndex]->Upload(D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, true);
 
 		delete[] data;
 	}

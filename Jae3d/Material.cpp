@@ -5,6 +5,7 @@
 #include "CommandList.hpp"
 #include "ConstantBuffer.hpp"
 #include "Graphics.hpp"
+#include "DescriptorTable.hpp"
 
 using namespace std;
 using namespace DirectX;
@@ -72,6 +73,9 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 					break;
 				case SHADER_PARAM_TYPE_TEXTURE:
 					v.value = shared_ptr<Texture>(nullptr);
+					break;
+				case SHADER_PARAM_TYPE_TABLE:
+					v.value = shared_ptr<DescriptorTable>(nullptr);
 					break;
 
 				case SHADER_PARAM_TYPE_FLOATRANGE:
@@ -142,6 +146,7 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 			case SHADER_PARAM_TYPE_UAV:
 			case SHADER_PARAM_TYPE_SAMPLER:
 			case SHADER_PARAM_TYPE_TEXTURE:
+			case SHADER_PARAM_TYPE_TABLE:
 				break;
 
 			case SHADER_PARAM_TYPE_FLOATRANGE:
@@ -253,6 +258,19 @@ void Material::SetCBuffer(jwstring param, shared_ptr<ConstantBuffer> cbuf, unsig
 			mActive[i]->D3DCommandList()->SetGraphicsRootConstantBufferView(sp->RootIndex(), cbuf->GetGPUAddress(frameIndex));
 	}
 }
+void Material::SetDescriptorTable(jwstring param, shared_ptr<DescriptorTable> tbl, unsigned int frameIndex) {
+	if (!mParamValues.has(param)) return;
+	mParamValues.at(param).value = tbl;
+
+	if (tbl) {
+		ShaderParameter* sp = mShader->GetParameter(param);
+		ID3D12DescriptorHeap* heap = { tbl->D3DHeap().Get() };
+		for (unsigned int i = 0; i < mActive.size(); i++) {
+			mActive[i]->D3DCommandList()->SetDescriptorHeaps(1, &heap);
+			mActive[i]->D3DCommandList()->SetGraphicsRootDescriptorTable(sp->RootIndex(), tbl->GpuDescriptor());
+		}
+	}
+}
 
 void Material::SetActive(CommandList* commandList) {
 	if (!mShader) return;
@@ -289,9 +307,14 @@ void Material::SetActive(CommandList* commandList) {
 				}
 				break;
 			}
-			case SHADER_PARAM_TYPE_SRV:
+			case SHADER_PARAM_TYPE_TABLE:
 			{
-
+				shared_ptr<DescriptorTable> tbl = get<shared_ptr<DescriptorTable>>((*it).Value().value);
+				if (tbl) {
+					ID3D12DescriptorHeap* heap = { tbl->D3DHeap().Get() };
+					d3dlist->SetDescriptorHeaps(1, &heap);
+					d3dlist->SetGraphicsRootDescriptorTable(sp->RootIndex(), tbl->GpuDescriptor());
+				}
 				break;
 			}
 			}

@@ -20,7 +20,8 @@ enum PARSEMODE {
 	PARSEMODE_SHADERSTAGE,
 	PARSEMODE_PARAMTYPE,
 	PARSEMODE_PARAMNAME,
-	PARSEMODE_PARAMVALUE
+	PARSEMODE_PARAMVALUE,
+	PARSEMODE_TABLESIZE
 };
 
 const unordered_map<SHADER_PARAM_TYPE, unsigned int> paramSizes = {
@@ -29,6 +30,7 @@ const unordered_map<SHADER_PARAM_TYPE, unsigned int> paramSizes = {
 	{ SHADER_PARAM_TYPE_UAV, 0 },
 	{ SHADER_PARAM_TYPE_SAMPLER, 0 },
 	{ SHADER_PARAM_TYPE_TEXTURE, 0 },
+	{ SHADER_PARAM_TYPE_TABLE, 0 },
 	
 	{ SHADER_PARAM_TYPE_FLOATRANGE, 4 },
 	{ SHADER_PARAM_TYPE_INTRANGE, 4 },
@@ -116,6 +118,7 @@ SHADER_PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
 		{ L"uav",	SHADER_PARAM_TYPE_UAV },
 		{ L"samp",	SHADER_PARAM_TYPE_SAMPLER },
 		{ L"tex",	SHADER_PARAM_TYPE_TEXTURE },
+		{ L"tbl",	SHADER_PARAM_TYPE_TABLE },
 
 		{ L"floatrange", SHADER_PARAM_TYPE_FLOATRANGE },
 		{ L"intrange",	SHADER_PARAM_TYPE_INTRANGE },
@@ -164,7 +167,7 @@ SHADER_PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
 	return paramTypes.at(val);
 }
 
-void SetParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName, jwstring &tstr, jwstring &vstr){
+void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName, jwstring &tstr, jwstring &vstr){
 	jwstring range;
 	ShaderParameter::ShaderValue value;
 	SHADER_PARAM_TYPE paramType = ParseType(tstr, range);
@@ -372,16 +375,19 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				jwstring range;
 				SHADER_PARAM_TYPE ptype = ParseType(paramType, range);
 				paramName = word;
-				if (ptype <= SHADER_PARAM_TYPE_TEXTURE) {
+				if (ptype <= SHADER_PARAM_TYPE_TABLE) {
 					// increase Root Parameter index since we are registering a Root Parameter
 					if (cbo > 0) {
 						shader->AddParameterBuffer(rootParamIndex - 1, cbo);
 						wprintf(L"Root Parameter %d: Integral Constant Buffer (%d)\n", rootParamIndex - 1, cbo);
 					}
 					cbo = 0;
-					shader->AddParameter(paramName, ShaderParameter(ptype, rootParamIndex++, 0, {}));
-					wprintf(L"Root Parameter %d: %s (%s)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
-					mode = PARSEMODE_PRAGMA;
+					if (ptype <= SHADER_PARAM_TYPE_TEXTURE) {
+						shader->AddParameter(paramName, ShaderParameter(ptype, rootParamIndex++, 0, {}));
+						wprintf(L"Root Parameter %d: %s (%s)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
+						mode = PARSEMODE_PRAGMA;
+					} else
+						mode = PARSEMODE_TABLESIZE;
 				} else
 					// integral value (will be placed in a cbuffer)
 					mode = PARSEMODE_PARAMVALUE;
@@ -391,8 +397,17 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			{
 				// cbv value description
 				int cbo1 = cbo;
-				SetParam(shader, rootParamIndex - 1, cbo, paramName, paramType, word);
+				SetCBParam(shader, rootParamIndex - 1, cbo, paramName, paramType, word);
 				wprintf(L"Root Parameter %d offset %d: %s (%s)\n", rootParamIndex - 1, cbo1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
+				mode = PARSEMODE_PRAGMA;
+				break;
+			}
+			case PARSEMODE_TABLESIZE:
+			{
+				// cbv value description
+				int s = _wtoi(word.c_str());
+				shader->AddParameter(paramName, ShaderParameter(SHADER_PARAM_TYPE_TABLE, rootParamIndex++, s));
+				wprintf(L"Root Parameter %d: Table %s [%d]\n", rootParamIndex - 1, paramName.c_str(), s);
 				mode = PARSEMODE_PRAGMA;
 				break;
 			}
@@ -401,7 +416,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 
 		// if a parameter had no default value
 		if (mode == PARSEMODE_PARAMVALUE)
-			SetParam(shader, rootParamIndex - 1, cbo, paramName, paramType, jwstring(L""));
+			SetCBParam(shader, rootParamIndex - 1, cbo, paramName, paramType, jwstring(L""));
 	}
 
 	if (cbo > 0) {

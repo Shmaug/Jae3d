@@ -7,9 +7,7 @@
 #include "Lighting.hlsli"
 #include "PBR.hlsli"
 
-#pragma Parameter tex CombinedTex
-#pragma Parameter tex NormalTex
-#pragma Parameter tex MetallicTex
+#pragma Parameter tbl MaterialTextures 3
 
 #define RootSig \
 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |" \
@@ -19,14 +17,12 @@
 RootSigCore \
 RootSigLighting \
 RootSigPBR \
-"DescriptorTable(SRV(t2), visibility=SHADER_VISIBILITY_PIXEL)," \
-"DescriptorTable(SRV(t3), visibility=SHADER_VISIBILITY_PIXEL)," \
-"DescriptorTable(SRV(t4), visibility=SHADER_VISIBILITY_PIXEL)," \
+"DescriptorTable(SRV(t2), SRV(t3), SRV(t4), visibility=SHADER_VISIBILITY_PIXEL)," \
 "StaticSampler(s1, filter=FILTER_MIN_MAG_MIP_LINEAR, visibility=SHADER_VISIBILITY_PIXEL)"
 
 Texture2D<float4> CombinedTex : register(t2);
-Texture2D<float3> NormalTex : register(t3);
-Texture2D<float4> MetallicTex : register(t4);
+Texture2D<float3> NormalTex   : register(t3);
+Texture2D<float>  MetallicTex : register(t4);
 sampler Sampler : register(s1);
 
 struct v2f {

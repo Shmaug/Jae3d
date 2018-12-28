@@ -17,7 +17,7 @@ void AssetDatabase::LoadAssets(jwstring file) {
 	for (int i = 0; i < a.size(); i++) {
 		if (a[i]) {
 			a[i]->mGroup = file;
-			assets.emplace(a[i]->mName, shared_ptr<Asset>(a[i]));
+			assets.emplace(a[i]->mName.lower(), shared_ptr<Asset>(a[i]));
 		}
 	}
 }
@@ -26,5 +26,5 @@ void AssetDatabase::UnloadAssets() {
 }
 
 shared_ptr<Asset> AssetDatabase::GetAsset(jwstring name) {
-	return assets.at(name);
+	return assets.at(name.lower());
 }

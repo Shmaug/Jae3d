@@ -197,6 +197,7 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	if (state.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE || state.fillMode == D3D12_FILL_MODE_WIREFRAME)
 		psoState.RasterizerState.AntialiasedLineEnable = TRUE;
 	psoState.RasterizerState.FillMode = state.fillMode;
+	psoState.RasterizerState.CullMode = state.cullMode;
 	psoState.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoState.BlendState.RenderTarget[0] = state.blendState;
 	psoState.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
