@@ -4,7 +4,6 @@
 #include "IOUtil.hpp"
 
 #include "jstring.hpp"
-#include "jmap.hpp"
 #include "jvector.hpp"
 
 #include <wrl.h>
@@ -15,7 +14,6 @@
 
 #include <variant>
 #include <memory>
-
 
 class Asset;
 class Mesh;
@@ -135,7 +133,8 @@ enum ALPHA_MODE {
 };
 
 // Stores all types of material parameters and their values
-struct MaterialValue {
+class MaterialValue {
+public:
 	union Range {
 		DirectX::XMFLOAT2 floatRange;
 		DirectX::XMINT2 intRange;
@@ -144,43 +143,48 @@ struct MaterialValue {
 		Range() : uintRange(DirectX::XMUINT2()) {};
 		~Range() {};
 	};
-	using Value = std::variant<
-		float,
-		DirectX::XMFLOAT2,
-		DirectX::XMFLOAT3,
-		DirectX::XMFLOAT4,
-		int,
-		DirectX::XMINT2,
-		DirectX::XMINT3,
-		DirectX::XMINT4,
-		unsigned int,
-		DirectX::XMUINT2,
-		DirectX::XMUINT3,
-		DirectX::XMUINT4,
-		std::shared_ptr<Texture>,
-		std::shared_ptr<ConstantBuffer>,
-		std::shared_ptr<DescriptorTable>>;
-
 	Range range;
-	Value value;
+
+	float floatValue;
+	DirectX::XMFLOAT2 float2Value;
+	DirectX::XMFLOAT3 float3Value;
+	DirectX::XMFLOAT4 float4Value;
+	int intValue;
+	DirectX::XMINT2 int2Value;
+	DirectX::XMINT3 int3Value;
+	DirectX::XMINT4 int4Value;
+	unsigned int uintValue;
+	DirectX::XMUINT2 uint2Value;
+	DirectX::XMUINT3 uint3Value;
+	DirectX::XMUINT4 uint4Value;
+	std::shared_ptr<Texture> textureValue;
+	std::shared_ptr<ConstantBuffer> cbufferValue;
+	std::shared_ptr<DescriptorTable> tableValue;
+
 	int cbufferIndex;
 	int tableSize;
 
-	MaterialValue() : cbufferIndex(-1), tableSize(-1) { range.floatRange = DirectX::XMFLOAT2(); value = 0.0f; }
-	MaterialValue(const MaterialValue &mv) : cbufferIndex(mv.cbufferIndex), tableSize(mv.tableSize) {
-		memcpy(&range, &mv.range, sizeof(Range));
-		memcpy(&value, &mv.value, sizeof(Value));
-	}
+	JAE_API MaterialValue();
+	JAE_API MaterialValue(const MaterialValue &mv);
 	~MaterialValue() {}
 
-	MaterialValue& operator=(const MaterialValue &rhs) {
-		if (&rhs == this) return *this;
-		memcpy(&range, &rhs.range, sizeof(Range));
-		memcpy(&value, &rhs.value, sizeof(Value));
-		cbufferIndex = rhs.cbufferIndex;
-		tableSize = rhs.tableSize;
-		return *this;
-	}
+	JAE_API void set(float val);
+	JAE_API void set(DirectX::XMFLOAT2 val);
+	JAE_API void set(DirectX::XMFLOAT3 val);
+	JAE_API void set(DirectX::XMFLOAT4 val);
+	JAE_API void set(int val);
+	JAE_API void set(DirectX::XMINT2 val);
+	JAE_API void set(DirectX::XMINT3 val);
+	JAE_API void set(DirectX::XMINT4 val);
+	JAE_API void set(unsigned int val);
+	JAE_API void set(DirectX::XMUINT2 val);
+	JAE_API void set(DirectX::XMUINT3 val);
+	JAE_API void set(DirectX::XMUINT4 val);
+	JAE_API void set(std::shared_ptr<Texture> val);
+	JAE_API void set(std::shared_ptr<ConstantBuffer> val);
+	JAE_API void set(std::shared_ptr<DescriptorTable> val);
+	 
+	JAE_API MaterialValue& operator=(const MaterialValue &rhs);
 };
 // Stores numeric material parameters in a cuffer at rootIndex
 struct MaterialParameterCBuffer {
@@ -238,7 +242,7 @@ public:
 	int TableSize() const { return tableSize; }
 	ShaderValue GetDefaultValue() const { return defaultValue; }
 
-	jwstring ToString() {
+	jwstring ToString() const {
 		int c = 0;
 		wchar_t* buf = new wchar_t[256];
 		switch (type) {
@@ -391,9 +395,31 @@ struct ShaderState {
 	D3D12_CULL_MODE cullMode;
 	bool ztest;
 	bool zwrite;
+	DXGI_FORMAT depthFormat;
+	DXGI_FORMAT renderFormat;
+	unsigned int msaaSamples;
 
-	ShaderState() : input(MESH_SEMANTIC_POSITION), blendState(BLEND_STATE_DEFAULT), topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE), ztest(true), zwrite(true), fillMode(D3D12_FILL_MODE_SOLID), cullMode(D3D12_CULL_MODE_BACK) {}
-	ShaderState(const ShaderState &s) : input(s.input), blendState(s.blendState), topology(s.topology), ztest(s.ztest), zwrite(s.zwrite), fillMode(s.fillMode), cullMode(s.cullMode) {}
+	ShaderState() :
+		input(MESH_SEMANTIC_POSITION),
+		blendState(BLEND_STATE_DEFAULT),
+		topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE),
+		ztest(true), zwrite(true),
+		fillMode(D3D12_FILL_MODE_SOLID),
+		cullMode(D3D12_CULL_MODE_BACK),
+		depthFormat(DXGI_FORMAT_D32_FLOAT),
+		renderFormat(DXGI_FORMAT_R8G8B8A8_UNORM),
+		msaaSamples(1) {}
+
+	ShaderState(const ShaderState &s) :
+		input(s.input),
+		blendState(s.blendState),
+		topology(s.topology),
+		ztest(s.ztest), zwrite(s.zwrite),
+		fillMode(s.fillMode),
+		cullMode(s.cullMode),
+		depthFormat(s.depthFormat),
+		renderFormat(s.renderFormat),
+		msaaSamples(s.msaaSamples) {}
 	~ShaderState() {}
 
 	ShaderState& operator =(const ShaderState &rhs) {
@@ -404,9 +430,13 @@ struct ShaderState {
 		ztest = rhs.ztest;
 		zwrite = rhs.zwrite;
 		fillMode = rhs.fillMode;
+		cullMode = rhs.cullMode;
+		depthFormat = rhs.depthFormat;
+		renderFormat = rhs.renderFormat;
+		msaaSamples = rhs.msaaSamples;
 		return *this;
 	}
-	bool operator ==(const ShaderState &rhs) {
+	bool operator ==(const ShaderState &rhs) const {
 		return input == rhs.input &&
 			topology == rhs.topology &&
 			ztest == rhs.ztest &&
@@ -422,8 +452,12 @@ struct ShaderState {
 			blendState.LogicOpEnable == rhs.blendState.LogicOpEnable &&
 			blendState.RenderTargetWriteMask == rhs.blendState.RenderTargetWriteMask &&
 			blendState.SrcBlend == rhs.blendState.SrcBlend &&
-			blendState.SrcBlendAlpha == rhs.blendState.SrcBlendAlpha;
+			blendState.SrcBlendAlpha == rhs.blendState.SrcBlendAlpha &&
+			depthFormat == rhs.depthFormat &&
+			renderFormat == rhs.renderFormat &&
+			msaaSamples == rhs.msaaSamples;
 	}
+
 };
 
 template <class T>
@@ -435,8 +469,8 @@ inline void hash_combine(std::size_t &s, const T &v) {
 namespace std {
 	template<>
 	struct hash<ShaderState> {
-		size_t operator()(const ShaderState &s) const noexcept {
-			size_t h = 0;
+		std::size_t operator()(const ShaderState &s) const {
+			std::size_t h = 0;
 			hash_combine(h, s.input);
 			hash_combine(h, s.topology);
 			hash_combine(h, s.ztest);
@@ -453,6 +487,9 @@ namespace std {
 			hash_combine(h, s.blendState.RenderTargetWriteMask);
 			hash_combine(h, s.blendState.SrcBlend);
 			hash_combine(h, s.blendState.SrcBlendAlpha);
+			hash_combine(h, s.depthFormat);
+			hash_combine(h, s.renderFormat);
+			hash_combine(h, s.msaaSamples);
 			return h;
 		}
 	};

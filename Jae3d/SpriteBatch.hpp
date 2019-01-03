@@ -27,21 +27,27 @@ public:
 	JAE_API void DrawText (std::shared_ptr<Font> font, DirectX::XMFLOAT4 rect, float scale, DirectX::XMFLOAT4 color, jwstring text);
 	JAE_API void DrawTextf(std::shared_ptr<Font> font, DirectX::XMFLOAT4 rect, float scale, DirectX::XMFLOAT4 color, jwstring text, ...);
 
+	JAE_API void SpriteBatch::DrawTexture(_WRL::ComPtr<ID3D12DescriptorHeap> srvHeap, D3D12_GPU_DESCRIPTOR_HANDLE srv, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 color = { 1, 1, 1, 1 }, DirectX::XMFLOAT4 srcRect = { 0, 0, 1, 1 });
+	JAE_API void SpriteBatch::DrawTexture(std::shared_ptr<Texture> texture, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 color = { 1, 1, 1, 1 }, DirectX::XMFLOAT4 srcRect = { 0, 0, 1, 1 });
+
 private:
 	class SpriteDraw {
 	public:
-		std::shared_ptr<Texture> mTexture;
+		_WRL::ComPtr<ID3D12DescriptorHeap> mTextureHeap;
+		D3D12_GPU_DESCRIPTOR_HANDLE mTextureSRV;
 		DirectX::XMFLOAT4 mPixelRect;
 		DirectX::XMFLOAT4 mTextureRect;
 		DirectX::XMFLOAT4 mColor;
 
-		SpriteDraw() : mTexture(nullptr), mPixelRect({ 0,0,0,0 }), mTextureRect({ 0,0,0,0 }), mColor({ 1,1,1,1 }) {}
-		SpriteDraw(std::shared_ptr<Texture> tex, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 tRect, DirectX::XMFLOAT4 color) : mTexture(tex), mPixelRect(rect), mTextureRect(tRect), mColor(color) {}
-		SpriteDraw(const SpriteDraw &t) : mTexture(t.mTexture), mPixelRect(t.mPixelRect), mTextureRect(t.mTextureRect), mColor(t.mColor) {}
+		SpriteDraw() : mTextureHeap(nullptr), mPixelRect({ 0,0,0,0 }), mTextureRect({ 0,0,0,0 }), mColor({ 1,1,1,1 }) {}
+		SpriteDraw(_WRL::ComPtr<ID3D12DescriptorHeap> srvHeap, D3D12_GPU_DESCRIPTOR_HANDLE srv, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 tRect, DirectX::XMFLOAT4 color)
+			: mTextureHeap(srvHeap), mTextureSRV(srv), mPixelRect(rect), mTextureRect(tRect), mColor(color) {}
+		SpriteDraw(const SpriteDraw &t) : mTextureHeap(t.mTextureHeap), mTextureSRV(t.mTextureSRV), mPixelRect(t.mPixelRect), mTextureRect(t.mTextureRect), mColor(t.mColor) {}
 		~SpriteDraw() {}
 
 		SpriteDraw& operator=(const SpriteDraw &rhs) {
-			mTexture = rhs.mTexture;
+			mTextureHeap = rhs.mTextureHeap;
+			mTextureSRV = rhs.mTextureSRV;
 			mPixelRect = rhs.mPixelRect;
 			mTextureRect = rhs.mTextureRect;
 			mColor = rhs.mColor;
@@ -71,7 +77,7 @@ private:
 		D3D12_VERTEX_BUFFER_VIEW mQuadVertexBufferView;
 		D3D12_INDEX_BUFFER_VIEW  mQuadIndexBufferView;
 		QuadVertex* mMappedQuadVertices;
-		uint16_t*     mMappedQuadIndices;
+		uint16_t*   mMappedQuadIndices;
 		size_t mMappedQuadLength;
 		unsigned int mQuadOffset;
 
@@ -98,7 +104,7 @@ private:
 		JAE_API void Reset();
 		JAE_API void Release();
 
-		JAE_API void DrawQuadGroup(_WRL::ComPtr<ID3D12GraphicsCommandList> cmdList, std::shared_ptr<Texture> tex, unsigned int startQuad);
+		JAE_API void SpriteBatch::SpriteContext::DrawQuadGroup(std::shared_ptr<CommandList> cmdList, unsigned int startQuad, _WRL::ComPtr<ID3D12DescriptorHeap> heap, D3D12_GPU_DESCRIPTOR_HANDLE tex);
 		JAE_API void DrawLines(_WRL::ComPtr<ID3D12GraphicsCommandList> cmdList, unsigned int startIndex);
 	};
 

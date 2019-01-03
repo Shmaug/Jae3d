@@ -39,7 +39,6 @@ public:
 	static _WRL::ComPtr<ID3D12Device2> GetDevice() { return mDevice; }
 	JAE_API static std::shared_ptr<Window> GetWindow();
 	JAE_API static std::shared_ptr<SpriteBatch> GetSpriteBatch();
-	JAE_API static UINT GetMSAASamples();
 
 	JAE_API static void Initialize(HWND hWnd, unsigned int bufferCount);
 	JAE_API static void Destroy();
@@ -52,8 +51,6 @@ public:
 	JAE_API static UINT DescriptorIncrement(D3D12_DESCRIPTOR_HEAP_TYPE type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	JAE_API static bool CheckTearingSupport();
-	JAE_API static DXGI_FORMAT GetDisplayFormat();
-	JAE_API static DXGI_FORMAT GetDepthFormat();
 	JAE_API static DXGI_SAMPLE_DESC GetSupportedMSAAQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags);
 	
 	JAE_API static void UploadData(std::shared_ptr<CommandList> commandList, ID3D12Resource** dst, ID3D12Resource** intermediate, size_t count, size_t stride, const void* data);

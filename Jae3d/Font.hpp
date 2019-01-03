@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.hpp"
+#include <unordered_map>
 
 #include "Asset.hpp"
 #include "Texture.hpp"
@@ -45,8 +46,8 @@ private:
 	unsigned int mLineSpace;
 	unsigned int mTexDpi;
 
-	jmap<wchar_t, FontGlyph> mGlyphs = jmap<wchar_t, FontGlyph>(251);
-	jmap<uint32_t, int> mKerning = jmap<uint32_t, int>(251);
+	std::unordered_map<wchar_t, FontGlyph> mGlyphs;
+	std::unordered_map<uint32_t, int> mKerning;
 	std::shared_ptr<Texture> mTexture;
 };
 

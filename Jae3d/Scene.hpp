@@ -29,14 +29,15 @@ public:
 	std::shared_ptr<T> AddObject(jwstring name) {
 		static_assert(std::is_base_of<Object, T>::value, "T must be an Object!");
 
-		std::shared_ptr<T> object = std::shared_ptr<T>(new T(name));
-		object->mScene = this;
+		T* obj = new T(name);
+		obj->mScene = this;
+		auto ptr = std::shared_ptr<T>(obj);
 
-		mObjects.push_back(object);
-		if (Renderer* r = dynamic_cast<Renderer*>(object.get())) mRenderers.push_back(r);
-		if (Light* l = dynamic_cast<Light*>(object.get())) mLights.push_back(l);
+		mObjects.push_back(ptr);
+		if (Renderer* r = dynamic_cast<Renderer*>(obj)) mRenderers.push_back(r);
+		if (Light* l = dynamic_cast<Light*>(obj)) mLights.push_back(l);
 
-		return object;
+		return ptr;
 	}
 
 	// Adds an object to this scene

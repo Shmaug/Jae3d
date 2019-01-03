@@ -384,7 +384,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 					cbo = 0;
 					if (ptype <= SHADER_PARAM_TYPE_TEXTURE) {
 						shader->AddParameter(paramName, ShaderParameter(ptype, rootParamIndex++, 0, {}));
-						wprintf(L"Root Parameter %d: %s (%s)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
+						wprintf(L"Root Parameter %d: %s (%s)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName).ToString().c_str());
 						mode = PARSEMODE_PRAGMA;
 					} else
 						mode = PARSEMODE_TABLESIZE;
@@ -398,7 +398,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				// cbv value description
 				int cbo1 = cbo;
 				SetCBParam(shader, rootParamIndex - 1, cbo, paramName, paramType, word);
-				wprintf(L"Root Parameter %d offset %d: %s (%s)\n", rootParamIndex - 1, cbo1, paramName.c_str(), shader->GetParameter(paramName)->ToString().c_str());
+				wprintf(L"Root Parameter %d offset %d: %s (%s)\n", rootParamIndex - 1, cbo1, paramName.c_str(), shader->GetParameter(paramName).ToString().c_str());
 				mode = PARSEMODE_PRAGMA;
 				break;
 			}

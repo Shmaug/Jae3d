@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "Common.hpp"
 #include "Asset.hpp"
 #include "Mesh.hpp"
@@ -33,7 +35,8 @@ public:
 
 	ID3D12RootSignature* GetRootSig() const { return mRootSignature.Get(); }
 	ID3DBlob* GetBlob(SHADER_STAGE stage) const { return mBlobs[stage]; }
-	ShaderParameter* GetParameter(jwstring name) const { return &mParams.at(name); }
+	bool HasParameter(jwstring name) const { return mParams.count(name); }
+	const ShaderParameter& GetParameter(jwstring name) const { return mParams.at(name); }
 
 	void AddParameter(jwstring name, ShaderParameter &param) { mParams.emplace(name, param); }
 	void AddParameterBuffer(int rootIndex, int size) { mCBufferParameters.push_back(ShaderParameterBuffer(rootIndex, size)); }
@@ -41,7 +44,8 @@ public:
 	ShaderParameterBuffer GetParameterBuffer(int index) const { return mCBufferParameters[index]; }
 
 	bool HasParameters() const { return !mParams.empty(); }
-	jmap<jwstring, ShaderParameter>::jmap_iterator ParameterBegin() { return mParams.begin(); }
+	std::unordered_map<jwstring, ShaderParameter>::const_iterator ParameterBegin() { return mParams.begin(); }
+	std::unordered_map<jwstring, ShaderParameter>::const_iterator ParameterEnd() { return mParams.end(); }
 
 private:
 	friend class CommandList;
@@ -51,7 +55,7 @@ private:
 	// Sets the compute root signature and compute PSO on the GPU
 	JAE_API void SetCompute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
-	jmap<ShaderState, _WRL::ComPtr<ID3D12PipelineState>> mStates;
+	std::unordered_map<ShaderState, _WRL::ComPtr<ID3D12PipelineState>> mStates;
 	_WRL::ComPtr<ID3D12PipelineState> mComputePSO;
 
 	JAE_API _WRL::ComPtr<ID3D12PipelineState> CreatePSO(ShaderState &state);
@@ -62,6 +66,6 @@ private:
 
 	jvector<ShaderParameterBuffer> mCBufferParameters;
 
-	jmap<jwstring, ShaderParameter> mParams;
+	std::unordered_map<jwstring, ShaderParameter> mParams;
 	ID3DBlob* mBlobs[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 };

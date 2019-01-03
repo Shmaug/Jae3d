@@ -46,5 +46,5 @@ private:
 	MaterialParameterCBuffer* mParamCbuffers;
 
 	std::shared_ptr<Shader> mShader;
-	jmap<jwstring, MaterialValue> mParamValues;
+	std::unordered_map<jwstring, MaterialValue> mParamValues;
 };

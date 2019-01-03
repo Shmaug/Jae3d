@@ -116,7 +116,7 @@ bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 }
 
 void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state) {
-	if (!mStates.has(state))
+	if (mStates.count(state) == 0)
 		mStates.emplace(state, CreatePSO(state));
 	commandList->SetPipelineState(mStates.at(state).Get());
 }
@@ -133,8 +133,6 @@ void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 }
 
 ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
-	auto device = Graphics::GetDevice();
-
 	if (!mBlobs[SHADER_STAGE_VERTEX] && !mBlobs[SHADER_STAGE_HULL] &&
 		!mBlobs[SHADER_STAGE_DOMAIN] && !mBlobs[SHADER_STAGE_GEOMETRY] && !mBlobs[SHADER_STAGE_PIXEL]){
 		// no applicable blobs!
@@ -182,7 +180,7 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 		inputElements[i++] = { "TEXCOORD", 3, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	DXGI_SAMPLE_DESC sampDesc = {};
-	sampDesc.Count = Graphics::GetMSAASamples();
+	sampDesc.Count = state.msaaSamples;
 	sampDesc.Quality = 0;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoState = {};
@@ -210,12 +208,12 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	psoState.SampleMask = UINT_MAX;
 	psoState.PrimitiveTopologyType = state.topology;
 	psoState.NumRenderTargets = 1;
-	psoState.RTVFormats[0] = Graphics::GetDisplayFormat();
-	psoState.DSVFormat = Graphics::GetDepthFormat();
+	psoState.RTVFormats[0] = state.renderFormat;
+	psoState.DSVFormat = state.depthFormat;
 	psoState.SampleDesc = sampDesc;
 
 	ComPtr<ID3D12PipelineState> pso;
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&psoState, IID_PPV_ARGS(&pso)));
+	ThrowIfFailed(Graphics::GetDevice()->CreateGraphicsPipelineState(&psoState, IID_PPV_ARGS(&pso)));
 
 	delete[] inputElements;
 	return pso;
@@ -377,14 +375,12 @@ void Shader::WriteData(MemoryStream &ms) {
 	int i = 0;
 	ms.Write((uint32_t)0);
 	if (!mParams.empty()) {
-		auto it = mParams.begin();
-		while (it.Valid()) {
-			ms.WriteString((*it).Key());
-			ms.Write((uint32_t)(*it).Value().Type());
-			ms.Write((*it).Value().RootIndex());
-			ms.Write((*it).Value().CBufferOffset());
-			ms.Write((*it).Value().GetDefaultValue());
-			it++;
+		for (const auto& it : mParams){
+			ms.WriteString(it.first);
+			ms.Write((uint32_t)it.second.Type());
+			ms.Write(it.second.RootIndex());
+			ms.Write(it.second.CBufferOffset());
+			ms.Write(it.second.GetDefaultValue());
 			i++;
 		}
 		size_t posc = ms.Tell();

@@ -15,6 +15,8 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptor() const { return mHeap->GetCPUDescriptorHandleForHeapStart(); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GpuDescriptor() const { return mHeap->GetGPUDescriptorHandleForHeapStart(); }
 
+	unsigned int Size() const { return mSize; }
+
 private:
 	_WRL::ComPtr<ID3D12DescriptorHeap> mHeap;
 	unsigned int mSize;

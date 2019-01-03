@@ -4,8 +4,11 @@
 #include "Shader.hpp"
 #include "Mesh.hpp"
 #include "Material.hpp"
+#include "ConstantBuffer.hpp"
 #include "Texture.hpp"
 #include "AssetDatabase.hpp"
+#include "Graphics.hpp"
+#include "Window.hpp"
 
 using namespace std;
 using namespace Microsoft::WRL;
@@ -23,10 +26,14 @@ void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator, unsigned int f
 	mActiveMaterial = nullptr;
 	mFrameIndex = frameIndex;
 	mState = ShaderState();
+	mGlobals.clear();
 }
 
 void CommandList::TransitionResource(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to) {
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), from, to));
+}
+void CommandList::TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to) {
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, from, to));
 }
 
 void CommandList::SetCompute(shared_ptr<Shader> shader) {
@@ -61,35 +68,44 @@ void CommandList::SetCamera(shared_ptr<Camera> camera) {
 	if (mActiveCamera == camera) return;
 
 	if (camera) {
+		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)camera->mPixelWidth, (float)camera->mPixelHeight);
+		D3D12_RECT sr = { 0, 0, (long)camera->mPixelWidth, (long)camera->mPixelHeight };
+		mCommandList->RSSetViewports(1, &vp);
+		mCommandList->RSSetScissorRects(1, &sr);
+		mCommandList->OMSetRenderTargets(1, &camera->RTVHandle(), FALSE, &camera->DSVHandle());
+		
 		camera->WriteCBuffer(mFrameIndex);
 		SetGlobalCBuffer(L"CameraBuffer", camera->mCBuffer);
+		mState.msaaSamples = camera->mMSAACount;
+		mState.depthFormat = camera->mDepthFormat;
+		mState.renderFormat = camera->mRenderFormat;
 	}
 	mActiveCamera = camera;
 }
 
-void CommandList::SetGlobalTexture(jwstring param, std::shared_ptr<Texture> tex) {
-	if (mGlobals.has(param)) {
+void CommandList::SetGlobalTexture(jwstring param, shared_ptr<Texture> tex) {
+	if (mGlobals.count(param)) {
 		GlobalParam& p = mGlobals.at(param);
 		p.type = SHADER_PARAM_TYPE_TEXTURE;
-		p.value = tex;
+		p.value.set(tex);
 	} else {
 		GlobalParam p;
 		p.type = SHADER_PARAM_TYPE_TEXTURE;
-		p.value = tex;
+		p.value.set(tex);
 		mGlobals.emplace(param, p);
 	}
 
 	if (mActiveMaterial) mActiveMaterial->SetTexture(param, tex, mFrameIndex);
 }
-void CommandList::SetGlobalCBuffer(jwstring param, std::shared_ptr<ConstantBuffer> cbuf) {
-	if (mGlobals.has(param)) {
+void CommandList::SetGlobalCBuffer(jwstring param, shared_ptr<ConstantBuffer> cbuf) {
+	if (mGlobals.count(param)) {
 		GlobalParam& p = mGlobals.at(param);
 		p.type = SHADER_PARAM_TYPE_CBUFFER;
-		p.value = cbuf;
+		p.value.set(cbuf);
 	} else {
 		GlobalParam p;
 		p.type = SHADER_PARAM_TYPE_CBUFFER;
-		p.value = cbuf;
+		p.value.set(cbuf);
 		mGlobals.emplace(param, p);
 	}
 
@@ -98,17 +114,19 @@ void CommandList::SetGlobalCBuffer(jwstring param, std::shared_ptr<ConstantBuffe
 void CommandList::SetGlobals() {
 	if (!mActiveMaterial) return;
 
-	auto it = mGlobals.begin();
-	while (it.Valid()) {
-		switch ((*it).Value().type) {
+	for (const auto &it : mGlobals){
+		switch (it.second.type) {
 		case SHADER_PARAM_TYPE_CBUFFER:
-			mActiveMaterial->SetCBuffer((*it).Key(), get<shared_ptr<ConstantBuffer>>((*it).Value().value), mFrameIndex);
+			mActiveMaterial->SetCBuffer(it.first, it.second.value.cbufferValue, mFrameIndex);
 			break;
 		case SHADER_PARAM_TYPE_TEXTURE:
-			mActiveMaterial->SetTexture((*it).Key(), get<shared_ptr<Texture>>((*it).Value().value), mFrameIndex);
+			mActiveMaterial->SetTexture(it.first, it.second.value.textureValue, mFrameIndex);
 			break;
+		case SHADER_PARAM_TYPE_TABLE:
+			mActiveMaterial->SetDescriptorTable(it.first, it.second.value.tableValue, mFrameIndex);
+			break;
+			// TODO: the rest of the types
 		}
-		it++;
 	}
 }
 

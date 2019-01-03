@@ -21,7 +21,7 @@ Scene::~Scene() {
 
 void Scene::Draw(std::shared_ptr<CommandList> commandList, BoundingFrustum cullFrustum) {
 	for (int i = 0; i < mRenderers.size(); i++) {
-		if (!mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
+		if (!mRenderers[i]->mVisible || !mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
 		mRenderers[i]->Draw(commandList);
 	}
 }

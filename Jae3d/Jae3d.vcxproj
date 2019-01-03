@@ -262,6 +262,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CommandList.cpp" />
     <ClCompile Include="CommandQueue.cpp" />
+    <ClCompile Include="Common.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="dds\DDSTextureLoader.cpp" />
     <ClCompile Include="DescriptorTable.cpp" />
@@ -306,7 +307,6 @@
     <ClInclude Include="Input.hpp" />
     <ClInclude Include="IOUtil.hpp" />
     <ClInclude Include="jae.hpp" />
-    <ClInclude Include="jmap.hpp" />
     <ClInclude Include="jstring.hpp" />
     <ClInclude Include="jvector.hpp" />
     <ClInclude Include="KeyCode.hpp" />

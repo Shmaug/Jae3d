@@ -33,12 +33,7 @@ Window::Window(HWND hWnd, UINT bufferCount) : mhWnd(hWnd), mBufferCount(bufferCo
 	CreateSwapChain();
 
 	mRTVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	mDSVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-
 	mRTVDescriptorHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, mBufferCount);
-	mDSVDescriptorHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
-
-	mMSAADescriptorHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
 
 	CreateBuffers();
 }
@@ -103,64 +98,6 @@ void Window::CreateBuffers() {
 		rtvHandle.Offset(mRTVDescriptorSize);
 	}
 #pragma endregion
-
-#pragma region msaa buffer
-	D3D12_RESOURCE_DESC msaaRTDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-		mDisplayFormat,
-		mClientWidth,
-		mClientHeight,
-		1, // This render target view has only one texture.
-		1, // Use a single mipmap level
-		mmsaaSampleCount);
-	msaaRTDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
-	D3D12_CLEAR_VALUE msaaOptimizedClearValue = {};
-	msaaOptimizedClearValue.Format = mDisplayFormat;
-	msaaOptimizedClearValue.DepthStencil = { 1.0f, 0 };
-	msaaOptimizedClearValue.Color[0] = 0.0f;
-	msaaOptimizedClearValue.Color[1] = 0.0f;
-	msaaOptimizedClearValue.Color[2] = 0.0f;
-	msaaOptimizedClearValue.Color[3] = 1.0f;
-
-	CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	ThrowIfFailed(device->CreateCommittedResource(
-		&heapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&msaaRTDesc,
-		D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
-		&msaaOptimizedClearValue,
-		IID_PPV_ARGS(mMSAATarget.ReleaseAndGetAddressOf())
-	));
-	mMSAATarget->SetName(L"MSAA Render Target");
-
-	D3D12_RENDER_TARGET_VIEW_DESC msaaDesc = {};
-	msaaDesc.Format = mDisplayFormat;
-	msaaDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
-	device->CreateRenderTargetView(mMSAATarget.Get(), &msaaDesc, mMSAADescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-#pragma endregion
-
-#pragma region depth buffer
-	D3D12_CLEAR_VALUE optimizedClearValue = {};
-	optimizedClearValue.Format = mDepthFormat;
-	optimizedClearValue.DepthStencil = { 1.0f, 0 };
-
-	ThrowIfFailed(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Tex2D(mDepthFormat, mClientWidth, mClientHeight, 1, 1, mmsaaSampleCount, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&optimizedClearValue,
-		IID_PPV_ARGS(mDepthBuffer.ReleaseAndGetAddressOf())
-	));
-
-	D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
-	dsv.Format = mDepthFormat;
-	dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
-	dsv.Texture2D.MipSlice = 0;
-	dsv.Flags = D3D12_DSV_FLAG_NONE;
-	device->CreateDepthStencilView(mDepthBuffer.Get(), &dsv, mDSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-#pragma endregion
-
 }
 void Window::SetFullscreen(bool fullscreen) {
 	if (mFullscreen == fullscreen) return;
@@ -252,27 +189,16 @@ void Window::Close() {
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE Window::GetCurrentRenderTargetView() {
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(mMSAADescriptorHeap->GetCPUDescriptorHandleForHeapStart(), 0, mRTVDescriptorSize);
-	return rtv;
-}
-D3D12_CPU_DESCRIPTOR_HANDLE Window::GetDepthStencilView() {
-	return mDSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(mRTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), mCurrentBackBufferIndex, mRTVDescriptorSize);
 }
 
-void Window::PrepareRenderTargets(std::shared_ptr<CommandList> commandList) {
-	commandList->TransitionResource(mMSAATarget.Get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+void Window::PrepareRender(std::shared_ptr<CommandList> commandList) {
+	commandList->TransitionResource(mRenderBuffers[mCurrentBackBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
-
 void Window::Present(std::shared_ptr<CommandList> commandList, shared_ptr<CommandQueue> commandQueue){
-	auto backBuffer = mRenderBuffers[mCurrentBackBufferIndex];
-
 	auto d3dCommmandList = commandList->D3DCommandList();
 
-	// Resolve msaa buffers
-	commandList->TransitionResource(mMSAATarget.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
-	commandList->TransitionResource(backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RESOLVE_DEST);
-	d3dCommmandList->ResolveSubresource(backBuffer.Get(), 0, mMSAATarget.Get(), 0, mDisplayFormat);
-	commandList->TransitionResource(backBuffer.Get(), D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT);
+	commandList->TransitionResource(mRenderBuffers[mCurrentBackBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 	// Execute the command list
 	mFenceValues[mCurrentBackBufferIndex] = commandQueue->Execute(commandList);

@@ -35,7 +35,7 @@ void MeshRenderer::Draw(shared_ptr<CommandList> commandList) {
 	mCBuffer->WriteFloat4x4(ObjectToWorld(), 0, commandList->GetFrameIndex());
 	mCBuffer->WriteFloat4x4(WorldToObject(), sizeof(XMFLOAT4X4), commandList->GetFrameIndex());
 
-	mMaterial->SetCBuffer(L"ObjectBuffer", mCBuffer, commandList->GetFrameIndex());
 	commandList->SetMaterial(mMaterial);
+	mMaterial->SetCBuffer(L"ObjectBuffer", mCBuffer, commandList->GetFrameIndex());
 	commandList->DrawMesh(*mMesh);
 }

@@ -167,17 +167,11 @@ bool Graphics::CheckTearingSupport() {
 	return allowTearing == TRUE;
 }
 
-DXGI_FORMAT Graphics::GetDisplayFormat() { return mWindow->GetDisplayFormat(); }
-DXGI_FORMAT Graphics::GetDepthFormat() { return mWindow->GetDepthFormat(); }
-
 unsigned int Graphics::BufferCount() { return mWindow->BufferCount(); }
 unsigned int Graphics::CurrentFrameIndex() { return mWindow->CurrentFrameIndex(); }
 
 shared_ptr<Window> Graphics::GetWindow() { return mWindow; }
 shared_ptr<SpriteBatch> Graphics::GetSpriteBatch() { return mSpriteBatch; }
-UINT Graphics::GetMSAASamples() {
-	return mWindow->GetMSAASamples();
-}
 
 UINT Graphics::DescriptorIncrement(D3D12_DESCRIPTOR_HEAP_TYPE type) {
 	return mDevice->GetDescriptorHandleIncrementSize(type);

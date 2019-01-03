@@ -25,6 +25,7 @@ using namespace std;
 shared_ptr<Mesh> quadMesh;
 shared_ptr<Shader> textureShader;
 shared_ptr<Shader> meshShader;
+shared_ptr<Camera> camera;
 
 void Viewport::Init(HWND hwnd){
 	Graphics::Initialize(hwnd, 2);
@@ -99,11 +100,16 @@ void Viewport::Init(HWND hwnd){
 	quadMesh = shared_ptr<Mesh>(new Mesh(L"Quad"));
 	quadMesh->LoadQuad(1.0f);
 	quadMesh->UploadStatic();
+
+	camera = shared_ptr<Camera>(new Camera(L"Camera"));
 }
 
 void Viewport::Resize() {
 	if (!Graphics::IsInitialized()) return;
 	Graphics::GetWindow()->Resize();
+	camera->PixelWidth(Graphics::GetWindow()->GetWidth());
+	camera->PixelHeight(Graphics::GetWindow()->GetHeight());
+	camera->CreateRenderBuffers();
 	DoFrame();
 }
 void Viewport::DoFrame() {
@@ -112,20 +118,8 @@ void Viewport::DoFrame() {
 	auto d3dCommandList = commandList->D3DCommandList();
 	auto window = Graphics::GetWindow();
 
-	window->PrepareRenderTargets(commandList);
-
-	auto rtv = window->GetCurrentRenderTargetView();
-	auto dsv = window->GetDepthStencilView();
-
-	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)window->GetWidth(), (float)window->GetHeight());
-	D3D12_RECT sr = { 0, 0, window->GetWidth(), window->GetHeight() };
-	commandList->D3DCommandList()->RSSetViewports(1, &vp);
-	commandList->D3DCommandList()->RSSetScissorRects(1, &sr);
-	commandList->D3DCommandList()->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-
-	DirectX::XMFLOAT4 clearColor = { 37.0f / 255.0f, 37.0f / 255.0f, 38.0f / 255.0f, 1.f };
-	commandList->D3DCommandList()->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
-	commandList->D3DCommandList()->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	window->PrepareRender(commandList);
+	commandList->SetCamera(camera);
 
 	if (shownAsset.asset) {
 		switch (shownAsset.asset->TypeId()) {
@@ -195,6 +189,15 @@ void Viewport::DoFrame() {
 		}
 		}
 	}
+
+	ID3D12Resource* camrt = camera->RenderBuffer().Get();
+	ID3D12Resource* winrt = window->RenderBuffer().Get();
+	commandList->TransitionResource(camrt, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+	commandList->TransitionResource(winrt, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+	d3dCommandList->ResolveSubresource(winrt, 0, camrt, 0, camera->RenderFormat());
+	commandList->TransitionResource(camrt, D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	commandList->TransitionResource(winrt, D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
 	window->Present(commandList, commandQueue);
 }
 

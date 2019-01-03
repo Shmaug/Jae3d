@@ -17,14 +17,17 @@ using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-
-Camera::Camera(jwstring name) : Object(name), mFieldOfView(70.0f), mNear(.1f), mFar(1000.0f) {
+Camera::Camera(jwstring name) : Object(name), mFieldOfView(70.0f), mNear(.1f), mFar(1000.0f),
+mDepthFormat(DXGI_FORMAT_D32_FLOAT), mRenderFormat(DXGI_FORMAT_R8G8B8A8_UNORM), mMSAACount(4) {
 	mPixelWidth = Graphics::GetWindow()->GetWidth();
 	mPixelHeight = Graphics::GetWindow()->GetHeight();
 
 	size_t size = sizeof(XMFLOAT4X4) * 4 + sizeof(XMFLOAT4) * 2;
-	auto cb = new ConstantBuffer(size, L"Camera CB", Graphics::BufferCount());
-	mCBuffer = shared_ptr<ConstantBuffer>(cb);
+	mCBuffer = shared_ptr<ConstantBuffer>(new ConstantBuffer(size, mName + L" CB", Graphics::BufferCount()));
+
+	mDSVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+	mRTVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+	CreateRenderBuffers();
 }
 Camera::~Camera() {}
 
@@ -40,6 +43,74 @@ void Camera::WriteCBuffer(unsigned int frameIndex){
 	mCBuffer->WriteFloat4(XMFLOAT4((float)mPixelWidth, (float)mPixelHeight, mNear, mFar), o, frameIndex);
 }
 
+void Camera::CreateRenderBuffers(){
+	auto device = Graphics::GetDevice();
+
+#pragma region render buffer
+	D3D12_RESOURCE_DESC rtvdesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		mRenderFormat,
+		mPixelWidth,
+		mPixelHeight,
+		1, // This render target view has only one texture.
+		1, // Use a single mipmap level
+		mMSAACount);
+	rtvdesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE rtvClearValue = {};
+	rtvClearValue.Format = mRenderFormat;
+	rtvClearValue.DepthStencil = { 1.0f, 0 };
+	rtvClearValue.Color[0] = 0.0f;
+	rtvClearValue.Color[1] = 0.0f;
+	rtvClearValue.Color[2] = 0.0f;
+	rtvClearValue.Color[3] = 1.0f;
+
+	CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+	ThrowIfFailed(device->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&rtvdesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		&rtvClearValue,
+		IID_PPV_ARGS(mRenderTarget.ReleaseAndGetAddressOf())
+	));
+	mRenderTarget->SetName((mName + L" Render Target").c_str());
+
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = mRenderFormat;
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+	device->CreateRenderTargetView(mRenderTarget.Get(), &rtvDesc, mRTVHeap->GetCPUDescriptorHandleForHeapStart());
+#pragma endregion
+#pragma region depth buffer
+
+	D3D12_CLEAR_VALUE optimizedClearValue = {};
+	optimizedClearValue.Format = mDepthFormat;
+	optimizedClearValue.DepthStencil = { 1.0f, 0 };
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Tex2D(mDepthFormat, mPixelWidth, mPixelHeight, 1, 1, mMSAACount, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&optimizedClearValue,
+		IID_PPV_ARGS(mDepthBuffer.ReleaseAndGetAddressOf())
+	));
+	mDepthBuffer->SetName((mName + L" Depth Buffer").c_str());
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+	dsv.Format = mDepthFormat;
+	dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+	dsv.Texture2D.MipSlice = 0;
+	dsv.Flags = D3D12_DSV_FLAG_NONE;
+	device->CreateDepthStencilView(mDepthBuffer.Get(), &dsv, mDSVHeap->GetCPUDescriptorHandleForHeapStart());
+#pragma endregion
+}
+
+void Camera::Clear(shared_ptr<CommandList> commandList) {
+	DirectX::XMFLOAT4 clearColor = { 0.0f, 0.0f, 0.0f, 1.f };
+	commandList->D3DCommandList()->ClearRenderTargetView(RTVHandle(), (float*)&clearColor, 0, nullptr);
+	commandList->D3DCommandList()->ClearDepthStencilView(DSVHandle(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+}
+
 bool Camera::UpdateTransform(){
 	if (!Object::UpdateTransform()) return false;
 
@@ -47,7 +118,11 @@ bool Camera::UpdateTransform(){
 	XMVECTOR worldRot = XMLoadFloat4(&WorldRotation());
 
 	XMMATRIX view = XMMatrixLookToLH(worldPos, XMVector3Rotate(XMVectorSet(0, 0, 1, 0), worldRot), XMVector3Rotate(XMVectorSet(0, 1, 0, 0), worldRot));
-	XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(mFieldOfView), (float)mPixelWidth / (float)mPixelHeight , mNear, mFar);
+	XMMATRIX proj;
+	if (mFieldOfView)
+		proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(mFieldOfView), (float)mPixelWidth / (float)mPixelHeight, mNear, mFar);
+	else
+		proj = XMMatrixPerspectiveOffCenterLH(mPerspectiveBounds.x, mPerspectiveBounds.y, mPerspectiveBounds.z, mPerspectiveBounds.w, mNear, mFar);
 
 	XMStoreFloat4x4(&mView, view);
 	XMStoreFloat4x4(&mProjection, proj);

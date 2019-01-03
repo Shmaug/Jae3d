@@ -48,6 +48,7 @@ public:
 	JAE_API void Parent(std::shared_ptr<Object> p);
 	std::shared_ptr<Object> Parent() { return mParent; }
 
+	Scene* GetScene() const { return mScene; }
 	JAE_API void SetScene(Scene* scene);
 	JAE_API virtual bool UpdateTransform();
 

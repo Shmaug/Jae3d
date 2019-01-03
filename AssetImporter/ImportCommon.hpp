@@ -3,10 +3,9 @@
 
 #include <Common.hpp>
 
-#include <jmap.hpp>
+#include <unordered_map>
 #include <jstring.hpp>
 
-#include <unordered_map>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -15,6 +14,7 @@
 #include <type_traits>
 #include <tuple>
 #include <utility>
+#include <jstring.hpp>
 
 const std::unordered_map<DXGI_FORMAT, jwstring> FormatToString {
 	{ DXGI_FORMAT_UNKNOWN		             , L"unknown"					},

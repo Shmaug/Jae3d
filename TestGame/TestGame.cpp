@@ -75,8 +75,6 @@ void TestGame::Initialize() {
 	camera = scene->AddObject<Camera>(L"Camera");
 	camera->LocalPosition(0, 1.668f, -2.0f);
 	camera->FieldOfView(60);
-	camera->PixelWidth(Graphics::GetWindow()->GetWidth());
-	camera->PixelHeight(Graphics::GetWindow()->GetHeight());
 
 	shared_ptr<Shader> shader = AssetDatabase::GetAsset<Shader>(L"Default");
 	shared_ptr<Shader> textured = AssetDatabase::GetAsset<Shader>(L"Textured");
@@ -173,6 +171,7 @@ void TestGame::OnResize() {
 	auto window = Graphics::GetWindow();
 	camera->PixelWidth(window->GetWidth());
 	camera->PixelHeight(window->GetHeight());
+	camera->CreateRenderBuffers();
 }
 
 void TestGame::Update(double total, double delta) {
@@ -240,23 +239,11 @@ void TestGame::Update(double total, double delta) {
 #pragma endregion
 }
 
-void TestGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE dsv) {
-	auto window = Graphics::GetWindow();
-	float w = (float)window->GetWidth();
-	float h = (float)window->GetHeight();
+void TestGame::Render(shared_ptr<Camera> cam, shared_ptr<CommandList> commandList) {
 	unsigned int i = commandList->GetFrameIndex();
 
-	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, w, h);
-	D3D12_RECT sr = { 0, 0, window->GetWidth(), window->GetHeight() };
-	commandList->D3DCommandList()->RSSetViewports(1, &vp);
-	commandList->D3DCommandList()->RSSetScissorRects(1, &sr);
-	commandList->D3DCommandList()->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-
-	DirectX::XMFLOAT4 clearColor = { 0.2f, 0.2f, 0.2f, 1.f };
-	commandList->D3DCommandList()->ClearRenderTargetView(rtv, (float*)&clearColor, 0, nullptr);
-	commandList->D3DCommandList()->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	commandList->SetCamera(camera);
+	commandList->SetCamera(cam);
+	cam->Clear(commandList);
 
 	Profiler::BeginSample(L"Calculate Tiled Lighting");
 	uint64_t lfence = lighting->CalculateScreenLights(camera, scene, i);
@@ -270,33 +257,36 @@ void TestGame::Render(shared_ptr<CommandList> commandList, D3D12_CPU_DESCRIPTOR_
 	if (wireframe) commandList->SetFillMode(D3D12_FILL_MODE_WIREFRAME);
 
 	Profiler::BeginSample(L"Draw Scene");
-	scene->Draw(commandList, camera->Frustum());
+	scene->Draw(commandList, cam->Frustum());
 	Profiler::EndSample();
 
 	Profiler::BeginSample(L"Draw Scene Debug");
-	if (debugDraw) scene->DebugDraw(commandList, camera->Frustum());
+	if (debugDraw) scene->DebugDraw(commandList, cam->Frustum());
 
-	#pragma region performance overlay
+#pragma region performance overlay
 	commandList->SetFillMode(D3D12_FILL_MODE_SOLID);
 	shared_ptr<SpriteBatch> sb = Graphics::GetSpriteBatch();
-	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender() * .5f), .5f, {1,1,1,1}, L"FPS: %d.%d\n", (int)mfps, (int)((mfps - floor(mfps)) * 10.0f + .5f));
+	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender() * .5f), .5f, { 1,1,1,1 }, L"FPS: %d.%d\n", (int)mfps, (int)((mfps - floor(mfps)) * 10.0f + .5f));
 	sb->DrawTextf(arial, XMFLOAT2(10.0f, (float)arial->GetAscender()), .5f, { 1,1,1,1 }, pbuf);
 
 	jvector<XMFLOAT3> verts;
 	jvector<XMFLOAT4> colors;
 	for (int i = 1; i < 128; i++) {
 		int d = frameTimeIndex - i; if (d < 0) d += 128;
-		verts.push_back({ 512.0f - i * 4.0f, h - frameTimes[d] * 5000, 0 });
-		float r = fmin(frameTimes[d] / .025f, 1.0f); // full red < 40fps
+		verts.push_back({ 512.0f - i * 4.0f, cam->PixelHeight() - frameTimes[d] * 5000, 0 });
+		// full red < 30fps, mostly green > 60fps
+		float r = fmin(frameTimes[d] / .025f, 1.0f);
 		r *= r;
+		r *= r;
+		r *= .25f;
 		colors.push_back({ r, 1.0f - r, 0, 1 });
 	}
 	sb->DrawLines(verts, colors);
 
 	sb->Flush(commandList);
-	#pragma endregion
-	Profiler::EndSample();
+#pragma endregion
 
+	Profiler::EndSample();
 }
 
 void TestGame::DoFrame(){
@@ -318,24 +308,28 @@ void TestGame::DoFrame(){
 	Profiler::EndSample();
 #pragma endregion
 
-#pragma region render
+#pragma region render/present
 	Profiler::BeginSample(L"Render");
 	auto commandQueue = Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList(Graphics::CurrentFrameIndex());
 	auto d3dCommandList = commandList->D3DCommandList();
 	auto window = Graphics::GetWindow();
 
-	window->PrepareRenderTargets(commandList);
-
-	auto rtv = window->GetCurrentRenderTargetView();
-	auto dsv = window->GetDepthStencilView();
-
-	Render(commandList, rtv, dsv);
+	window->PrepareRender(commandList);
+	Render(camera, commandList);
 	Profiler::EndSample();
 
 	Profiler::BeginSample(L"Present");
-	window->Present(commandList, commandQueue);
 
+	ID3D12Resource* camrt = camera->RenderBuffer().Get();
+	ID3D12Resource* winrt = window->RenderBuffer().Get();
+	commandList->TransitionResource(camrt, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+	commandList->TransitionResource(winrt, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+	d3dCommandList->ResolveSubresource(winrt, 0, camrt, 0, camera->RenderFormat());
+	commandList->TransitionResource(camrt, D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	commandList->TransitionResource(winrt, D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	window->Present(commandList, commandQueue);
 	Profiler::EndSample();
 #pragma endregion
 

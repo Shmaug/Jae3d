@@ -6,6 +6,8 @@
 #include "AssetDatabase.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
+#include "Texture.hpp"
+#include "Camera.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -166,7 +168,7 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 			p.x += scale * font->GetKerning(prev, cur);
 
 			if (g.character != L' ') {
-				SpriteDraw sprite(font->GetTexture(),
+				SpriteDraw sprite(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
 					XMFLOAT4(
 					p.x + scale * g.ox,
 					p.y - scale * g.oy,
@@ -224,7 +226,7 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT4 rect, float sca
 			}
 
 			if (g.character != L' ') {
-				SpriteDraw sprite(font->GetTexture(),
+				SpriteDraw sprite(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
 					XMFLOAT4(
 						p.x + scale * g.ox,
 						p.y - scale * g.oy,
@@ -250,6 +252,13 @@ void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, XMFLOAT4 rect, float sca
 	wvsprintf(buf, fmt.c_str(), args);
 	va_end(args);
 	DrawText(font, rect, scale, color, jwstring(buf));
+}
+
+void SpriteBatch::DrawTexture(ComPtr<ID3D12DescriptorHeap> mTextureHeap, D3D12_GPU_DESCRIPTOR_HANDLE mTextureSRV, XMFLOAT4 rect, XMFLOAT4 color, XMFLOAT4 srcRect) {
+	mQuadDrawQueue.push_back(SpriteDraw(mTextureHeap, mTextureSRV, rect, srcRect, color));
+}
+void SpriteBatch::DrawTexture(std::shared_ptr<Texture> texture, XMFLOAT4 rect, XMFLOAT4 color, XMFLOAT4 srcRect) {
+	mQuadDrawQueue.push_back(SpriteDraw(texture->GetSRVDescriptorHeap(), texture->GetSRVGPUDescriptor(), rect, srcRect, color));
 }
 
 SpriteBatch::SpriteContext* SpriteBatch::GetContext(unsigned int frameIndex) {
@@ -339,14 +348,16 @@ void SpriteBatch::CreateShader() {
 	mColoredShader->Upload();
 }
 
-void SpriteBatch::SpriteContext::DrawQuadGroup(ComPtr<ID3D12GraphicsCommandList> cmdList, std::shared_ptr<Texture> tex, unsigned int startQuad) {
+void SpriteBatch::SpriteContext::DrawQuadGroup(std::shared_ptr<CommandList> commandList, unsigned int startQuad, ComPtr<ID3D12DescriptorHeap> heap, D3D12_GPU_DESCRIPTOR_HANDLE tex) {
+	auto cmdList = commandList->D3DCommandList();
+
 	XMFLOAT4X4 m;
-	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)Graphics::GetWindow()->GetWidth(), (float)Graphics::GetWindow()->GetHeight(), 0, 0, 1.0f));
+	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)commandList->GetCamera()->PixelWidth(), (float)commandList->GetCamera()->PixelHeight(), 0, 0, 1.0f));
 	cmdList->SetGraphicsRoot32BitConstants(0, 16, &m, 0);
 
-	ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
-	cmdList->SetDescriptorHeaps(1, &heap);
-	cmdList->SetGraphicsRootDescriptorTable(1, tex->GetSRVGPUDescriptor());
+	ID3D12DescriptorHeap* heaps = { heap.Get() };
+	cmdList->SetDescriptorHeaps(1, &heaps);
+	cmdList->SetGraphicsRootDescriptorTable(1, tex);
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList->IASetVertexBuffers(0, 1, &mQuadVertexBufferView);
@@ -372,10 +383,10 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		ctx->ResizeQuads(qsize);
 
 		unsigned int curq = 0;
-		std::shared_ptr<Texture> curTex;
+		ComPtr<ID3D12DescriptorHeap> curHeap = nullptr;
+		D3D12_GPU_DESCRIPTOR_HANDLE curSRV = { 0 };
 
 		if (!mTexturedShader) CreateShader();
-		commandList->SetCamera(nullptr);
 		commandList->SetShader(mTexturedShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
 		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_TEXCOORD0 | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
@@ -383,17 +394,19 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		for (unsigned int i = 0; i < mQuadDrawQueue.size(); i++) {
 			SpriteDraw s = mQuadDrawQueue[i];
 
-			if (curTex != s.mTexture) {
+			if (curSRV.ptr != s.mTextureSRV.ptr) {
 				// Draw previous batch
-				if (curTex) ctx->DrawQuadGroup(commandList->D3DCommandList(), curTex, curq);
-				curTex = s.mTexture;
+				if (curHeap && curSRV.ptr) ctx->DrawQuadGroup(commandList, curq, curHeap, curSRV);
+				// Start new batch
+				curHeap = s.mTextureHeap;
+				curSRV = s.mTextureSRV;
 				curq = ctx->mQuadOffset;
 			}
 
 			ctx->AddQuad(s.mPixelRect, s.mTextureRect, s.mColor);
 		}
 
-		if (curTex) ctx->DrawQuadGroup(commandList->D3DCommandList(), curTex, curq);
+		if (curHeap && curSRV.ptr) ctx->DrawQuadGroup(commandList, curq, curHeap, curSRV);
 
 		mQuadDrawQueue.clear();
 	}
@@ -406,7 +419,6 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		ctx->ResizeLines(lsize);
 
 		if (!mColoredShader) CreateShader();
-		commandList->SetCamera(nullptr);
 		commandList->SetShader(mColoredShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
 		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);

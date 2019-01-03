@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Common.hpp"
+
+#include <unordered_map>
 #include <stack>
 
 // Wraps D3D12CommandList, tracks active objects. Use to do anything on the GPU
@@ -14,10 +16,13 @@ public:
 	JAE_API void Reset(_WRL::ComPtr<ID3D12CommandAllocator> allocator, unsigned int frameIndex);
 
 	JAE_API void TransitionResource(_WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
+	JAE_API void TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
 
 	JAE_API void SetCompute(std::shared_ptr<Shader> shader);
 	JAE_API void SetShader(std::shared_ptr<Shader> shader);
 	JAE_API void SetMaterial(std::shared_ptr<Material> material);
+	// Sets the camera's constant buffer in the "CameraBuffer" shader parameter
+	// Sets the camera's render/depth buffers as active
 	JAE_API void SetCamera(std::shared_ptr<Camera> camera);
 
 	JAE_API void SetGlobalTexture(jwstring param, std::shared_ptr<Texture> tex);
@@ -43,18 +48,16 @@ public:
 
 private:
 	struct GlobalParam {
-		MaterialValue::Value value;
+		MaterialValue value;
 		SHADER_PARAM_TYPE type;
 
-		GlobalParam() : type(SHADER_PARAM_TYPE_FLOAT) { value = 0.0f; }
-		GlobalParam(const GlobalParam &mv) : type(mv.type) {
-			memcpy(&value, &mv.value, sizeof(MaterialValue::Value));
-		}
+		GlobalParam() : type(SHADER_PARAM_TYPE_FLOAT), value(MaterialValue()) {}
+		GlobalParam(const GlobalParam &mv) : type(mv.type), value(mv.value) {}
 		~GlobalParam() {}
 
 		GlobalParam& operator=(const GlobalParam &rhs) {
 			if (&rhs == this) return *this;
-			memcpy(&value, &rhs.value, sizeof(MaterialValue::Value));
+			memcpy(&value, &rhs.value, sizeof(MaterialValue));
 			return *this;
 		}
 	};
@@ -68,7 +71,7 @@ private:
 
 	_WRL::ComPtr<ID3D12GraphicsCommandList2> mCommandList;
 
-	jmap<jwstring, GlobalParam> mGlobals;
+	std::unordered_map<jwstring, GlobalParam> mGlobals;
 
 	void SetGlobals();
 
