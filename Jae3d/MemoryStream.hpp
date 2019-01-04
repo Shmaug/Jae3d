@@ -33,7 +33,9 @@ public:
 	JAE_API void Write(const char* ptr, size_t sz);
 	JAE_API void Read(char* ptr, size_t sz);
 
+	JAE_API void WriteStringA(jstring jwstring);
 	JAE_API void WriteString(jwstring jwstring);
+	JAE_API jstring ReadStringA();
 	JAE_API jwstring ReadString();
 
 	JAE_API void Fit(size_t s);

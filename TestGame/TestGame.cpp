@@ -33,6 +33,9 @@ shared_ptr<Camera> camera;
 shared_ptr<Scene> scene;
 shared_ptr<Font> arial;
 shared_ptr<TiledLighting> lighting;
+shared_ptr<Material> defaultMaterial;
+shared_ptr<Material> barrelMaterial;
+shared_ptr<Material> rifleMaterial;
 
 wchar_t pbuf[1024];
 
@@ -84,9 +87,9 @@ void TestGame::Initialize() {
 	shared_ptr<Mesh> rifleMesh = AssetDatabase::GetAsset<Mesh>(L"Rifle.Rifle");
 	shared_ptr<Mesh> dragonMesh = AssetDatabase::GetAsset<Mesh>(L"Dragon");
 
-	shared_ptr<Material> defaultMaterial = shared_ptr<Material>(new Material(L"Default", shader));
-	shared_ptr<Material> barrelMaterial = shared_ptr<Material>(new Material(L"Barrel", textured));
-	shared_ptr<Material> rifleMaterial = shared_ptr<Material>(new Material(L"Rifle", textured));
+	defaultMaterial = shared_ptr<Material>(new Material(L"Default", shader));
+	barrelMaterial = shared_ptr<Material>(new Material(L"Barrel", textured));
+	rifleMaterial = shared_ptr<Material>(new Material(L"Rifle", textured));
 
 	shared_ptr<Texture> uvgridTexture = AssetDatabase::GetAsset<Texture>(L"uvgrid");
 	shared_ptr<Texture> barrelTexture = AssetDatabase::GetAsset<Texture>(L"barrel_combined");

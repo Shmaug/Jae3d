@@ -67,6 +67,7 @@ float4 psmain(v2f i) : SV_Target{
 	float3 view = normalize(worldPos - Camera.Position.xyz);
 
 	float4 tex = CombinedTex.Sample(Sampler, uv);
+
 	float3 bump = normalize(NormalTex.Sample(Sampler, uv).rgb * 2 - 1);
 	float metallic = MetallicTex.Sample(Sampler, uv).r;
 

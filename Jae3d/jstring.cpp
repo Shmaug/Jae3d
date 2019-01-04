@@ -10,7 +10,10 @@ jstring::jstring() : mLength(0), mCapacity(1) {
 }
 jstring::jstring(const jstring &str) : mLength(str.mLength), mCapacity(str.mLength + 1) {
 	mCStr = new char[str.mLength + 1];
-	strcpy_s(mCStr, str.mLength + 1, str.mCStr);
+	if (str.mLength == 0)
+		mCStr[0] = '\0';
+	else
+		strcpy_s(mCStr, str.mLength + 1, str.mCStr);
 }
 jstring::jstring(jstring &&mvstr) {
 	mCStr = mvstr.mCStr;
@@ -25,7 +28,7 @@ jstring::jstring(const size_t length) : mLength(0) {
 	if (length < 1024) {
 		mCapacity = length + 1;
 		mCStr = new char[length + 1];
-		mCStr[0] = '\0';
+		ZeroMemory(mCStr, length + 1);
 	} else {
 		mCStr = new char[1];
 		mCStr[0] = '\0';

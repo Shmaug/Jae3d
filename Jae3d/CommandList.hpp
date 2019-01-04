@@ -25,6 +25,11 @@ public:
 	// Sets the camera's render/depth buffers as active
 	JAE_API void SetCamera(std::shared_ptr<Camera> camera);
 
+	JAE_API bool IsKeywordEnabled(jstring keyword);
+	JAE_API void EnableKeyword(jstring keyword);
+	JAE_API void DisableKeyword(jstring keyword);
+	JAE_API void SetKeywords(jvector<jstring> &keywords);
+
 	JAE_API void SetGlobalTexture(jwstring param, std::shared_ptr<Texture> tex);
 	JAE_API void SetGlobalCBuffer(jwstring param, std::shared_ptr<ConstantBuffer> tex);
 

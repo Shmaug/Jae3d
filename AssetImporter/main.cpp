@@ -82,8 +82,6 @@ void LoadFile(jwstring file, jvector<AssetMetadata> &meta, jvector<jwstring> sha
 	else if (ext == L"dds")
 		ImportTexture(file, meta);
 
-	else if (ext == L"cso")
-		ReadShader(file, meta);
 	else if (ext == L"hlsl")
 		CompileShader(file, meta, shaderIncludePaths);
 

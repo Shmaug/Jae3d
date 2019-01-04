@@ -1,5 +1,3 @@
-#pragma multi_compile COLORSPACE_GAMMA _
-
 #pragma Parameter cbuf		 Material
 #pragma Parameter rgb		 color		(1, 1, 1)
 #pragma Parameter float(0,1) roughness	.5

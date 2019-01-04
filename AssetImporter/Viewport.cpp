@@ -53,10 +53,11 @@ void Viewport::Init(HWND hwnd){
 " }"
 ;
 
+	jvector<jstring> keywords;
 	meshShader = shared_ptr<Shader>(new Shader(L"Mesh Shader"));
-	meshShader->CompileShaderStage(meshrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
-	meshShader->CompileShaderStage(meshshader, "vsmain", SHADER_STAGE_VERTEX);
-	meshShader->CompileShaderStage(meshshader, "psmain", SHADER_STAGE_PIXEL);
+	meshShader->CompileShaderStage(meshrootsig, "RootSig", SHADER_STAGE_ROOTSIG, keywords);
+	meshShader->CompileShaderStage(meshshader, "vsmain", SHADER_STAGE_VERTEX, keywords);
+	meshShader->CompileShaderStage(meshshader, "psmain", SHADER_STAGE_PIXEL, keywords);
 	meshShader->Upload();
 	
 	const char texrootsig[] = 
@@ -92,9 +93,9 @@ void Viewport::Init(HWND hwnd){
 ;
 
 	textureShader = shared_ptr<Shader>(new Shader(L"Texture Shader"));
-	textureShader->CompileShaderStage(texrootsig, "RootSig", SHADER_STAGE_ROOTSIG);
-	textureShader->CompileShaderStage(texshader, "vsmain", SHADER_STAGE_VERTEX);
-	textureShader->CompileShaderStage(texshader, "psmain", SHADER_STAGE_PIXEL);
+	textureShader->CompileShaderStage(texrootsig, "RootSig", SHADER_STAGE_ROOTSIG, keywords);
+	textureShader->CompileShaderStage(texshader, "vsmain", SHADER_STAGE_VERTEX, keywords);
+	textureShader->CompileShaderStage(texshader, "psmain", SHADER_STAGE_PIXEL, keywords);
 	textureShader->Upload();
 
 	quadMesh = shared_ptr<Mesh>(new Mesh(L"Quad"));

@@ -221,6 +221,28 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 		SetActive(mActive[i]);
 }
 
+bool Material::IsKeywordEnabled(jstring keyword) {
+	for (unsigned int i = 0; i < mKeywords.size(); i++)
+		if (mKeywords[i] == keyword)
+			return true;
+	return false;
+}
+void Material::EnableKeyword(jstring keyword) {
+	if (IsKeywordEnabled(keyword)) return;
+	mKeywords.push_back(keyword);
+	for (unsigned int i = 0; i < mActive.size(); i++)
+		mActive[i]->SetKeywords(mKeywords);
+}
+void Material::DisableKeyword(jstring keyword) {
+	for (unsigned int i = 0; i < mKeywords.size(); i++)
+		if (mKeywords[i] == keyword) {
+			mKeywords.remove(i);
+			break;
+		}
+	for (unsigned int i = 0; i < mActive.size(); i++)
+		mActive[i]->SetKeywords(mKeywords);
+}
+
 void Material::SetFloat(jwstring param, float v, unsigned int frameIndex) {
 	if (!mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
@@ -273,6 +295,7 @@ void Material::SetDescriptorTable(jwstring param, shared_ptr<DescriptorTable> tb
 
 void Material::SetActive(CommandList* commandList) {
 	if (!mShader) return;
+	commandList->SetKeywords(mKeywords);
 	commandList->SetShader(mShader);
 
 	bool f = false;

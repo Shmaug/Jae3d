@@ -13,6 +13,11 @@ public:
 	// Set shader and synchronize parameters
 	JAE_API void SetShader(std::shared_ptr<Shader> shader, bool resetParameters = false);
 
+	JAE_API bool IsKeywordEnabled(jstring keyword);
+	JAE_API void EnableKeyword(jstring keyword);
+	JAE_API void DisableKeyword(jstring keyword);
+	JAE_API void SetKeywords(jvector<jstring> &keywords);
+
 	JAE_API void SetInt(jwstring param, int v, unsigned int frameIndex);
 	JAE_API void SetInt2(jwstring param, DirectX::XMINT2 v, unsigned int frameIndex);
 	JAE_API void SetInt3(jwstring param, DirectX::XMINT3 v, unsigned int frameIndex);
@@ -36,6 +41,8 @@ public:
 	JAE_API void SetDescriptorTable(jwstring param, std::shared_ptr<DescriptorTable> tbl, unsigned int frameIndex);
 
 private:
+	jvector<jstring> mKeywords;
+
 	jvector<CommandList*> mActive;
 	friend class CommandList;
 	// Sets the shader and all parameters

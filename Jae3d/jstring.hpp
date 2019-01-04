@@ -16,7 +16,7 @@ public:
 	JAE_API jstring();
 	JAE_API jstring(const jstring &str);
 	JAE_API jstring(jstring &&mvstr);
-	JAE_API jstring(const size_t capacity);
+	JAE_API jstring(const size_t length);
 	JAE_API jstring(const char* str);
 	JAE_API jstring(const char* start, size_t length);
 	JAE_API ~jstring();
@@ -77,7 +77,7 @@ public:
 	JAE_API jwstring();
 	JAE_API jwstring(const jwstring &str);
 	JAE_API jwstring(jwstring &&mvstr);
-	JAE_API jwstring(const size_t capacity);
+	JAE_API jwstring(const size_t length);
 	JAE_API jwstring(const wchar_t* str);
 	JAE_API jwstring(const wchar_t* start, size_t length);
 	JAE_API ~jwstring();

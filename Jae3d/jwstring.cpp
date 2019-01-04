@@ -10,21 +10,24 @@ jwstring::jwstring() : mLength(0), mCapacity(1) {
 }
 jwstring::jwstring(const jwstring &str) : mLength(str.mLength), mCapacity(str.mLength + 1) {
 	mCStr = new wchar_t[str.mLength + 1];
-	wcscpy_s(mCStr, str.mLength + 1, str.mCStr);
+	if (str.mLength == 0)
+		mCStr[0] = L'\0';
+	else
+		wcscpy_s(mCStr, str.mLength + 1, str.mCStr);
 }
 jwstring::jwstring(jwstring &&mvstr) {
 	mCStr = mvstr.mCStr;
 	mLength = mvstr.mLength;
 	mCapacity = mvstr.mCapacity;
 	mvstr.mCStr = new wchar_t[1];
-	mvstr.mCStr[0] = '\0';
+	mvstr.mCStr[0] = L'\0';
 	mvstr.mLength = 0;
 	mvstr.mCapacity = 1;
 }
 jwstring::jwstring(const size_t length) : mLength(0) {
 	mCapacity = length + 1;
 	mCStr = new wchar_t[length + 1];
-	mCStr[0] = '\0';
+	ZeroMemory(mCStr, (length + 1) * sizeof(wchar_t));
 }
 jwstring::jwstring(const wchar_t* str) {
 	if (str) {
@@ -34,7 +37,7 @@ jwstring::jwstring(const wchar_t* str) {
 		wcscpy_s(mCStr, mCapacity, str);
 	} else {
 		mCStr = new wchar_t[1];
-		mCStr[0] = '\0';
+		mCStr[0] = L'\0';
 		mLength = 0;
 		mCapacity = 1;
 	}
@@ -44,7 +47,7 @@ jwstring::jwstring(const wchar_t* start, const size_t length) {
 	mCapacity = mLength + 1;
 	mCStr = new wchar_t[mCapacity];
 	wcsncpy_s(mCStr, mCapacity, start, mLength);
-	mCStr[mLength] = '\0';
+	mCStr[mLength] = L'\0';
 }
 jwstring::~jwstring() {
 	if (mCStr) delete[] mCStr;

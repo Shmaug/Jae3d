@@ -18,6 +18,8 @@
 #include "MemoryStream.hpp"
 #include "AssetFile.hpp"
 
+#include <vector>
+
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
@@ -65,16 +67,49 @@ public:
 	}
 };
 
-Shader::Shader(jwstring name) : Asset(name) {}
-Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
-	uint8_t mask = ms.Read<uint8_t>();
-	for (int i = 0; i < 7; i++) {
-		if (mask & (1 << i)) {
-			uint64_t size = ms.Read<uint64_t>();
-			if (FAILED(D3DCreateBlob(size, &mBlobs[i]))) throw std::exception();
-			ms.Read(reinterpret_cast<char*>(mBlobs[i]->GetBufferPointer()), size);
+jstring Shader::KeywordListToString(jvector<jstring> keywords) {
+	for (unsigned int i = 0; i < keywords.size(); i++) {
+		if (mKeywords.count(i) == 0 || keywords[i].empty()) {
+			keywords.remove(i);
+			i--;
 		}
 	}
+	if (keywords.size() == 0) return "";
+
+	std::sort(keywords.data(), keywords.data() + keywords.size(), [](const jstring& lhs, const jstring& rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; });
+
+	jstring str;
+	for (unsigned int i = 0; i < keywords.size(); i++)
+		str += keywords[i] + " ";
+
+	return str;
+}
+
+Shader::Shader(jwstring name) : Asset(name) {}
+Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
+	uint32_t count = ms.Read<uint32_t>();
+	for (unsigned int j = 0; j < count; j++) {
+		uint8_t mask = ms.Read<uint8_t>();
+		jstring keywords = ms.ReadStringA();
+
+		ComPtr<ID3DBlob>* blobs = new ComPtr<ID3DBlob>[7];
+		ZeroMemory(blobs, 7 * sizeof(ComPtr<ID3DBlob>));
+
+		for (int i = 0; i < 7; i++) {
+			if (mask & (1 << i)) {
+				uint64_t size = ms.Read<uint64_t>();
+				if (FAILED(D3DCreateBlob(size, &blobs[i])))
+					throw std::exception();
+				ms.Read(reinterpret_cast<char*>(blobs[i]->GetBufferPointer()), size);
+			}
+		}
+
+		mBlobs.emplace(keywords, blobs);
+	}
+
+	uint32_t kwcount = ms.Read<uint32_t>();
+	for (unsigned int i = 0; i < kwcount; i++)
+		mKeywords.emplace(ms.ReadStringA());
 
 	uint32_t pcount = ms.Read<uint32_t>();
 	for (unsigned int i = 0; i < pcount; i++) {
@@ -95,11 +130,9 @@ Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
 	}
 }
 Shader::~Shader() {
-	for (int i = 0; i < 7; i++)
-		if (mBlobs[i]) {
-			mBlobs[i]->Release();
-			mBlobs[i] = nullptr;
-		}
+	for (const auto &it : mBlobs)
+		delete[] it.second;
+	mBlobs.clear();
 	mParams.clear();
 	mStates.clear();
 }
@@ -121,21 +154,23 @@ void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState 
 	commandList->SetPipelineState(mStates.at(state).Get());
 }
 
-void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state) {
 	if (!mCreated) Upload();
 
 	if (mRootSignature) {
 		commandList->SetComputeRootSignature(mRootSignature.Get());
 
-		if (!mComputePSO) CreateComputePSO();
+		if (!mComputePSO) CreateComputePSO(state);
 		commandList->SetPipelineState(mComputePSO.Get());
 	}
 }
 
 ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
-	if (!mBlobs[SHADER_STAGE_VERTEX] && !mBlobs[SHADER_STAGE_HULL] &&
-		!mBlobs[SHADER_STAGE_DOMAIN] && !mBlobs[SHADER_STAGE_GEOMETRY] && !mBlobs[SHADER_STAGE_PIXEL]){
-		// no applicable blobs!
+	ComPtr<ID3DBlob>* blobs = mBlobs.at(KeywordListToString(state.keywords));
+
+	if (!blobs[SHADER_STAGE_VERTEX] && !blobs[SHADER_STAGE_HULL] &&
+		!blobs[SHADER_STAGE_DOMAIN] && !blobs[SHADER_STAGE_GEOMETRY] && !blobs[SHADER_STAGE_PIXEL]){
+		// no applicable shaders!
 		return nullptr;
 	}
 
@@ -186,11 +221,11 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoState = {};
 	psoState.InputLayout = { inputElements, inputElementCount };
 	psoState.pRootSignature = mRootSignature.Get();
-	if (mBlobs[SHADER_STAGE_VERTEX])	psoState.VS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_VERTEX]);
-	if (mBlobs[SHADER_STAGE_HULL])		psoState.HS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_HULL]);
-	if (mBlobs[SHADER_STAGE_DOMAIN])	psoState.DS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_DOMAIN]);
-	if (mBlobs[SHADER_STAGE_GEOMETRY])	psoState.GS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_GEOMETRY]);
-	if (mBlobs[SHADER_STAGE_PIXEL])		psoState.PS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_PIXEL]);
+	if (blobs[SHADER_STAGE_VERTEX])		psoState.VS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_VERTEX].Get());
+	if (blobs[SHADER_STAGE_HULL])		psoState.HS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_HULL].Get());
+	if (blobs[SHADER_STAGE_DOMAIN])		psoState.DS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_DOMAIN].Get());
+	if (blobs[SHADER_STAGE_GEOMETRY])	psoState.GS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_GEOMETRY].Get());
+	if (blobs[SHADER_STAGE_PIXEL])		psoState.PS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_PIXEL].Get());
 	psoState.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	if (state.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE || state.fillMode == D3D12_FILL_MODE_WIREFRAME)
 		psoState.RasterizerState.AntialiasedLineEnable = TRUE;
@@ -218,27 +253,25 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	delete[] inputElements;
 	return pso;
 }
-void Shader::CreateComputePSO() {
+void Shader::CreateComputePSO(ShaderState &state) {
+	jstring key = KeywordListToString(state.keywords);
+
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = mRootSignature.Get();
-	psoDesc.CS = CD3DX12_SHADER_BYTECODE(mBlobs[SHADER_STAGE_COMPUTE]);
+	psoDesc.CS = CD3DX12_SHADER_BYTECODE(mBlobs.at(key)[SHADER_STAGE_COMPUTE].Get());
 	Graphics::GetDevice()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&mComputePSO));
 }
 
 void Shader::Upload() {
 	if (mCreated) return;
 	
-	ID3DBlob* rsblob = mBlobs[SHADER_STAGE_ROOTSIG];
-	if (rsblob)
-		ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)));
+	ComPtr<ID3DBlob> rsblob = mBlobs.at("")[SHADER_STAGE_ROOTSIG];
+	if (rsblob) ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)));
 	
 	mCreated = true;
 }
 
-HRESULT Shader::ReadShaderStage(jwstring path, SHADER_STAGE stage) {
-	return D3DReadFileToBlob(path.c_str(), &mBlobs[stage]);
-}
-HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> includePaths) {
+HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> &includePaths, jvector<jstring> &keywords) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -280,11 +313,26 @@ HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_ST
 		break;
 	}
 
+	for (unsigned int i = 0; i < keywords.size(); i++) {
+		mKeywords.emplace(keywords[i]);
+		defines.push_back({ keywords[i].c_str(), "" });
+	}
+
 	defines.push_back({ NULL, NULL });
+
+	jstring key = KeywordListToString(keywords);
+	ComPtr<ID3DBlob>* blobs;
+	if (mBlobs.count(key))
+		blobs = mBlobs.at(key);
+	else {
+		blobs = new ComPtr<ID3DBlob>[7];
+		ZeroMemory(blobs, 7 * sizeof(ComPtr<ID3DBlob>));
+		mBlobs.emplace(key, blobs);
+	}
 
 	CustomInclude inc(GetDirectoryW(GetFullPathW(file)), includePaths);
 	ID3DBlob *errorBlob = nullptr;
-	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), &inc, utf16toUtf8(entryPoint).c_str(), profile, flags, 0, &mBlobs[stage], &errorBlob);
+	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), &inc, utf16toUtf8(entryPoint).c_str(), profile, flags, 0, &blobs[stage], &errorBlob);
 
 	if (errorBlob) {
 		char msg[128];
@@ -292,11 +340,12 @@ HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_ST
 		std::cerr << msg;
 		std::cerr << reinterpret_cast<const char*>(errorBlob->GetBufferPointer());
 		errorBlob->Release();
+		blobs[stage].Reset();
 	}
+
 	return hr;
 }
-
-HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage) {
+HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage, jvector<jstring> &keywords) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -338,10 +387,24 @@ HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHA
 		break;
 	}
 
+	for (unsigned int i = 0; i < keywords.size(); i++) {
+		mKeywords.emplace(keywords[i]);
+		defines.push_back({ keywords[i].c_str(), "" });
+	}
+
 	defines.push_back({ NULL, NULL });
 
-	ID3DBlob *errorBlob = nullptr;
-	HRESULT hr = D3DCompile2(text, strlen(text), NULL, defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint, profile, flags, 0, 0, NULL, 0, &mBlobs[stage], &errorBlob);
+	jstring key = KeywordListToString(keywords);
+	ComPtr<ID3DBlob>* blobs;
+	if (mBlobs.count(key))
+		blobs = mBlobs.at(key);
+	else {
+		blobs = new ComPtr<ID3DBlob>[7];
+		ZeroMemory(blobs, 7 * sizeof(ComPtr<ID3DBlob>));
+	}
+
+	ID3DBlob* errorBlob = nullptr;
+	HRESULT hr = D3DCompile2(text, strlen(text), NULL, defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint, profile, flags, 0, 0, NULL, 0, &blobs[stage], &errorBlob);
 
 	if (errorBlob) {
 		std::cerr << "Error compiling " << profile << "\n";
@@ -352,41 +415,46 @@ HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHA
 	}
 
 	if (FAILED(hr)) {
-		if (mBlobs[stage]) mBlobs[stage]->Release();
-		mBlobs[stage] = nullptr;
+		if (blobs[stage]) blobs[stage].Reset();
+		blobs[stage] = nullptr;
 	}
+
 	return hr;
 }
 
 void Shader::WriteData(MemoryStream &ms) {
-	uint8_t mask = 0;
-	for (int i = 0; i < 7; i++)
-		if (mBlobs[i])
-			mask |= 1 << i;
-	ms.Write(mask);
-	for (int i = 0; i < 7; i++) {
-		if (mBlobs[i]) {
-			ms.Write((uint64_t)mBlobs[i]->GetBufferSize());
-			ms.Write(reinterpret_cast<const char*>(mBlobs[i]->GetBufferPointer()), mBlobs[i]->GetBufferSize());
+	ms.Write((uint32_t)mBlobs.size());
+	for (const auto &it : mBlobs) {
+		uint8_t mask = 0;
+		for (unsigned int i = 0; i < 7; i++)
+			if (it.second[i])
+				mask |= 1 << i;
+		ms.Write(mask);
+		ms.WriteStringA(it.first);
+		printf("  variant: '%s'\n", it.first.c_str());
+		for (unsigned int i = 0; i < 7; i++) {
+			if (it.second[i]) {
+				ms.Write((uint64_t)it.second[i]->GetBufferSize());
+				ms.Write(reinterpret_cast<const char*>(it.second[i]->GetBufferPointer()), it.second[i]->GetBufferSize());
+			}
 		}
 	}
 
-	size_t pos = ms.Tell();
-	int i = 0;
-	ms.Write((uint32_t)0);
-	if (!mParams.empty()) {
-		for (const auto& it : mParams){
-			ms.WriteString(it.first);
-			ms.Write((uint32_t)it.second.Type());
-			ms.Write(it.second.RootIndex());
-			ms.Write(it.second.CBufferOffset());
-			ms.Write(it.second.GetDefaultValue());
-			i++;
-		}
-		size_t posc = ms.Tell();
-		ms.Seek(pos);
-		ms.Write((uint32_t)i);
-		ms.Seek(posc);
+	printf("  all: ");
+	ms.Write((uint32_t)mKeywords.size());
+	for (const auto &it : mKeywords) {
+		ms.WriteStringA(it);
+		printf("'%s' ", it.c_str());
+	}
+	printf("\n");
+
+	ms.Write((uint32_t)mParams.size());
+	for (const auto& it : mParams){
+		ms.WriteString(it.first);
+		ms.Write((uint32_t)it.second.Type());
+		ms.Write(it.second.RootIndex());
+		ms.Write(it.second.CBufferOffset());
+		ms.Write(it.second.GetDefaultValue());
 	}
 
 	ms.Write((uint32_t)mCBufferParameters.size());

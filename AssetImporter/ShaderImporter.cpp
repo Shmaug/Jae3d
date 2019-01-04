@@ -9,6 +9,7 @@
 #include <cassert>
 #include <comdef.h>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 using namespace DirectX;
@@ -21,7 +22,8 @@ enum PARSEMODE {
 	PARSEMODE_PARAMTYPE,
 	PARSEMODE_PARAMNAME,
 	PARSEMODE_PARAMVALUE,
-	PARSEMODE_TABLESIZE
+	PARSEMODE_TABLESIZE,
+	PARSEMODE_MULTI_COMPILE
 };
 
 const unordered_map<SHADER_PARAM_TYPE, unsigned int> paramSizes = {
@@ -261,7 +263,11 @@ void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramNam
 	}
 }
 
-void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jwstring path, jvector<jwstring> includePaths) {
+struct ShaderStageCompile {
+	jwstring entryPoint;
+	SHADER_STAGE stage;
+};
+void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jwstring path, jvector<jwstring> includePaths, jvector<jvector<jstring>> &keywords, jvector<ShaderStageCompile> &stages) {
 	int cbo = 0;
 	int linenum = 0;
 	std::wstring line;
@@ -271,6 +277,8 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 		SHADER_STAGE stage;
 		jwstring paramType;
 		jwstring paramName;
+
+		unsigned int kwc = (unsigned int)keywords.size();
 
 		// scan for whitespace-delimited words
 		for (int i = 0; i < line.length(); i++) {
@@ -320,7 +328,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				}
 				wifstream incstr(inc.c_str());
 				if (incstr.is_open())
-					ParseShader(shader, incstr, rootParamIndex, inc, includePaths);
+					ParseShader(shader, incstr, rootParamIndex, inc, includePaths, keywords, stages);
 				mode = PARSEMODE_PRAGMA;
 				break;
 			}
@@ -349,17 +357,25 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 					mode = PARSEMODE_SHADERSTAGE;
 				} else if (word == L"Parameter") {
 					mode = PARSEMODE_PARAMTYPE;
+				} else if (word == L"multi_compile") {
+					mode = PARSEMODE_MULTI_COMPILE;
+				}
+				break;
+			}
+			case PARSEMODE_MULTI_COMPILE:
+			{
+				jstring keyword = utf16toUtf8(word);
+				for (unsigned int i = 0; i < kwc; i++) {
+					jvector<jstring> k = keywords[i];
+					k.push_back(keyword);
+					keywords.push_back(k);
 				}
 				break;
 			}
 			case PARSEMODE_SHADERSTAGE: // reading entry point
 			{
 				mode = PARSEMODE_PRAGMA;
-				HRESULT hr = shader->CompileShaderStage(path, word, stage, includePaths);
-				if (FAILED(hr)) {
-					_com_error err(hr);
-					wprintf(L"%s\n", err.ErrorMessage());
-				}
+				stages.push_back({ word, stage });
 				break;
 			}
 
@@ -430,43 +446,32 @@ void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jwstring
 	m.asset = std::shared_ptr<Asset>(CompileShader(path, includePaths));
 	meta.push_back(m);
 }
-void ReadShader(jwstring path, jvector<AssetMetadata> &meta) {
-	AssetMetadata m(path);
-	m.asset = std::shared_ptr<Asset>(ReadShader(path));
-	meta.push_back(m);
-}
 Shader* CompileShader(jwstring path, jvector<jwstring> includePaths) {
 	Shader* shader = new Shader(GetNameW(path));
 
 	wprintf(L"Compiling %s\n", shader->mName.c_str());
 
+	jvector<jvector<jstring>> keywords;
+	keywords.push_back(jvector<jstring>());
+	keywords[0].push_back("");
+
+	jvector<ShaderStageCompile> stages;
+
 	int rootParamIndex = 0;
 	wifstream is(path.c_str());
-	ParseShader(shader, is, rootParamIndex, path, includePaths);
+	ParseShader(shader, is, rootParamIndex, path, includePaths, keywords, stages);
 
-	return shader;
-}
+	wprintf(L"  %d variants:\n", (int)keywords.size());
 
-Shader* ReadShader(jwstring path) {
-	Shader* shader = new Shader(GetNameW(path));
+	for (unsigned int i = 0; i < keywords.size(); i++){
+		for (unsigned int j = 0; j < stages.size(); j++) {
+			HRESULT hr = shader->CompileShaderStage(path, stages[j].entryPoint, stages[j].stage, includePaths, keywords[i]);
+			if (FAILED(hr)) {
+				_com_error err(hr);
+				wprintf(L"%s\n", err.ErrorMessage());
+			}
+		}
+	}
 
-	SHADER_STAGE stage;
-	jwstring end = GetNameW(path).substr(-3);
-	if (end == L"_rs")
-		stage = SHADER_STAGE_ROOTSIG;
-	else if (end == L"_vs")
-		stage = SHADER_STAGE_VERTEX;
-	else if (end == L"_hs")
-		stage = SHADER_STAGE_HULL;
-	else if (end == L"_ds")
-		stage = SHADER_STAGE_DOMAIN;
-	else if (end == L"_gs")
-		stage = SHADER_STAGE_GEOMETRY;
-	else if (end == L"_ps")
-		stage = SHADER_STAGE_PIXEL;
-	else if (end == L"_cs")
-		stage = SHADER_STAGE_COMPUTE;
-
-	shader->ReadShaderStage(path, stage);
 	return shader;
 }

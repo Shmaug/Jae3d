@@ -398,6 +398,7 @@ struct ShaderState {
 	DXGI_FORMAT depthFormat;
 	DXGI_FORMAT renderFormat;
 	unsigned int msaaSamples;
+	jvector<jstring> keywords;
 
 	ShaderState() :
 		input(MESH_SEMANTIC_POSITION),
@@ -408,7 +409,8 @@ struct ShaderState {
 		cullMode(D3D12_CULL_MODE_BACK),
 		depthFormat(DXGI_FORMAT_D32_FLOAT),
 		renderFormat(DXGI_FORMAT_R8G8B8A8_UNORM),
-		msaaSamples(1) {}
+		msaaSamples(1),
+		keywords(jvector<jstring>()) {}
 
 	ShaderState(const ShaderState &s) :
 		input(s.input),
@@ -419,7 +421,8 @@ struct ShaderState {
 		cullMode(s.cullMode),
 		depthFormat(s.depthFormat),
 		renderFormat(s.renderFormat),
-		msaaSamples(s.msaaSamples) {}
+		msaaSamples(s.msaaSamples),
+		keywords(s.keywords) {}
 	~ShaderState() {}
 
 	ShaderState& operator =(const ShaderState &rhs) {
@@ -434,13 +437,14 @@ struct ShaderState {
 		depthFormat = rhs.depthFormat;
 		renderFormat = rhs.renderFormat;
 		msaaSamples = rhs.msaaSamples;
+		keywords = rhs.keywords;
 		return *this;
 	}
 	bool operator ==(const ShaderState &rhs) const {
-		return input == rhs.input &&
+		bool s = input == rhs.input &&
 			topology == rhs.topology &&
 			ztest == rhs.ztest &&
-			zwrite == rhs.zwrite && 
+			zwrite == rhs.zwrite &&
 			fillMode == rhs.fillMode &&
 			cullMode == rhs.cullMode &&
 			blendState.BlendEnable == rhs.blendState.BlendEnable &&
@@ -456,6 +460,13 @@ struct ShaderState {
 			depthFormat == rhs.depthFormat &&
 			renderFormat == rhs.renderFormat &&
 			msaaSamples == rhs.msaaSamples;
+		if (!s) return false;
+
+		if (keywords.size() != rhs.keywords.size()) return false;
+		for (unsigned int i = 0; i < rhs.keywords.size(); i++)
+			if (keywords[i] != rhs.keywords[i])
+				return false;
+		return true;
 	}
 
 };
@@ -490,6 +501,8 @@ namespace std {
 			hash_combine(h, s.depthFormat);
 			hash_combine(h, s.renderFormat);
 			hash_combine(h, s.msaaSamples);
+			for (unsigned int i = 0; i < s.keywords.size(); i++)
+				hash_combine(h, s.keywords[i]);
 			return h;
 		}
 	};

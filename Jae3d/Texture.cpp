@@ -194,7 +194,10 @@ Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigne
 	DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS)
 	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(dimension), mArraySize(arraySize), mFormat(format), mAlphaMode(alphaMode), mMipLevels(mipLevels), mDataSize(dataSize), mIsDDS(isDDS) {
 	mData = new uint8_t[mDataSize];
-	SetPixelData(data);
+	if (data)
+		memcpy(mData, data, mDataSize);
+	else
+		ZeroMemory(mData, mDataSize);
 }
 
 Texture::Texture(jwstring name, MemoryStream &ms) : Asset(name, ms) {

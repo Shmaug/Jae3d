@@ -13,7 +13,9 @@
 using namespace std;
 using namespace DirectX;
 
-Texture* ConvertTexture(unique_ptr<ScratchImage> &image, TexMetadata &info, AssetMetadata &meta, jwstring name) {
+Texture* ConvertTexture(unique_ptr<ScratchImage> &image, AssetMetadata &meta, jwstring name) {
+	const TexMetadata& info = image->GetMetadata();
+
 	DirectX::Blob blob;
 	HRESULT hr = SaveToDDSMemory(image->GetImages(), image->GetImageCount(), image->GetMetadata(), DDS_FLAGS_NONE, blob);
 	if (FAILED(hr)) {
@@ -60,7 +62,7 @@ Texture* ProcessImage(unique_ptr<ScratchImage> &image, AssetMetadata &meta, jwst
 		unique_ptr<ScratchImage> tmp = make_unique<ScratchImage>();
 		HRESULT hr = Convert(image->GetImages(), image->GetImageCount(), info, meta.textureFormat, TEX_FILTER_DEFAULT, TEX_THRESHOLD_DEFAULT, *tmp);
 		if (FAILED(hr)) {
-			cerr << "Failed to convert format: " << _com_error(hr).ErrorMessage() << "\n";
+			cerr << "Failed to convert format: " << utf16toUtf8(_com_error(hr).ErrorMessage()).c_str() << "\n";
 		} else {
 			image.swap(tmp);
 			info = image->GetMetadata();
@@ -73,7 +75,7 @@ Texture* ProcessImage(unique_ptr<ScratchImage> &image, AssetMetadata &meta, jwst
 		unique_ptr<ScratchImage> tmp = make_unique<ScratchImage>();
 		HRESULT hr = GenerateMipMaps(image->GetImages(), image->GetImageCount(), info, TEX_FILTER_DEFAULT, (int)Texture::ComputeNumMips((int)info.width, (int)info.height), *tmp);
 		if (FAILED(hr)) {
-			cerr << "Failed to generate mip maps: " << _com_error(hr).ErrorMessage() << "\n";
+			cerr << "Failed to generate mip maps: " << utf16toUtf8(_com_error(hr).ErrorMessage()).c_str() << "\n";
 		} else {
 			image.swap(tmp);
 			info = image->GetMetadata();
@@ -82,7 +84,7 @@ Texture* ProcessImage(unique_ptr<ScratchImage> &image, AssetMetadata &meta, jwst
 
 	wprintf(L"%s: %dD %s %dx%d, %d slice(s) %d mip levels\n", name.c_str(), (int)info.dimension - 1, FormatToString.at(info.format).c_str(), (int)info.width, (int)info.height, (int)info.depth, (int)info.mipLevels);
 
-	return ConvertTexture(image, info, meta, name);
+	return ConvertTexture(image, meta, name);
 }
 
 // Imports a texture and metadata and stores in meta
@@ -93,22 +95,6 @@ void ImportTexture(jwstring path, jvector<AssetMetadata> &meta) {
 }
 // Imports a texture with settings in a file [path].meta
 Texture* ImportTexture(jwstring path) {
-	jwstring ext = GetExtW(path).lower();
-
-	TexMetadata info;
-	HRESULT hr;
-	if (ext == L"tga")
-		hr = GetMetadataFromTGAFile(path.c_str(), info);
-	else if (ext == L"dds")
-		hr = GetMetadataFromDDSFile(path.c_str(), DDS_FLAGS_NONE, info);
-	else
-		hr = GetMetadataFromWICFile(path.c_str(), WIC_FLAGS_ALL_FRAMES, info);
-	if (FAILED(hr)) {
-		_com_error err(hr);
-		wprintf(L"Failed to read %s: %s\n", path.c_str(), err.ErrorMessage());
-		return nullptr;
-	}
-
 	AssetMetadata metadata(path);
 	return ImportTexture(path, metadata);
 }

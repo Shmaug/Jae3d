@@ -14,9 +14,8 @@ public:
 			mData = new char[vec.mSize * sizeof(T)];
 			memset(mData, 0, vec.mSize * sizeof(T));
 			T* ndt = reinterpret_cast<T*>(vec.mData);
-			T* mdt = reinterpret_cast<T*>(mData);
 			for (size_t i = 0; i < vec.mSize; i++)
-				mdt[i] = ndt[i];
+				new (mData + i * sizeof(T)) T(ndt[i]);
 		} else {
 			mData = nullptr;
 			mSize = 0;
@@ -132,15 +131,17 @@ public:
 	size_t capacity() const { return mCapacity; }
 	T* data() const { return reinterpret_cast<T*>(mData); }
 
-	jvector& operator=(const jvector &rhs) {
+	jvector<T>& operator=(const jvector<T> &rhs) {
 		if (this == &rhs) return *this;
 
-		realloc(rhs.mSize, rhs.mSize);
+		free();
+		reserve(rhs.mSize);
 
 		T* ndt = reinterpret_cast<T*>(rhs.mData);
-		T* mdt = reinterpret_cast<T*>(mData);
 		for (size_t i = 0; i < rhs.mSize; i++)
-			mdt[i] = ndt[i];
+			new (mData + i * sizeof(T)) T(ndt[i]);
+
+		mSize = rhs.mSize;
 
 		return *this;
 	}
@@ -190,4 +191,3 @@ private:
 			mdt[i].~T();
 	}
 };
-

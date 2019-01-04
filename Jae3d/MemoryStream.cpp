@@ -15,15 +15,35 @@ MemoryStream::~MemoryStream() {
 	if (mBuffer) delete[] mBuffer;
 }
 
+void MemoryStream::WriteStringA(jstring str) {
+	Write((uint32_t)str.length());
+	if (str.length() > 0)
+		Write(str.c_str(), str.length());
+}
 void MemoryStream::WriteString(jwstring str) {
 	Write((uint32_t)str.length());
-	Write(reinterpret_cast<const char*>(str.c_str()), (str.length() + 1) * sizeof(wchar_t));
+	if (str.length() > 0)
+		Write(reinterpret_cast<const char*>(str.c_str()), str.length() * sizeof(wchar_t));
+}
+jstring MemoryStream::ReadStringA() {
+	uint32_t sz = Read<uint32_t>();
+	if (sz > 0) {
+		if (mCurrent + sz > mSize) throw std::out_of_range("Read out of bounds!");
+		jstring str(mBuffer + mCurrent, sz);
+		mCurrent += sz;
+		return str;
+	}
+	return jstring();
 }
 jwstring MemoryStream::ReadString() {
 	uint32_t sz = Read<uint32_t>();
-	wchar_t* s = new wchar_t[sz + 1];
-	Read(const_cast<char*>(reinterpret_cast<const char*>(s)), (sz + 1) * sizeof(wchar_t));
-	return jwstring(s, sz);
+	if (sz > 0) {
+		if (mCurrent + sz * sizeof(wchar_t) > mSize) throw std::out_of_range("Read out of bounds!");
+		jwstring str(reinterpret_cast<wchar_t*>(mBuffer + mCurrent), sz);
+		mCurrent += sz * sizeof(wchar_t);
+		return str;
+	}
+	return jwstring();
 }
 
 void MemoryStream::Write(const char* ptr, size_t sz) {

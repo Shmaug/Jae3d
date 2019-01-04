@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Common.hpp"
 #include "Asset.hpp"
@@ -22,19 +23,16 @@ public:
 	// Creates the root signature
 	JAE_API void Upload();
 
-	// Read a compiled shader stage 
-	JAE_API HRESULT ReadShaderStage(jwstring path, SHADER_STAGE stage);
 	// Compile a shader stage from a file
-	JAE_API HRESULT CompileShaderStage(jwstring path, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> includePaths);
+	JAE_API HRESULT CompileShaderStage(jwstring path, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> &includePaths, jvector<jstring> &keywords);
 	// Compile a shader stage from memory
-	JAE_API HRESULT CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage);
+	JAE_API HRESULT CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage, jvector<jstring> &keywords);
 
 	// Serialize to a memorystream
 	JAE_API void WriteData(MemoryStream &ms);
 	JAE_API uint64_t TypeId();
 
 	ID3D12RootSignature* GetRootSig() const { return mRootSignature.Get(); }
-	ID3DBlob* GetBlob(SHADER_STAGE stage) const { return mBlobs[stage]; }
 	bool HasParameter(jwstring name) const { return mParams.count(name); }
 	const ShaderParameter& GetParameter(jwstring name) const { return mParams.at(name); }
 
@@ -47,19 +45,22 @@ public:
 	std::unordered_map<jwstring, ShaderParameter>::const_iterator ParameterBegin() { return mParams.begin(); }
 	std::unordered_map<jwstring, ShaderParameter>::const_iterator ParameterEnd() { return mParams.end(); }
 
+	JAE_API jstring KeywordListToString(jvector<jstring> keywords);
+
 private:
 	friend class CommandList;
 	// Sets the root signature of this shader on the GPU
 	JAE_API bool SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 	JAE_API void SetPSO(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state);
 	// Sets the compute root signature and compute PSO on the GPU
-	JAE_API void SetCompute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
+	JAE_API void SetCompute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state);
 
+	std::unordered_set<jstring> mKeywords;
 	std::unordered_map<ShaderState, _WRL::ComPtr<ID3D12PipelineState>> mStates;
 	_WRL::ComPtr<ID3D12PipelineState> mComputePSO;
 
 	JAE_API _WRL::ComPtr<ID3D12PipelineState> CreatePSO(ShaderState &state);
-	void CreateComputePSO();
+	void CreateComputePSO(ShaderState &state);
 
 	bool mCreated = false;
 	_WRL::ComPtr<ID3D12RootSignature> mRootSignature;
@@ -67,5 +68,5 @@ private:
 	jvector<ShaderParameterBuffer> mCBufferParameters;
 
 	std::unordered_map<jwstring, ShaderParameter> mParams;
-	ID3DBlob* mBlobs[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	std::unordered_map<jstring, _WRL::ComPtr<ID3DBlob>*> mBlobs;
 };

@@ -38,7 +38,7 @@ void CommandList::TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_ST
 
 void CommandList::SetCompute(shared_ptr<Shader> shader) {
 	if (mActiveShader == shader) return;
-	if (shader) shader->SetCompute(mCommandList);
+	if (shader) shader->SetCompute(mCommandList, mState);
 	mActiveShader = shader;
 }
 void CommandList::SetShader(shared_ptr<Shader> shader) {
@@ -81,6 +81,27 @@ void CommandList::SetCamera(shared_ptr<Camera> camera) {
 		mState.renderFormat = camera->mRenderFormat;
 	}
 	mActiveCamera = camera;
+}
+
+bool CommandList::IsKeywordEnabled(jstring keyword) {
+	for (unsigned int i = 0; i < mState.keywords.size(); i++)
+		if (mState.keywords[i] == keyword)
+			return true;
+	return false;
+}
+void CommandList::EnableKeyword(jstring keyword) {
+	if (IsKeywordEnabled(keyword)) return;
+	mState.keywords.push_back(keyword);
+}
+void CommandList::DisableKeyword(jstring keyword) {
+	for (unsigned int i = 0; i < mState.keywords.size(); i++)
+		if (mState.keywords[i] == keyword) {
+			mState.keywords.remove(i);
+			break;
+		}
+}
+void CommandList::SetKeywords(jvector<jstring> &keywords) {
+	mState.keywords = keywords;
 }
 
 void CommandList::SetGlobalTexture(jwstring param, shared_ptr<Texture> tex) {
