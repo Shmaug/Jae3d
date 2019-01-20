@@ -117,19 +117,19 @@ public:
 		mCapacity = 0;
 	}
 
-	T& operator [](size_t i) {
+	inline T& operator [](size_t i) {
 		if (i >= mSize) throw std::out_of_range("Index out of bounds");
 		return reinterpret_cast<T*>(mData)[i];
 	}
-	T const& operator [](size_t i) const {
+	inline T const& operator [](size_t i) const {
 		if (i >= mSize) throw std::out_of_range("Index out of bounds");
 		return reinterpret_cast<T*>(mData)[i];
 	}
 
-	bool empty() const { return mSize == 0; }
-	size_t size() const { return mSize; }
-	size_t capacity() const { return mCapacity; }
-	T* data() const { return reinterpret_cast<T*>(mData); }
+	inline bool empty() const { return mSize == 0; }
+	inline size_t size() const { return mSize; }
+	inline size_t capacity() const { return mCapacity; }
+	inline T* data() const { return reinterpret_cast<T*>(mData); }
 
 	jvector<T>& operator=(const jvector<T> &rhs) {
 		if (this == &rhs) return *this;
@@ -145,6 +145,45 @@ public:
 
 		return *this;
 	}
+
+	class iterator : public std::iterator<std::bidirectional_iterator_tag, T> {
+	private:
+		T* data;
+
+	public:
+		iterator(const iterator& it) : data(it.data) {};
+		iterator(T* pos) : data(pos) {};
+		
+		iterator operator++(int) {
+			iterator tmp(data);
+			data++;
+			return tmp;
+		}
+		iterator& operator++() {
+			data++;
+			return *this;
+		}
+		iterator operator--(int) {
+			iterator tmp(data);
+			data--;
+			return tmp;
+		}
+		iterator& operator--() {
+			data--;
+			return *this;
+		}
+		bool operator==(const iterator& rhs) {
+			return data == rhs.data;
+		}
+		bool operator!=(const iterator& rhs) {
+			return data != rhs.data;
+		}
+		T& operator*() const { return *data; }
+		T& operator->() const { return *data; }
+	};
+
+	iterator begin() const { return iterator(data()); }
+	iterator end() const { return iterator(data() + size()); }
 
 private:
 	size_t mSize;

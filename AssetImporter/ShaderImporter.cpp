@@ -29,9 +29,6 @@ enum PARSEMODE {
 const unordered_map<SHADER_PARAM_TYPE, unsigned int> paramSizes = {
 	{ SHADER_PARAM_TYPE_CBUFFER, 0 },
 	{ SHADER_PARAM_TYPE_SRV, 0 },
-	{ SHADER_PARAM_TYPE_UAV, 0 },
-	{ SHADER_PARAM_TYPE_SAMPLER, 0 },
-	{ SHADER_PARAM_TYPE_TEXTURE, 0 },
 	{ SHADER_PARAM_TYPE_TABLE, 0 },
 	
 	{ SHADER_PARAM_TYPE_FLOATRANGE, 4 },
@@ -58,107 +55,104 @@ const unordered_map<SHADER_PARAM_TYPE, unsigned int> paramSizes = {
 };
 
 // remove whitespace, return new length
-int strTrim(wchar_t* str) {
+int strTrim(char* str) {
 	int count = 0;
 	for (int i = 0; str[i]; i++)
 		if (!isspace(str[i]))
 			str[count++] = str[i];
-	str[count] = L'\0';
+	str[count] = '\0';
 	return count;
 }
 
-XMFLOAT2 atof2(const wchar_t* str) {
+XMFLOAT2 atof2(const char* str) {
 	XMFLOAT2 v;
-	swscanf_s(str, L"(%f,%f)", &v.x, &v.y);
+	sscanf_s(str, "(%f,%f)", &v.x, &v.y);
 	return v;
 }
-XMFLOAT3 atof3(const wchar_t* str) {
+XMFLOAT3 atof3(const char* str) {
 	XMFLOAT3 v;
-	swscanf_s(str, L"(%f,%f,%f)", &v.x, &v.y, &v.z);
+	sscanf_s(str, "(%f,%f,%f)", &v.x, &v.y, &v.z);
 	return v;
 }
-XMFLOAT4 atof4(const wchar_t* str) {
+XMFLOAT4 atof4(const char* str) {
 	XMFLOAT4 v;
-	swscanf_s(str, L"(%f,%f,%f,%f)", &v.x, &v.y, &v.z, &v.w);
+	sscanf_s(str, "(%f,%f,%f,%f)", &v.x, &v.y, &v.z, &v.w);
 	return v;
 }
-XMINT2 atoi2(const wchar_t* str) {
+XMINT2 atoi2(const char* str) {
 	XMINT2 v;
-	swscanf_s(str, L"(%d,%d)", &v.x, &v.y);
+	sscanf_s(str, "(%d,%d)", &v.x, &v.y);
 	return v;
 }
-XMINT3 atoi3(const wchar_t* str) {
+XMINT3 atoi3(const char* str) {
 	XMINT3 v;
-	swscanf_s(str, L"(%d,%d,%d)", &v.x, &v.y, &v.z);
+	sscanf_s(str, "(%d,%d,%d)", &v.x, &v.y, &v.z);
 	return v;
 }
-XMINT4 atoi4(const wchar_t* str) {
+XMINT4 atoi4(const char* str) {
 	XMINT4 v;
-	swscanf_s(str, L"(%d,%d,%d,%d)", &v.x, &v.y, &v.z, &v.w);
+	sscanf_s(str, "(%d,%d,%d,%d)", &v.x, &v.y, &v.z, &v.w);
 	return v;
 }
-XMUINT2 atou2(const wchar_t* str) {
+XMUINT2 atou2(const char* str) {
 	XMUINT2 v;
-	swscanf_s(str, L"(%u,%u)", &v.x, &v.y);
+	sscanf_s(str, "(%u,%u)", &v.x, &v.y);
 	return v;
 }
-XMUINT3 atou3(const wchar_t* str) {
+XMUINT3 atou3(const char* str) {
 	XMUINT3 v;
-	swscanf_s(str, L"(%u,%u,%u)", &v.x, &v.y, &v.z);
+	sscanf_s(str, "(%u,%u,%u)", &v.x, &v.y, &v.z);
 	return v;
 }
-XMUINT4 atou4(const wchar_t* str) {
+XMUINT4 atou4(const char* str) {
 	XMUINT4 v;
-	swscanf_s(str, L"(%u,%u,%u,%u)", &v.x, &v.y, &v.z, &v.w);
+	sscanf_s(str, "(%u,%u,%u,%u)", &v.x, &v.y, &v.z, &v.w);
 	return v;
 }
 
-SHADER_PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
-	static const std::unordered_map<jwstring, SHADER_PARAM_TYPE> paramTypes {
-		{ L"cbuf",	SHADER_PARAM_TYPE_CBUFFER },
-		{ L"srv",	SHADER_PARAM_TYPE_SRV },
-		{ L"uav",	SHADER_PARAM_TYPE_UAV },
-		{ L"samp",	SHADER_PARAM_TYPE_SAMPLER },
-		{ L"tex",	SHADER_PARAM_TYPE_TEXTURE },
-		{ L"tbl",	SHADER_PARAM_TYPE_TABLE },
+SHADER_PARAM_TYPE ParseType(jstring &str, jstring &range) {
+	static const std::unordered_map<jstring, SHADER_PARAM_TYPE> paramTypes {
+		{ "cbuf",	SHADER_PARAM_TYPE_CBUFFER },
+		{ "srv",	SHADER_PARAM_TYPE_SRV },
+		{ "tbl",	SHADER_PARAM_TYPE_TABLE },
 
-		{ L"floatrange", SHADER_PARAM_TYPE_FLOATRANGE },
-		{ L"intrange",	SHADER_PARAM_TYPE_INTRANGE },
-		{ L"uintrange",	SHADER_PARAM_TYPE_UINTRANGE },
+		{ "floatrange", SHADER_PARAM_TYPE_FLOATRANGE },
+		{ "intrange",	SHADER_PARAM_TYPE_INTRANGE },
+		{ "uintrange",	SHADER_PARAM_TYPE_UINTRANGE },
 
-		{ L"rgb",	SHADER_PARAM_TYPE_COLOR3 },
-		{ L"rgba",	SHADER_PARAM_TYPE_COLOR4 },
+		{ "rgb",	SHADER_PARAM_TYPE_COLOR3 },
+		{ "rgba",	SHADER_PARAM_TYPE_COLOR4 },
 		
-		{ L"float",	SHADER_PARAM_TYPE_FLOAT },
-		{ L"float2", SHADER_PARAM_TYPE_FLOAT2 },
-		{ L"float3", SHADER_PARAM_TYPE_FLOAT3 },
-		{ L"float4", SHADER_PARAM_TYPE_FLOAT4 },
+		{ "float",	SHADER_PARAM_TYPE_FLOAT },
+		{ "float2", SHADER_PARAM_TYPE_FLOAT2 },
+		{ "float3", SHADER_PARAM_TYPE_FLOAT3 },
+		{ "float4", SHADER_PARAM_TYPE_FLOAT4 },
 		
-		{ L"int",	SHADER_PARAM_TYPE_INT },
-		{ L"int2",	SHADER_PARAM_TYPE_INT2 },
-		{ L"int3",	SHADER_PARAM_TYPE_INT3 },
-		{ L"int4",	SHADER_PARAM_TYPE_INT4 },
+		{ "int",	SHADER_PARAM_TYPE_INT },
+		{ "int2",	SHADER_PARAM_TYPE_INT2 },
+		{ "int3",	SHADER_PARAM_TYPE_INT3 },
+		{ "int4",	SHADER_PARAM_TYPE_INT4 },
 		
-		{ L"uint",	SHADER_PARAM_TYPE_UINT },
-		{ L"uint2",	SHADER_PARAM_TYPE_UINT2 },
-		{ L"uint3",	SHADER_PARAM_TYPE_UINT3 },
-		{ L"uint4",	SHADER_PARAM_TYPE_UINT4 },
+		{ "uint",	SHADER_PARAM_TYPE_UINT },
+		{ "uint2",	SHADER_PARAM_TYPE_UINT2 },
+		{ "uint3",	SHADER_PARAM_TYPE_UINT3 },
+		{ "uint4",	SHADER_PARAM_TYPE_UINT4 },
 	};
 	
-	range = L"(0,0)";
+	range = "(0,0)";
 	if (str.empty()) return SHADER_PARAM_TYPE_FLOAT;
 
-	jwstring val = str;
+	jstring val = str;
 
-	size_t p = str.find(L'(');
+	size_t p = str.find('(');
 	if (p != jstring::npos) {
-		val = str.substr(0, p) + L"range";
+		val = str.substr(0, p) + "range";
 		range = str.substr((int)p);
 
-		wchar_t* buf = new wchar_t[range.length() + 1];
-		wcscpy_s(buf, range.length() + 1, range.c_str());
+		char* buf = new char[range.length() + 1];
+		strcpy_s(buf, range.length() + 1, range.c_str());
 		strTrim(buf);
-		range = jwstring(buf);
+		range = jstring(buf);
 		delete[] buf;
 	}
 
@@ -169,44 +163,41 @@ SHADER_PARAM_TYPE ParseType(jwstring &str, jwstring &range) {
 	return paramTypes.at(val);
 }
 
-void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramName, jwstring &tstr, jwstring &vstr){
-	jwstring range;
+void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jstring &paramName, jstring &tstr, jstring &vstr){
+	jstring range;
 	ShaderParameter::ShaderValue value;
 	SHADER_PARAM_TYPE paramType = ParseType(tstr, range);
 
-	wstring valstr = L"0";
+	string valstr = "0";
 
 	if (!vstr.empty()) {
-		wchar_t* buf = new wchar_t[vstr.length() + 1];
-		wcscpy_s(buf, vstr.length() + 1, vstr.c_str());
+		char* buf = new char[vstr.length() + 1];
+		strcpy_s(buf, vstr.length() + 1, vstr.c_str());
 		strTrim(buf);
-		valstr = wstring(buf);
+		valstr = string(buf);
 		delete[] buf;
 	}
 
 	switch (paramType) {
 		case SHADER_PARAM_TYPE_CBUFFER:
 		case SHADER_PARAM_TYPE_SRV:
-		case SHADER_PARAM_TYPE_UAV:
-		case SHADER_PARAM_TYPE_SAMPLER:
-		case SHADER_PARAM_TYPE_TEXTURE:
 			break;
 
 		case SHADER_PARAM_TYPE_FLOATRANGE:
 			value.floatRange = atof2(range.c_str());
-			value.floatValue = (float)_wtof(valstr.c_str());
+			value.floatValue = (float)atof(valstr.c_str());
 			break;
 		case SHADER_PARAM_TYPE_INTRANGE:
 			value.intRange = atoi2(range.c_str());
-			value.intValue = _wtoi(valstr.c_str());
+			value.intValue = atoi(valstr.c_str());
 			break;
 		case SHADER_PARAM_TYPE_UINTRANGE:
 			value.uintRange = atou2(range.c_str());
-			value.uintValue = _wtoi(valstr.c_str());
+			value.uintValue = atoi(valstr.c_str());
 			break;
 
 		case SHADER_PARAM_TYPE_FLOAT:
-			value.floatValue = (float)_wtof(valstr.c_str());
+			value.floatValue = (float)atof(valstr.c_str());
 			break;
 		case SHADER_PARAM_TYPE_FLOAT2:
 			value.float2Value = atof2(valstr.c_str());
@@ -225,7 +216,7 @@ void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramNam
 			break;
 
 		case SHADER_PARAM_TYPE_INT:
-			value.intValue = _wtoi(valstr.c_str());
+			value.intValue = atoi(valstr.c_str());
 			break;
 		case SHADER_PARAM_TYPE_INT2:
 			value.int2Value = atoi2(valstr.c_str());
@@ -238,7 +229,7 @@ void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramNam
 			break;
 
 		case SHADER_PARAM_TYPE_UINT:
-			value.uintValue = _wtoi(valstr.c_str());
+			value.uintValue = atoi(valstr.c_str());
 			break;
 		case SHADER_PARAM_TYPE_UINT2:
 			value.uint2Value = atou2(valstr.c_str());
@@ -264,19 +255,19 @@ void SetCBParam(Shader* shader, int rootParamIndex, int &cbo, jwstring &paramNam
 }
 
 struct ShaderStageCompile {
-	jwstring entryPoint;
+	jstring entryPoint;
 	SHADER_STAGE stage;
 };
-void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jwstring path, jvector<jwstring> includePaths, jvector<jvector<jstring>> &keywords, jvector<ShaderStageCompile> &stages) {
+void ParseShader(Shader* shader, std::istream &infile, int &rootParamIndex, jstring path, jvector<jstring> includePaths, jvector<jvector<jstring>> &keywords, jvector<ShaderStageCompile> &stages) {
 	int cbo = 0;
 	int linenum = 0;
-	std::wstring line;
+	std::string line;
 	while (std::getline(infile, line)) {
 		linenum++;
 		PARSEMODE mode = PARSEMODE_NONE;
 		SHADER_STAGE stage;
-		jwstring paramType;
-		jwstring paramName;
+		jstring paramType;
+		jstring paramName;
 
 		unsigned int kwc = (unsigned int)keywords.size();
 
@@ -296,15 +287,15 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				if (line[j] == ')') parenthesisCount--;
 				j++;
 			}
-			jwstring word(&line[i], j - i);
+			jstring word(&line[i], j - i);
 			i = j;
 #pragma endregion
 
 			if (mode == PARSEMODE_NONE) {
 				// first word found on the line
-				if (word == L"#pragma")
+				if (word == "#pragma")
 					mode = PARSEMODE_PRAGMA;
-				else if (word == L"#include")
+				else if (word == "#include")
 					mode = PARSEMODE_INCLUDE;
 				else
 					break;
@@ -314,19 +305,19 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			switch (mode) {
 			case PARSEMODE_INCLUDE: // parse pragmas from #included file
 			{
-				jwstring inc;
+				jstring inc;
 				if (word[0] == '"') {
-					jwstring dir = GetDirectoryW(path);
-					inc = GetFullPathW(dir + L"\\" + word.substr(1, word.length() - 2));
+					jstring dir = GetDirectoryA(path);
+					inc = GetFullPathA(dir + "\\" + word.substr(1, word.length() - 2));
 				} else if (word[0] == '<') {
 					// System include
 					for (unsigned int i = 0; i < includePaths.size(); i++) {
-						inc = GetFullPathW(includePaths[i] + L"\\" + word.substr(1, word.length() - 2));
-						if (PathFileExistsW(inc.c_str()))
+						inc = GetFullPathA(includePaths[i] + "\\" + word.substr(1, word.length() - 2));
+						if (PathFileExistsA(inc.c_str()))
 							break;
 					}
 				}
-				wifstream incstr(inc.c_str());
+				ifstream incstr(inc.c_str());
 				if (incstr.is_open())
 					ParseShader(shader, incstr, rootParamIndex, inc, includePaths, keywords, stages);
 				mode = PARSEMODE_PRAGMA;
@@ -334,40 +325,39 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			}
 			case PARSEMODE_PRAGMA: // reading pragma type
 			{
-				if (word == L"rootsig") {
+				if (word == "rootsig") {
 					stage = SHADER_STAGE_ROOTSIG;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"vertex") {
+				} else if (word == "vertex") {
 					stage = SHADER_STAGE_VERTEX;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"hull") {
+				} else if (word == "hull") {
 					stage = SHADER_STAGE_HULL;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"domain") {
+				} else if (word == "domain") {
 					stage = SHADER_STAGE_DOMAIN;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"geometry") {
+				} else if (word == "geometry") {
 					stage = SHADER_STAGE_GEOMETRY;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"pixel") {
+				} else if (word == "pixel") {
 					stage = SHADER_STAGE_PIXEL;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"compute") {
+				} else if (word == "compute") {
 					stage = SHADER_STAGE_COMPUTE;
 					mode = PARSEMODE_SHADERSTAGE;
-				} else if (word == L"Parameter") {
+				} else if (word == "Parameter") {
 					mode = PARSEMODE_PARAMTYPE;
-				} else if (word == L"multi_compile") {
+				} else if (word == "multi_compile") {
 					mode = PARSEMODE_MULTI_COMPILE;
 				}
 				break;
 			}
 			case PARSEMODE_MULTI_COMPILE:
 			{
-				jstring keyword = utf16toUtf8(word);
 				for (unsigned int i = 0; i < kwc; i++) {
 					jvector<jstring> k = keywords[i];
-					k.push_back(keyword);
+					k.push_back(word);
 					keywords.push_back(k);
 				}
 				break;
@@ -382,13 +372,13 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 			case PARSEMODE_PARAMTYPE: // reading parameter type
 			{
 				paramType = word;
-				if (paramType == L"StaticSampler") rootParamIndex++;
+				if (paramType == "StaticSampler") rootParamIndex++;
 				mode = PARSEMODE_PARAMNAME;
 				break;
 			}
 			case PARSEMODE_PARAMNAME: // reading parameter name
 			{ 
-				jwstring range;
+				jstring range;
 				SHADER_PARAM_TYPE ptype = ParseType(paramType, range);
 				paramName = word;
 				if (ptype <= SHADER_PARAM_TYPE_TABLE) {
@@ -398,9 +388,9 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 						wprintf(L"Root Parameter %d: Integral Constant Buffer (%d)\n", rootParamIndex - 1, cbo);
 					}
 					cbo = 0;
-					if (ptype <= SHADER_PARAM_TYPE_TEXTURE) {
+					if (ptype <= SHADER_PARAM_TYPE_SRV) {
 						shader->AddParameter(paramName, ShaderParameter(ptype, rootParamIndex++, 0, {}));
-						wprintf(L"Root Parameter %d: %s (%s)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName).ToString().c_str());
+						wprintf(L"Root Parameter %d: %S (%S)\n", rootParamIndex - 1, paramName.c_str(), shader->GetParameter(paramName).ToString().c_str());
 						mode = PARSEMODE_PRAGMA;
 					} else
 						mode = PARSEMODE_TABLESIZE;
@@ -414,16 +404,16 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 				// cbv value description
 				int cbo1 = cbo;
 				SetCBParam(shader, rootParamIndex - 1, cbo, paramName, paramType, word);
-				wprintf(L"Root Parameter %d offset %d: %s (%s)\n", rootParamIndex - 1, cbo1, paramName.c_str(), shader->GetParameter(paramName).ToString().c_str());
+				wprintf(L"Root Parameter %d offset %d: %S (%S)\n", rootParamIndex - 1, cbo1, paramName.c_str(), shader->GetParameter(paramName).ToString().c_str());
 				mode = PARSEMODE_PRAGMA;
 				break;
 			}
 			case PARSEMODE_TABLESIZE:
 			{
 				// cbv value description
-				int s = _wtoi(word.c_str());
+				int s = atoi(word.c_str());
 				shader->AddParameter(paramName, ShaderParameter(SHADER_PARAM_TYPE_TABLE, rootParamIndex++, s));
-				wprintf(L"Root Parameter %d: Table %s [%d]\n", rootParamIndex - 1, paramName.c_str(), s);
+				wprintf(L"Root Parameter %d: Table %S [%d]\n", rootParamIndex - 1, paramName.c_str(), s);
 				mode = PARSEMODE_PRAGMA;
 				break;
 			}
@@ -432,7 +422,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 
 		// if a parameter had no default value
 		if (mode == PARSEMODE_PARAMVALUE)
-			SetCBParam(shader, rootParamIndex - 1, cbo, paramName, paramType, jwstring(L""));
+			SetCBParam(shader, rootParamIndex - 1, cbo, paramName, paramType, jstring(""));
 	}
 
 	if (cbo > 0) {
@@ -441,12 +431,7 @@ void ParseShader(Shader* shader, std::wistream &infile, int &rootParamIndex, jws
 	}
 }
 
-void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jwstring> includePaths) {
-	AssetMetadata m(path);
-	m.asset = std::shared_ptr<Asset>(CompileShader(path, includePaths));
-	meta.push_back(m);
-}
-Shader* CompileShader(jwstring path, jvector<jwstring> includePaths) {
+Shader* CompileShader(jwstring path, jvector<jstring> includePaths) {
 	Shader* shader = new Shader(GetNameW(path));
 
 	wprintf(L"Compiling %s\n", shader->mName.c_str());
@@ -458,8 +443,8 @@ Shader* CompileShader(jwstring path, jvector<jwstring> includePaths) {
 	jvector<ShaderStageCompile> stages;
 
 	int rootParamIndex = 0;
-	wifstream is(path.c_str());
-	ParseShader(shader, is, rootParamIndex, path, includePaths, keywords, stages);
+	ifstream is(utf16toUtf8(path).c_str());
+	ParseShader(shader, is, rootParamIndex, utf16toUtf8(path), includePaths, keywords, stages);
 
 	wprintf(L"  %d variants:\n", (int)keywords.size());
 
@@ -474,4 +459,9 @@ Shader* CompileShader(jwstring path, jvector<jwstring> includePaths) {
 	}
 
 	return shader;
+}
+void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jstring> includePaths) {
+	AssetMetadata m(path);
+	m.asset = std::shared_ptr<Asset>(CompileShader(path, includePaths));
+	meta.push_back(m);
 }

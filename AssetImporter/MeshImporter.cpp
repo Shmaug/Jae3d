@@ -19,6 +19,9 @@
 #include <d3d12.h>
 #include <DirectXMath.h>
 
+#include <unordered_set>
+#include <stack>
+
 using namespace DirectX;
 
 XMFLOAT3 ai2dx(aiVector3D v) {
@@ -77,39 +80,43 @@ void XMSET(XMUINT4 &v, int i, unsigned int val) {
 	}
 }
 
-Mesh* Convert(aiMesh *aimesh){
-	Mesh *mesh = new Mesh(utf8toUtf16(aimesh->mName.C_Str()));
+void Convert(Mesh* mesh, unsigned int submesh, aiMesh *aimesh){
+	if (aimesh->HasNormals()) mesh->HasSemantic(MESH_SEMANTIC_NORMAL, true);
+	if (aimesh->HasTangentsAndBitangents()) mesh->HasSemantic(MESH_SEMANTIC_TANGENT, true);
+	if (aimesh->HasTangentsAndBitangents()) mesh->HasSemantic(MESH_SEMANTIC_BINORMAL, true);
+	if (aimesh->HasVertexColors(0)) mesh->HasSemantic(MESH_SEMANTIC_COLOR0, true);
+	if (aimesh->HasVertexColors(1)) mesh->HasSemantic(MESH_SEMANTIC_COLOR1, true);
+	if (aimesh->HasBones()) {
+		mesh->HasSemantic(MESH_SEMANTIC_BLENDINDICES, true);
+		mesh->HasSemantic(MESH_SEMANTIC_BLENDWEIGHT, true);
+	}
+	if (aimesh->HasTextureCoords(0)) mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD0, true);
+	if (aimesh->HasTextureCoords(1)) mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD1, true);
+	if (aimesh->HasTextureCoords(2)) mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD2, true);
+	if (aimesh->HasTextureCoords(3)) mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD3, true);
 
-	mesh->HasSemantic(MESH_SEMANTIC_NORMAL, aimesh->HasNormals());
-	mesh->HasSemantic(MESH_SEMANTIC_TANGENT, aimesh->HasTangentsAndBitangents());
-	mesh->HasSemantic(MESH_SEMANTIC_BINORMAL, aimesh->HasTangentsAndBitangents());
-	mesh->HasSemantic(MESH_SEMANTIC_COLOR0, aimesh->HasVertexColors(0));
-	mesh->HasSemantic(MESH_SEMANTIC_COLOR1, aimesh->HasVertexColors(1));
-	mesh->HasSemantic(MESH_SEMANTIC_BLENDINDICES, aimesh->HasBones());
-	mesh->HasSemantic(MESH_SEMANTIC_BLENDWEIGHT, aimesh->HasBones());
-	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD0, aimesh->HasTextureCoords(0));
-	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD1, aimesh->HasTextureCoords(1));
-	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD2, aimesh->HasTextureCoords(2));
-	mesh->HasSemantic(MESH_SEMANTIC_TEXCOORD3, aimesh->HasTextureCoords(3));
+	unsigned int c = mesh->VertexCount();
+	mesh->VertexCount(c + aimesh->mNumVertices);
 
-	mesh->VertexCount(aimesh->mNumVertices);
+	for (unsigned int j = 0; j < aimesh->mNumVertices; j++) {
+		unsigned int i = j + c;
 
-	for (unsigned int i = 0; i < aimesh->mNumVertices; i++) {
-		mesh->GetVertices()[i] = ai2dx(aimesh->mVertices[i]);
+		mesh->GetVertices()[i] = ai2dx(aimesh->mVertices[j]);
+
 		if (aimesh->HasNormals())
-			mesh->GetNormals()[i] = ai2dx(aimesh->mNormals[i]);
+			mesh->GetNormals()[i] = ai2dx(aimesh->mNormals[j]);
 		if (aimesh->HasTangentsAndBitangents()) {
-			mesh->GetTangents()[i] = ai2dx(aimesh->mTangents[i]);
-			mesh->GetBinormals()[i] = ai2dx(aimesh->mBitangents[i]);
+			mesh->GetTangents()[i] = ai2dx(aimesh->mTangents[j]);
+			mesh->GetBinormals()[i] = ai2dx(aimesh->mBitangents[j]);
 		}
 
 		for (int k = 0; k < 2; k++)
 			if (aimesh->HasVertexColors(k))
-				mesh->GetColors(k)[i] = ai2dx(aimesh->mColors[k][i]);
+				mesh->GetColors(k)[i] = ai2dx(aimesh->mColors[k][j]);
 
 		for (int k = 0; k < 4; k++)
 			if (aimesh->HasTextureCoords(k)) {
-				XMFLOAT3 v = ai2dx(aimesh->mTextureCoords[k][i]);
+				XMFLOAT3 v = ai2dx(aimesh->mTextureCoords[k][j]);
 				mesh->GetTexcoords(k)[i].x = v.x;
 				mesh->GetTexcoords(k)[i].y = v.y;
 				mesh->GetTexcoords(k)[i].z = v.z;
@@ -120,12 +127,12 @@ Mesh* Convert(aiMesh *aimesh){
 	for (unsigned int i = 0; i < aimesh->mNumFaces; i++) {
 		const struct aiFace *face = &aimesh->mFaces[i];
 		for (unsigned int j = 2; j < face->mNumIndices; j++)
-			mesh->AddTriangle(face->mIndices[j], face->mIndices[j - 1], face->mIndices[j - 2]);
+			mesh->AddTriangle(c + face->mIndices[j], c + face->mIndices[j - 1], c + face->mIndices[j - 2], submesh);
 	}
 
 	if (aimesh->HasBones()) {
-		XMUINT4*   bi = mesh->GetBlendIndices();
-		XMFLOAT4* bw = mesh->GetBlendWeights();
+		XMUINT4*  bi = mesh->GetBlendIndices() + c;
+		XMFLOAT4* bw = mesh->GetBlendWeights() + c;
 
 		for (uint32_t j = 0; j < aimesh->mNumBones; j++) {
 			aiBone *bone = aimesh->mBones[j];
@@ -154,60 +161,59 @@ Mesh* Convert(aiMesh *aimesh){
 			}
 		}
 	}
-
-	return mesh;
 }
 
-void ImportMesh(jwstring path, jvector<AssetMetadata> &meta) {
+void ImportScene(jwstring path, jvector<AssetMetadata> &meta) {
 	AssetMetadata metadata(path);
-	int c;
-	Asset** a = ImportMesh(path, c);
-	for (int i = 0; i < c; i++) {
+	jvector<Asset*> assets;
+	ImportScene(path, assets);
+	for (int i = 0; i < assets.size(); i++) {
 		AssetMetadata t = metadata;
-		t.asset = std::shared_ptr<Asset>(a[i]);
+		t.asset = std::shared_ptr<Asset>(assets[i]);
 		meta.push_back(t);
 	}
-	delete[] a;
 }
-Asset** ImportMesh(jwstring path, int &count) {
-	const aiScene *scene = aiImportFile(utf16toUtf8(path.c_str()).c_str(), 
-		aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_MakeLeftHanded | aiProcess_FlipUVs);
+void ImportScene(jwstring path, jvector<Asset*> &assets) {
+	const aiScene *scene = aiImportFile(utf16toUtf8(path).c_str(),
+		aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights | aiProcess_Triangulate |
+		aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace | aiProcess_GenUVCoords |
+		aiProcess_ValidateDataStructure | aiProcess_ImproveCacheLocality |
+		aiProcess_MakeLeftHanded | aiProcess_FlipUVs);
 	jwstring fname = GetNameExtW(path);
 
-	count = 0;
-	if (scene->HasMeshes()) count += scene->mNumMeshes;
-	//if (scene->HasAnimations()) count += scene->mNumAnimations;
+	std::unordered_set<jstring> meshes;
 
-	Asset** assets = new Asset*[count];
-
-	if (scene->HasMeshes()) {
-		for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
-			aiMesh* aimesh = scene->mMeshes[i];
-			wprintf(L"%s: %S (%d vertices, %d faces)\n", fname.c_str(), aimesh->mName.C_Str(), aimesh->mNumVertices, aimesh->mNumFaces);
-			assets[i] = Convert(aimesh);
-		}
-	}
 	//if (scene->HasAnimations()) {
 	//	for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
 	//		aiAnimation aianim = scene->mAnimations[i];
 	//	}
 	//}
 
-	/*
 	// load scene information
-	stack<aiNode*> nodes;
+	std::stack<aiNode*> nodes;
 	nodes.push(scene->mRootNode);
 	while (!nodes.empty()) {
 		aiNode* node = nodes.top();
 		nodes.pop();
+
+		if (node->mNumMeshes) {
+			Mesh* mesh = new Mesh(utf8toUtf16(node->mName.C_Str()));
+
+			wprintf(L"%S: %d meshes\n", node->mName.C_Str(), node->mNumMeshes);
+			for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+				aiMesh* aimesh = scene->mMeshes[node->mMeshes[i]];
+
+				aiString matname;
+				scene->mMaterials[aimesh->mMaterialIndex]->Get(AI_MATKEY_NAME, matname);
+				wprintf(L"  %S: %d vertices, %d faces\n", matname.C_Str(), aimesh->mNumVertices, aimesh->mNumFaces);
+				Convert(mesh, i, scene->mMeshes[node->mMeshes[i]]);
+			}
+			assets.push_back(mesh);
+		}
+
 		for (unsigned int i = 0; i < node->mNumChildren; i++)
 			nodes.push(node->mChildren[i]);
-
-		// add transform information from node
 	}
-	*/
 
 	aiReleaseImport(scene);
-
-	return assets;
 }

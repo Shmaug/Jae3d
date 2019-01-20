@@ -5,13 +5,14 @@
 #include "Mesh.hpp"
 #include "Material.hpp"
 #include "ConstantBuffer.hpp"
+#include "Profiler.hpp"
 
 using namespace Microsoft::WRL;
 using namespace std;
 using namespace DirectX;
 
 MeshRenderer::MeshRenderer() : MeshRenderer(L"") {}
-MeshRenderer::MeshRenderer(jwstring name) : Renderer(name) { 
+MeshRenderer::MeshRenderer(jwstring name) : Renderer(name), mVisible(true) { 
 	mCBuffer = shared_ptr<ConstantBuffer>(new ConstantBuffer(sizeof(XMFLOAT4X4) * 2, L"MeshRenderer CB", Graphics::BufferCount()));
 }
 MeshRenderer::~MeshRenderer() {}
@@ -27,15 +28,37 @@ DirectX::BoundingOrientedBox MeshRenderer::Bounds() {
 	}
 	return BoundingOrientedBox(WorldPosition(), XMFLOAT3(0, 0, 0), WorldRotation());
 }
+void MeshRenderer::SetMesh(shared_ptr<Mesh> mesh) {
+	mMesh = mesh;
+	if (mMesh) {
+		while (mMaterials.size() < mesh->SubmeshCount())
+			mMaterials.push_back(nullptr);
+	}
+}
 
-void MeshRenderer::Draw(shared_ptr<CommandList> commandList) {
-	if (!mMesh || !mMaterial) return;
+bool MeshRenderer::SubmeshRenderJob::LessThan(RenderJob* b) {
+	if (RenderJob::LessThan(b)) return true;
+	SubmeshRenderJob* j = dynamic_cast<SubmeshRenderJob*>(b);
+	if (!j) return true;
+	return false;
+	return j->mMaterial->mName < mMaterial->mName;
+}
+void MeshRenderer::SubmeshRenderJob::Execute(shared_ptr<CommandList> commandList, std::shared_ptr<Material> materialOverride){
+	if (materialOverride) mMaterial = materialOverride;
+	mMaterial->SetCBuffer("ObjectBuffer", mObjectBuffer, commandList->GetFrameIndex());
+	commandList->SetMaterial(mMaterial);
+	commandList->DrawMesh(*mMesh, mSubmesh);
+}
+
+void MeshRenderer::GatherRenderJobs(shared_ptr<CommandList> commandList, shared_ptr<Camera> camera, jvector<RenderJob*> &list) {
+	if (!mMesh) return;
 	UpdateTransform();
 
 	mCBuffer->WriteFloat4x4(ObjectToWorld(), 0, commandList->GetFrameIndex());
 	mCBuffer->WriteFloat4x4(WorldToObject(), sizeof(XMFLOAT4X4), commandList->GetFrameIndex());
 
-	commandList->SetMaterial(mMaterial);
-	mMaterial->SetCBuffer(L"ObjectBuffer", mCBuffer, commandList->GetFrameIndex());
-	commandList->DrawMesh(*mMesh);
+	for (unsigned int i = 0; i < mMesh->SubmeshCount(); i++) {
+		if (!mMaterials[i]) continue;
+		list.push_back(new SubmeshRenderJob(mMaterials[i]->RenderQueue(), mMesh, i, mMaterials[i], mCBuffer));
+	}
 }

@@ -127,18 +127,7 @@ void Viewport::DoFrame() {
 		case ASSET_TYPE_TEXTURE:
 		{
 			shared_ptr<Texture> tex = static_pointer_cast<Texture>(shownAsset.asset);
-
-			switch (tex->AlphaMode()) {
-			case ALPHA_MODE_TRANSPARENCY:
-				commandList->SetBlendState(BLEND_STATE_ALPHA);
-				break;
-			case ALPHA_MODE_PREMULTIPLIED:
-				commandList->SetBlendState(BLEND_STATE_PREMUL);
-				break;
-			default:
-				commandList->SetBlendState(BLEND_STATE_DEFAULT);
-				break;
-			}
+			commandList->SetBlendState(BLEND_STATE_ALPHA);
 
 			XMFLOAT2 scale = tex->Width() > tex->Height() ? XMFLOAT2(1.0f, (float)tex->Height() / tex->Width()) : XMFLOAT2((float)tex->Width() / tex->Height(), 1.0f);
 			if (window->GetWidth() > window->GetHeight())
@@ -185,7 +174,7 @@ void Viewport::DoFrame() {
 			float h = (float)Graphics::GetWindow()->GetHeight();
 
 			auto sb = Graphics::GetSpriteBatch();
-			sb->DrawText(static_pointer_cast<Font>(shownAsset.asset), XMFLOAT4(0, h * .3f, w, h), 1.0f, {1,1,1,1}, L"the quick brown fox jumped\nover the lazy brown dog.");
+			sb->DrawText(static_pointer_cast<Font>(shownAsset.asset), XMFLOAT2(0, h * .3f), 1.0f, {1,1,1,1}, L"the quick brown fox jumped\nover the lazy brown dog.");
 			sb->Flush(commandList);
 		}
 		}

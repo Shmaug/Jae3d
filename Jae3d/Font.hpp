@@ -22,13 +22,13 @@ public:
 	JAE_API Font(jwstring name, MemoryStream &ms);
 	JAE_API ~Font();
 
-	JAE_API void WriteData(MemoryStream &ms);
-	JAE_API uint64_t TypeId();
+	JAE_API void WriteData(MemoryStream &ms) override;
+	JAE_API uint64_t TypeId() override;
 
 	JAE_API std::shared_ptr<Texture> GetTexture() const { return mTexture; };
 
 	JAE_API int GetKerning(wchar_t from, wchar_t to) const;
-	JAE_API FontGlyph GetGlyph(wchar_t c) const;
+	JAE_API const FontGlyph& GetGlyph(wchar_t c) const;
 	JAE_API bool HasGlyph(wchar_t c) const;
 
 	unsigned int GetSize() const { return mSize; };

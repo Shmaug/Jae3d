@@ -260,18 +260,6 @@ const std::unordered_map<jwstring, DXGI_FORMAT> StringToFormat {
 	{ L"v408",						DXGI_FORMAT_V408                        },
 	{ L"force_uint",				DXGI_FORMAT_FORCE_UINT                  }
 };
-const std::unordered_map<ALPHA_MODE, jwstring> AlphaModeToString {
-	{ ALPHA_MODE_OTHER,			L"other"			},
-	{ ALPHA_MODE_PREMULTIPLIED,	L"premultiplied"	},
-	{ALPHA_MODE_TRANSPARENCY,	L"transparency"		},
-	{ ALPHA_MODE_UNUSED,		L"unused"			}
-};
-const std::unordered_map<jwstring, ALPHA_MODE> StringToAlphaMode {
-	{ L"other",			ALPHA_MODE_OTHER			},
-	{ L"premultiplied",	ALPHA_MODE_PREMULTIPLIED	},
-	{ L"transparency",	ALPHA_MODE_TRANSPARENCY		},
-	{ L"unused",		ALPHA_MODE_UNUSED			}
-};
 
 inline DXGI_FORMAT MakeLinear(DXGI_FORMAT format) {
 	switch (format) {
@@ -332,7 +320,6 @@ struct AssetMetadata {
 					Field<DXGI_FORMAT>(	L"Pixel Format",		nullptr),
 					Field<bool>(		L"Linear",				nullptr),
 					Field<bool>(		L"Generate Mip Maps",	nullptr),
-					Field<ALPHA_MODE>(	L"Alpha Mode",			nullptr),
 					Field<unsigned int>(L"Font Size (pts)",		&fontSize),
 					Field<unsigned int>(L"Font Dpi",			&fontDpi));
 
@@ -341,7 +328,6 @@ struct AssetMetadata {
 					Field<DXGI_FORMAT>(	L"Pixel Format",		&textureFormat),
 					Field<bool>(		L"Linear",				&textureLinear),
 					Field<bool>(		L"Generate Mip Maps",	&textureMipMaps),
-					Field<ALPHA_MODE>(	L"Alpha Mode",			&textureAlphaMode),
 					Field<unsigned int>(L"Font Size (pts)",		nullptr),
 					Field<unsigned int>(L"Font Dpi",			nullptr));
 			}
@@ -350,7 +336,6 @@ struct AssetMetadata {
 			Field<DXGI_FORMAT>(	L"Pixel Format",		nullptr),
 			Field<bool>(		L"Linear",				nullptr),
 			Field<bool>(		L"Generate Mip Maps",	nullptr),
-			Field<ALPHA_MODE>(	L"Alpha Mode",			nullptr),
 			Field<unsigned int>(L"Font Size (pts)",		nullptr),
 			Field<unsigned int>(L"Font Dpi",			nullptr));
 	}
@@ -361,13 +346,12 @@ struct AssetMetadata {
 	DXGI_FORMAT textureFormat;
 	bool textureLinear;
 	bool textureMipMaps;
-	ALPHA_MODE textureAlphaMode;
 
 	unsigned int fontSize;
 	unsigned int fontDpi;
 
 	AssetMetadata() :
-		textureFormat(DXGI_FORMAT_R8G8B8A8_UNORM), textureLinear(true), textureMipMaps(true), textureAlphaMode(ALPHA_MODE_OTHER),
+		textureFormat(DXGI_FORMAT_R8G8B8A8_UNORM), textureLinear(true), textureMipMaps(true),
 		fontSize(24), fontDpi(96), asset(nullptr), assetPath(L"") {}
 	AssetMetadata(jwstring assetp) : AssetMetadata() {
 		assetPath = assetp;
@@ -448,13 +432,7 @@ struct AssetMetadata {
 			else if (tags[i].name == L"linear")
 				textureLinear = tags[i].value == L"true";
 
-			else if (tags[i].name == L"alpha") {
-				if (StringToAlphaMode.count(tags[i].value))
-					textureAlphaMode = StringToAlphaMode.at(tags[i].value);
-				else
-					std::cerr << "Invalid alpha mode " << utf16toUtf8(tags[i].value).c_str() << "\n";
-
-			} else if (tags[i].name == L"fontsize")
+			else if (tags[i].name == L"fontsize")
 				fontSize = (unsigned int)_wtoi(tags[i].value.c_str());
 
 			else if (tags[i].name == L"fontdpi")
@@ -478,7 +456,6 @@ struct AssetMetadata {
 			WriteField(os, L"Format", textureFormat);
 			WriteField(os, L"Linear", textureLinear);
 			WriteField(os, L"MipMaps", textureMipMaps);
-			WriteField(os, L"AlphaMode", textureAlphaMode);
 			break;
 		case ASSET_TYPE_FONT:
 			WriteField(os, L"FontSize", fontSize);
@@ -516,13 +493,6 @@ private:
 		os.write(name.c_str(), name.length());
 		os.write(L"=", 1);
 		jwstring fmt = FormatToString.at(v);
-		os.write(fmt.c_str(), fmt.length());
-		os.write(L";\n", 2);
-	}
-	void WriteField(std::wofstream &os, jwstring name, ALPHA_MODE v) {
-		os.write(name.c_str(), name.length());
-		os.write(L"=", 1);
-		jwstring fmt = AlphaModeToString.at(v);
 		os.write(fmt.c_str(), fmt.length());
 		os.write(L";\n", 2);
 	}

@@ -3,11 +3,17 @@
 #include "Texture.hpp"
 #include "ConstantBuffer.hpp"
 
-DescriptorTable::DescriptorTable(unsigned int size) : mSize(size) {
+DescriptorTable::DescriptorTable(unsigned int size) : DescriptorTable(L"", size) {}
+DescriptorTable::DescriptorTable(jwstring name, unsigned int size) : mSize(size) {
 	mHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, size, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+	mHeap->SetName(name.c_str());
+	mTable.reserve(size);
+	for (unsigned int i = 0; i < size; i++)
+		mTable.push_back(nullptr);
 }
 DescriptorTable::~DescriptorTable() {
 	mHeap.Reset();
+	mTable.free();
 }
 
 void DescriptorTable::SetTexture(unsigned int i, std::shared_ptr<Texture> tex, bool uav) {
@@ -54,7 +60,7 @@ void DescriptorTable::SetTexture(unsigned int i, std::shared_ptr<Texture> tex, b
 		srvDesc.Format = desc.Format;
 		srvDesc.Texture2D.MipLevels = desc.MipLevels;
 		Graphics::GetDevice()->CreateShaderResourceView(tex->GetTexture().Get(), &srvDesc, handle);
-
 	}
 
+	mTable[i] = tex;
 }

@@ -5,5 +5,5 @@
 #include <Asset.hpp>
 #include "ImportCommon.hpp"
 
-void ImportMesh(jwstring file, jvector<AssetMetadata> &meta);
-Asset** ImportMesh(jwstring file, int &count);
+void ImportScene(jwstring file, jvector<AssetMetadata> &meta);
+void ImportScene(jwstring file, jvector<Asset*> &assets);

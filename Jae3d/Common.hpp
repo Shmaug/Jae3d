@@ -19,48 +19,61 @@ class Asset;
 class Mesh;
 class Shader;
 class Texture;
+class Animation;
+class Model;
 class ConstantBuffer;
 class DescriptorTable;
 class CommandList;
 class Camera;
 class Material;
 
-const D3D12_RENDER_TARGET_BLEND_DESC BLEND_STATE_DEFAULT {
-	FALSE,							// BOOL BlendEnable;
-	FALSE,							// BOOL LogicOpEnable;
-	D3D12_BLEND_ONE,				// D3D12_BLEND SrcBlend;
-	D3D12_BLEND_ZERO,				// D3D12_BLEND DestBlend;
-	D3D12_BLEND_OP_ADD,				// D3D12_BLEND_OP BlendOp;
-	D3D12_BLEND_ONE,				// D3D12_BLEND SrcBlendAlpha;
-	D3D12_BLEND_ZERO,				// D3D12_BLEND DestBlendAlpha;
-	D3D12_BLEND_OP_ADD,				// D3D12_BLEND_OP BlendOpAlpha;
-	D3D12_LOGIC_OP_NOOP,			// D3D12_LOGIC_OP LogicOp;
-	D3D12_COLOR_WRITE_ENABLE_ALL	// UINT8 RenderTargetWriteMask;
-};
-const D3D12_RENDER_TARGET_BLEND_DESC BLEND_STATE_ALPHA {
-	TRUE,							// BOOL BlendEnable;
-	FALSE,							// BOOL LogicOpEnable;
-	D3D12_BLEND_SRC_ALPHA,			// D3D12_BLEND SrcBlend;
-	D3D12_BLEND_INV_SRC_ALPHA,		// D3D12_BLEND DestBlend;
-	D3D12_BLEND_OP_ADD,				// D3D12_BLEND_OP BlendOp;
-	D3D12_BLEND_SRC_ALPHA,			// D3D12_BLEND SrcBlendAlpha;
-	D3D12_BLEND_INV_SRC_ALPHA,		// D3D12_BLEND DestBlendAlpha;
-	D3D12_BLEND_OP_ADD,				// D3D12_BLEND_OP BlendOpAlpha;
-	D3D12_LOGIC_OP_NOOP,			// D3D12_LOGIC_OP LogicOp;
-	D3D12_COLOR_WRITE_ENABLE_ALL	// UINT8 RenderTargetWriteMask;
-};
-const D3D12_RENDER_TARGET_BLEND_DESC BLEND_STATE_PREMUL {
-	TRUE,							// BOOL BlendEnable;
-	FALSE,							// BOOL LogicOpEnable;
-	D3D12_BLEND_ONE,				// D3D12_BLEND SrcBlend;
-	D3D12_BLEND_INV_SRC_ALPHA,		// D3D12_BLEND DestBlend;
-	D3D12_BLEND_OP_ADD,				// D3D12_BLEND_OP BlendOp;
-	D3D12_BLEND_SRC_ALPHA,			// D3D12_BLEND SrcBlendAlpha;
-	D3D12_BLEND_INV_SRC_ALPHA,		// D3D12_BLEND DestBlendAlpha;
-	D3D12_BLEND_OP_ADD,				// D3D12_BLEND_OP BlendOpAlpha;
-	D3D12_LOGIC_OP_NOOP,			// D3D12_LOGIC_OP LogicOp;
-	D3D12_COLOR_WRITE_ENABLE_ALL	// UINT8 RenderTargetWriteMask;
-};
+// BOOL BlendEnable;
+// BOOL LogicOpEnable;
+// D3D12_BLEND SrcBlend;
+// D3D12_BLEND DestBlend;
+// D3D12_BLEND_OP BlendOp;
+// D3D12_BLEND SrcBlendAlpha;
+// D3D12_BLEND DestBlendAlpha;
+// D3D12_BLEND_OP BlendOpAlpha;
+// D3D12_LOGIC_OP LogicOp;
+// UINT8 RenderTargetWriteMask;
+
+#define BLEND_STATE_DEFAULT { \
+	FALSE,							\
+	FALSE,							\
+	D3D12_BLEND_ONE,				\
+	D3D12_BLEND_ZERO,				\
+	D3D12_BLEND_OP_ADD,				\
+	D3D12_BLEND_ONE,				\
+	D3D12_BLEND_ZERO,				\
+	D3D12_BLEND_OP_ADD,				\
+	D3D12_LOGIC_OP_NOOP,			\
+	D3D12_COLOR_WRITE_ENABLE_ALL	\
+}
+#define BLEND_STATE_ALPHA { \
+	TRUE,							\
+	FALSE,							\
+	D3D12_BLEND_SRC_ALPHA,			\
+	D3D12_BLEND_INV_SRC_ALPHA,		\
+	D3D12_BLEND_OP_ADD,				\
+	D3D12_BLEND_SRC_ALPHA,			\
+	D3D12_BLEND_INV_SRC_ALPHA,		\
+	D3D12_BLEND_OP_ADD,				\
+	D3D12_LOGIC_OP_NOOP,			\
+	D3D12_COLOR_WRITE_ENABLE_ALL	\
+}
+#define BLEND_STATE_PREMUL { \
+	TRUE,							\
+	FALSE,							\
+	D3D12_BLEND_ONE,				\
+	D3D12_BLEND_INV_SRC_ALPHA,		\
+	D3D12_BLEND_OP_ADD,				\
+	D3D12_BLEND_SRC_ALPHA,			\
+	D3D12_BLEND_INV_SRC_ALPHA,		\
+	D3D12_BLEND_OP_ADD,				\
+	D3D12_LOGIC_OP_NOOP,			\
+	D3D12_COLOR_WRITE_ENABLE_ALL	\
+}
 
 enum ASSET_TYPE : uint32_t {
 	ASSET_TYPE_UNSPECIFIED	= 0,
@@ -68,6 +81,7 @@ enum ASSET_TYPE : uint32_t {
 	ASSET_TYPE_SHADER		= 2,
 	ASSET_TYPE_TEXTURE		= 3,
 	ASSET_TYPE_FONT			= 4,
+	ASSET_TYPE_ANIMATION    = 5,
 };
 
 enum MESH_SEMANTIC {
@@ -97,9 +111,6 @@ enum SHADER_STAGE {
 enum SHADER_PARAM_TYPE {
 	SHADER_PARAM_TYPE_CBUFFER,
 	SHADER_PARAM_TYPE_SRV,
-	SHADER_PARAM_TYPE_UAV,
-	SHADER_PARAM_TYPE_SAMPLER,
-	SHADER_PARAM_TYPE_TEXTURE,
 	SHADER_PARAM_TYPE_TABLE,
 	
 	SHADER_PARAM_TYPE_FLOATRANGE,
@@ -123,13 +134,6 @@ enum SHADER_PARAM_TYPE {
 	SHADER_PARAM_TYPE_UINT2,
 	SHADER_PARAM_TYPE_UINT3,
 	SHADER_PARAM_TYPE_UINT4,
-};
-
-enum ALPHA_MODE {
-	ALPHA_MODE_TRANSPARENCY = 0,
-	ALPHA_MODE_PREMULTIPLIED = 1,
-	ALPHA_MODE_OTHER = 2,
-	ALPHA_MODE_UNUSED = 3,
 };
 
 // Stores all types of material parameters and their values
@@ -242,86 +246,77 @@ public:
 	int TableSize() const { return tableSize; }
 	ShaderValue GetDefaultValue() const { return defaultValue; }
 
-	jwstring ToString() const {
+	jstring ToString() const {
 		int c = 0;
-		wchar_t* buf = new wchar_t[256];
+		char* buf = new char[256];
 		switch (type) {
 		case SHADER_PARAM_TYPE_CBUFFER:
-			c += swprintf_s(buf, 256, L"Root CBV");
+			c += sprintf_s(buf, 256, "Root CBV");
 			break;
 		case SHADER_PARAM_TYPE_SRV:
-			c += swprintf_s(buf, 256, L"Root SRV");
-			break;
-		case SHADER_PARAM_TYPE_UAV:
-			c += swprintf_s(buf, 256, L"Root UAV");
-			break;
-		case SHADER_PARAM_TYPE_SAMPLER:
-			c += swprintf_s(buf, 256, L"Root Sampler");
-			break;
-		case SHADER_PARAM_TYPE_TEXTURE:
-			c += swprintf_s(buf, 256, L"Root Texture");
+			c += sprintf_s(buf, 256, "Root SRV");
 			break;
 		case SHADER_PARAM_TYPE_TABLE:
-			c += swprintf_s(buf, 256, L"Root Table [%d]", tableSize);
+			c += sprintf_s(buf, 256, "Root Table [%d]", tableSize);
 			break;
 
 		case SHADER_PARAM_TYPE_FLOATRANGE:
-			c += swprintf_s(buf, 256, L"Float: %f Range: (%f,%f)", defaultValue.floatValue, defaultValue.floatRange.x, defaultValue.floatRange.y);
+			c += sprintf_s(buf, 256, "Float: %f Range: (%f,%f)", defaultValue.floatValue, defaultValue.floatRange.x, defaultValue.floatRange.y);
 			break;
 		case SHADER_PARAM_TYPE_INTRANGE:
-			c += swprintf_s(buf, 256, L"Int: %d Range: (%d,%d)", defaultValue.intValue, defaultValue.intRange.x, defaultValue.intRange.y);
+			c += sprintf_s(buf, 256, "Int: %d Range: (%d,%d)", defaultValue.intValue, defaultValue.intRange.x, defaultValue.intRange.y);
 			break;
 		case SHADER_PARAM_TYPE_UINTRANGE:
-			c += swprintf_s(buf, 256, L"UInt: %u Range: (%u,%u)", defaultValue.uintValue, defaultValue.uintRange.x, defaultValue.uintRange.y);
+			c += sprintf_s(buf, 256, "UInt: %u Range: (%u,%u)", defaultValue.uintValue, defaultValue.uintRange.x, defaultValue.uintRange.y);
 			break;
 
 		case SHADER_PARAM_TYPE_FLOAT:
-			c += swprintf_s(buf, 256, L"Float:%f", defaultValue.floatValue);
+			c += sprintf_s(buf, 256, "Float:%f", defaultValue.floatValue);
 			break;
 		case SHADER_PARAM_TYPE_FLOAT2:
-			c += swprintf_s(buf, 256, L"Float2: %f %f", defaultValue.float2Value.x, defaultValue.float2Value.y);
+			c += sprintf_s(buf, 256, "Float2: %f %f", defaultValue.float2Value.x, defaultValue.float2Value.y);
 			break;
 		case SHADER_PARAM_TYPE_COLOR3:
-			c += swprintf_s(buf, 256, L"Color3: %f %f %f", defaultValue.float3Value.x, defaultValue.float3Value.y, defaultValue.float3Value.z);
+			c += sprintf_s(buf, 256, "Color3: %f %f %f", defaultValue.float3Value.x, defaultValue.float3Value.y, defaultValue.float3Value.z);
 			break;
 		case SHADER_PARAM_TYPE_FLOAT3:
-			c += swprintf_s(buf, 256, L"Float3: %f %f %f", defaultValue.float3Value.x, defaultValue.float3Value.y, defaultValue.float3Value.z);
+			c += sprintf_s(buf, 256, "Float3: %f %f %f", defaultValue.float3Value.x, defaultValue.float3Value.y, defaultValue.float3Value.z);
 			break;
 		case SHADER_PARAM_TYPE_COLOR4:
-			c += swprintf_s(buf, 256, L"Color4: %f %f %f %f", defaultValue.float4Value.x, defaultValue.float4Value.y, defaultValue.float4Value.z, defaultValue.float4Value.w);
+			c += sprintf_s(buf, 256, "Color4: %f %f %f %f", defaultValue.float4Value.x, defaultValue.float4Value.y, defaultValue.float4Value.z, defaultValue.float4Value.w);
 			break;
 		case SHADER_PARAM_TYPE_FLOAT4:
-			c += swprintf_s(buf, 256, L"Float4: %f %f %f %f", defaultValue.float4Value.x, defaultValue.float4Value.y, defaultValue.float4Value.z, defaultValue.float4Value.w);
+			c += sprintf_s(buf, 256, "Float4: %f %f %f %f", defaultValue.float4Value.x, defaultValue.float4Value.y, defaultValue.float4Value.z, defaultValue.float4Value.w);
 			break;
 
 		case SHADER_PARAM_TYPE_INT:
-			c += swprintf_s(buf, 256, L"Int: %d", defaultValue.intValue);
+			c += sprintf_s(buf, 256, "Int: %d", defaultValue.intValue);
 			break;
 		case SHADER_PARAM_TYPE_INT2:
-			c += swprintf_s(buf, 256, L"Int2: %d %d", defaultValue.int2Value.x, defaultValue.int2Value.y);
+			c += sprintf_s(buf, 256, "Int2: %d %d", defaultValue.int2Value.x, defaultValue.int2Value.y);
 			break;
 		case SHADER_PARAM_TYPE_INT3:
-			c += swprintf_s(buf, 256, L"Int3: %d %d %d", defaultValue.int3Value.x, defaultValue.int3Value.y, defaultValue.int3Value.z);
+			c += sprintf_s(buf, 256, "Int3: %d %d %d", defaultValue.int3Value.x, defaultValue.int3Value.y, defaultValue.int3Value.z);
 			break;
 		case SHADER_PARAM_TYPE_INT4:
-			c += swprintf_s(buf, 256, L"Int3: %d %d %d %d", defaultValue.int4Value.x, defaultValue.int4Value.y, defaultValue.int4Value.z, defaultValue.int4Value.w);
+			c += sprintf_s(buf, 256, "Int3: %d %d %d %d", defaultValue.int4Value.x, defaultValue.int4Value.y, defaultValue.int4Value.z, defaultValue.int4Value.w);
 			break;
 
 		case SHADER_PARAM_TYPE_UINT:
-			c += swprintf_s(buf, 256, L"UInt: %u", defaultValue.uintValue);
+			c += sprintf_s(buf, 256, "UInt: %u", defaultValue.uintValue);
 			break;
 		case SHADER_PARAM_TYPE_UINT2:
-			c += swprintf_s(buf, 256, L"UInt2: %u %u", defaultValue.uint2Value.x, defaultValue.uint2Value.y);
+			c += sprintf_s(buf, 256, "UInt2: %u %u", defaultValue.uint2Value.x, defaultValue.uint2Value.y);
 			break;
 		case SHADER_PARAM_TYPE_UINT3:
-			c += swprintf_s(buf, 256, L"UInt3: %u %u %u", defaultValue.uint3Value.x, defaultValue.uint3Value.y, defaultValue.uint3Value.z);
+			c += sprintf_s(buf, 256, "UInt3: %u %u %u", defaultValue.uint3Value.x, defaultValue.uint3Value.y, defaultValue.uint3Value.z);
 			break;
 		case SHADER_PARAM_TYPE_UINT4:
-			c += swprintf_s(buf, 256, L"UInt3: %u %u %u %u", defaultValue.uint4Value.x, defaultValue.uint4Value.y, defaultValue.uint4Value.z, defaultValue.uint4Value.w);
+			c += sprintf_s(buf, 256, "UInt3: %u %u %u %u", defaultValue.uint4Value.x, defaultValue.uint4Value.y, defaultValue.uint4Value.z, defaultValue.uint4Value.w);
 			break;
 		}
 
-		jwstring str(buf);
+		jstring str(buf);
 		delete[] buf;
 		return str;
 	}

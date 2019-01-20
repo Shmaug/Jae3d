@@ -134,6 +134,9 @@
     <ClCompile Include="AssetDatabase.cpp">
       <Filter>Source Files\Assets</Filter>
     </ClCompile>
+    <ClCompile Include="Animation.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.hpp">
@@ -253,6 +256,9 @@
     <ClInclude Include="DescriptorTable.hpp">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Animation.hpp">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -263,5 +269,6 @@
     <None Include="..\Assets\Core\Colored.hlsl" />
     <None Include="..\Assets\Core\SpriteTextured.hlsl" />
     <None Include="..\Assets\Core\SpriteColored.hlsl" />
+    <None Include="..\Assets\Core\ColoredRoot.hlsl" />
   </ItemGroup>
 </Project>

@@ -13,7 +13,7 @@ using namespace DirectX;
 using namespace std;
 
 Mesh::Mesh(jwstring name) : Asset(name), mDataUploaded(false) {}
-Mesh::Mesh(jwstring name, MemoryStream &ms) : Asset(name), mDataUploaded(false) {
+Mesh::Mesh(jwstring name, MemoryStream &ms) : Asset(name, ms), mDataUploaded(false) {
 	mSemantics = (MESH_SEMANTIC)ms.Read<uint32_t>();
 	VertexCount(ms.Read<uint32_t>());
 
@@ -50,16 +50,22 @@ Mesh::Mesh(jwstring name, MemoryStream &ms) : Asset(name), mDataUploaded(false) 
 		XMFLOAT3((min.x + max.x) * .5f, (min.y + max.y) * .5f, (min.z + max.z) * .5f),
 		XMFLOAT3(max.x - min.x, max.y - min.y, max.z - min.z));
 
-	uint32_t indexCount = ms.Read<uint32_t>();
 	m32BitIndices = ms.Read<uint8_t>();
-	if (m32BitIndices) {
-		mIndices32.reserve(indexCount);
-		for (uint32_t i = 0; i < indexCount; i++)
-			mIndices32.push_back(ms.Read<uint32_t>());
-	} else {
-		mIndices16.reserve(indexCount);
-		for (uint32_t i = 0; i < indexCount; i++)
-			mIndices16.push_back(ms.Read<uint16_t>());
+
+	uint32_t submeshCount = ms.Read<uint32_t>();
+	mSubmeshes.reserve(submeshCount);
+	for (unsigned int s = 0; s < submeshCount; s++) {
+		mSubmeshes.push_back({});
+		uint32_t indexCount = ms.Read<uint32_t>();
+		if (m32BitIndices) {
+			mSubmeshes[s].mIndices32.reserve(indexCount);
+			for (uint32_t i = 0; i < indexCount; i++)
+				mSubmeshes[s].mIndices32.push_back(ms.Read<uint32_t>());
+		} else {
+			mSubmeshes[s].mIndices16.reserve(indexCount);
+			for (uint32_t i = 0; i < indexCount; i++)
+				mSubmeshes[s].mIndices16.push_back(ms.Read<uint16_t>());
+		}
 	}
 
 	uint32_t bonec = ms.Read<uint32_t>();
@@ -96,14 +102,18 @@ void Mesh::WriteData(MemoryStream &ms) {
 		if (HasSemantic(MESH_SEMANTIC_TEXCOORD3)) ms.Write(mTexcoord3[i]);
 	}
 
-	ms.Write((uint32_t)IndexCount());
 	ms.Write((uint8_t)m32BitIndices);
-	if (m32BitIndices)
-		for (unsigned int i = 0; i < IndexCount(); i++)
-			ms.Write(mIndices32[i]);
-	else
-		for (unsigned int i = 0; i < IndexCount(); i++)
-			ms.Write(mIndices16[i]);
+
+	ms.Write((uint32_t)mSubmeshes.size());
+	for (unsigned int s = 0; s < mSubmeshes.size(); s++) {
+		ms.Write((uint32_t)IndexCount(s));
+		if (m32BitIndices)
+			for (unsigned int i = 0; i < IndexCount(s); i++)
+				ms.Write(mSubmeshes[s].mIndices32[i]);
+		else
+			for (unsigned int i = 0; i < IndexCount(s); i++)
+				ms.Write(mSubmeshes[s].mIndices16[i]);
+	}
 
 	ms.Write((uint32_t)bones.size());
 	for (int i = 0; i < bones.size(); i++) {
@@ -133,8 +143,7 @@ void Mesh::Clear() {
 	mTexcoord2.free();
 	mTexcoord3.free();
 
-	mIndices16.free();
-	mIndices32.free();
+	mSubmeshes.free();
 }
 
 void Mesh::Use32BitIndices(bool v) {
@@ -142,16 +151,22 @@ void Mesh::Use32BitIndices(bool v) {
 	m32BitIndices = v;
 	if (v) {
 		// switch to 32 bit indices
-		mIndices32.reserve(mIndices16.size());
-		for (int i = 0; i < mIndices16.size(); i++)
-			mIndices32.push_back((uint32_t)mIndices16[i]);
-		mIndices16.free();
+		for (unsigned int s = 0; s < mSubmeshes.size(); s++) {
+			Submesh& sm = mSubmeshes[s];
+			sm.mIndices32.reserve(sm.mIndices16.size());
+			for (int i = 0; i < sm.mIndices16.size(); i++)
+				sm.mIndices32.push_back((uint32_t)sm.mIndices16[i]);
+			sm.mIndices16.free();
+		}
 	} else {
 		// switch to 16 bit indices
-		mIndices16.reserve(mIndices32.size());
-		for (int i = 0; i < mIndices32.size(); i++)
-			mIndices16.push_back((uint16_t)mIndices32[i]);
-		mIndices32.free();
+		for (unsigned int s = 0; s < mSubmeshes.size(); s++) {
+			Submesh& sm = mSubmeshes[s];
+			sm.mIndices16.reserve(sm.mIndices32.size());
+			for (int i = 0; i < sm.mIndices32.size(); i++)
+				sm.mIndices16.push_back((uint16_t)sm.mIndices32[i]);
+			sm.mIndices32.free();
+		}
 	}
 }
 
@@ -193,15 +208,29 @@ unsigned int Mesh::AddVertex(XMFLOAT3 &v) {
 	return (unsigned int)mVertices.size() - 1;
 }
 
-void Mesh::AddIndices(unsigned int count, unsigned int* indices) {
+void Mesh::AddIndices(unsigned int count, unsigned int* indices, unsigned int submesh) {
 	if (m32BitIndices) {
-		mIndices32.reserve(mIndices32.size() + count);
+		mSubmeshes[submesh].mIndices32.reserve(mSubmeshes[submesh].mIndices32.size() + count);
 		for (unsigned int i = 0; i < count; i++)
-			mIndices32.push_back((uint32_t)indices[i]);
+			mSubmeshes[submesh].mIndices32.push_back((uint32_t)indices[i]);
 	} else {
-		mIndices16.reserve(mIndices16.size() + count);
+		mSubmeshes[submesh].mIndices16.reserve(mSubmeshes[submesh].mIndices16.size() + count);
 		for (unsigned int i = 0; i < count; i++)
-			mIndices16.push_back((uint16_t)indices[i]);
+			mSubmeshes[submesh].mIndices16.push_back((uint16_t)indices[i]);
+	}
+}
+void Mesh::AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2, unsigned int submesh){
+	while (submesh >= mSubmeshes.size())
+		mSubmeshes.push_back({});
+
+	if (m32BitIndices) {
+		mSubmeshes[submesh].mIndices32.push_back(i0);
+		mSubmeshes[submesh].mIndices32.push_back(i1);
+		mSubmeshes[submesh].mIndices32.push_back(i2);
+	} else {
+		mSubmeshes[submesh].mIndices16.push_back((uint16_t)i0);
+		mSubmeshes[submesh].mIndices16.push_back((uint16_t)i1);
+		mSubmeshes[submesh].mIndices16.push_back((uint16_t)i2);
 	}
 }
 
@@ -284,16 +313,17 @@ void Mesh::HasSemantic(MESH_SEMANTIC s, bool v) {
 	}
 }
 
-void Mesh::LoadCube(float s) {
+void Mesh::LoadCube(float s, unsigned int submesh) {
 	HasSemantic(MESH_SEMANTIC_NORMAL, true);
 	HasSemantic(MESH_SEMANTIC_TEXCOORD0, true);
-	VertexCount(24);
+	int si = VertexCount();
+	VertexCount(VertexCount() + 24);
 
 	XMFLOAT3* v = GetVertices();
 	XMFLOAT3* n = GetNormals();
 	XMFLOAT4* t = GetTexcoords(0);
 
-	int i = 0;
+	int i = si;
 	// top
 	v[i] = XMFLOAT3( s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 0
 	v[i] = XMFLOAT3(-s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 1
@@ -330,35 +360,36 @@ void Mesh::LoadCube(float s) {
 	v[i] = XMFLOAT3(-s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(1, 0, 0, 0); // 22
 	v[i] = XMFLOAT3(-s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(0, 0, 0, 0); // 23
 
-	AddTriangle(1,  0,  2);
-	AddTriangle(1,  2,  3);
-	AddTriangle(5,  4,  6);
-	AddTriangle(5,  6,  7);
-	AddTriangle(10, 8,  9);
-	AddTriangle(10, 9,  11);
-	AddTriangle(13, 12, 14);
-	AddTriangle(13, 14, 15);
-	AddTriangle(17, 16, 18);
-	AddTriangle(17, 18, 19);
-	AddTriangle(21, 20, 22);
-	AddTriangle(21, 22, 23);
+	AddTriangle(si + 1,  si + 0,  si + 2, submesh);
+	AddTriangle(si + 1,  si + 2,  si + 3, submesh);
+	AddTriangle(si + 5,  si + 4,  si + 6, submesh);
+	AddTriangle(si + 5,  si + 6,  si + 7, submesh);
+	AddTriangle(si + 10, si + 8,  si + 9, submesh);
+	AddTriangle(si + 10, si + 9,  si + 11, submesh);
+	AddTriangle(si + 13, si + 12, si + 14, submesh);
+	AddTriangle(si + 13, si + 14, si + 15, submesh);
+	AddTriangle(si + 17, si + 16, si + 18, submesh);
+	AddTriangle(si + 17, si + 18, si + 19, submesh);
+	AddTriangle(si + 21, si + 20, si + 22, submesh);
+	AddTriangle(si + 21, si + 22, si + 23, submesh);
 }
-void Mesh::LoadQuad(float s) {
+void Mesh::LoadQuad(float s, unsigned int submesh) {
 	HasSemantic(MESH_SEMANTIC_TEXCOORD0, true);
-	VertexCount(4);
+	int si = VertexCount();
+	VertexCount(VertexCount() + 4);
 
 	XMFLOAT3* v = GetVertices();
 	XMFLOAT4* t = GetTexcoords(0);
 
-	int i = 0;
+	int i = si;
 	// top
 	v[i] = XMFLOAT3(-s, -s, 0); t[i++] = XMFLOAT4(0, 1, 0, 0);
 	v[i] = XMFLOAT3(-s,  s, 0); t[i++] = XMFLOAT4(0, 0, 0, 0);
 	v[i] = XMFLOAT3( s,  s, 0); t[i++] = XMFLOAT4(1, 0, 0, 0);
 	v[i] = XMFLOAT3( s, -s, 0); t[i++] = XMFLOAT4(1, 1, 0, 0);
 
-	AddTriangle(0, 1, 2);
-	AddTriangle(0, 2, 3);
+	AddTriangle(si + 0, si + 1, si + 2, submesh);
+	AddTriangle(si + 0, si + 2, si + 3, submesh);
 }
 
 inline size_t Write(BYTE* buffer, uint32_t* v) {
@@ -499,10 +530,14 @@ void Mesh::UploadStatic() {
 	#pragma region index buffer
 	size_t isize = Use32BitIndices() ? sizeof(uint32_t) : sizeof(uint16_t);
 
+	unsigned int ic = 0;
+	for (unsigned int s = 0; s < mSubmeshes.size(); s++)
+		ic += IndexCount(s);
+
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(IndexCount() * isize),
+		&CD3DX12_RESOURCE_DESC::Buffer(ic * isize),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(&mIndexBuffer)));
@@ -511,53 +546,57 @@ void Mesh::UploadStatic() {
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(IndexCount() * isize),
+		&CD3DX12_RESOURCE_DESC::Buffer(ic * isize),
 		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
 		IID_PPV_ARGS(&iintermediate)));
 
 	void* idata;
 	CD3DX12_RANGE ireadRange(0, 0);
 	iintermediate->Map(0, &ireadRange, &idata);
-	if (Use32BitIndices())
-		memcpy(idata, GetIndices32(), IndexCount() * isize);
-	else
-		memcpy(idata, GetIndices16(), IndexCount() * isize);
+	unsigned int c = 0;
+	for (unsigned int s = 0; s < mSubmeshes.size(); s++) {
+		Submesh &sm = mSubmeshes[s];
+
+		sm.mIndexCount = IndexCount(s);
+		sm.mStartIndex = c;
+
+		if (Use32BitIndices())
+			memcpy((uint32_t*)idata + c, sm.mIndices32.data(), sm.mIndexCount * isize);
+		else
+			memcpy((uint16_t*)idata + c, sm.mIndices16.data(), sm.mIndexCount * isize);
+
+		c += sm.mIndexCount;
+	}
+
 	iintermediate->Unmap(0, &ireadRange);
 
 	commandList->D3DCommandList()->CopyResource(mIndexBuffer.Get(), iintermediate.Get());
 	commandList->TransitionResource(mIndexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
-	mIndexCount = (UINT)IndexCount();
 	mIndexBufferView.BufferLocation = mIndexBuffer->GetGPUVirtualAddress();
-	mIndexBufferView.SizeInBytes = mIndexCount * (UINT)isize;
+	mIndexBufferView.SizeInBytes = c * (UINT)isize;
 	mIndexBufferView.Format = Use32BitIndices() ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+	mIndexBuffer->SetName(L"Index Buffer");
 	#pragma endregion
 
 	commandQueue->WaitForFenceValue(commandQueue->Execute(commandList));
 
 	mVertexBuffer->SetName(L"Vertex Buffer");
-	mIndexBuffer->SetName(L"Index Buffer");
 
 	mDataUploaded = true;
-	mDataMapped = false;
 }
 
 void Mesh::ReleaseGpu() {
-	if (mDataMapped) {
-		CD3DX12_RANGE readRange(0, 0);
-		mIndexBuffer->Unmap(0, &readRange);
-		mVertexBuffer->Unmap(0, &readRange);
-		mDataMapped = false;
-	}
 	mVertexBuffer.Reset();
-	mIndexBuffer.Reset();
 	mDataUploaded = false;
 }
-void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList, D3D_PRIMITIVE_TOPOLOGY topology) {
+void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int submesh, D3D_PRIMITIVE_TOPOLOGY topology) {
 	if (!mDataUploaded) return;
-	if (mIndexCount == 0) return;
+
 	commandList->IASetPrimitiveTopology(topology);
 	commandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
 	commandList->IASetIndexBuffer(&mIndexBufferView);
-	commandList->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);
+
+	if (mSubmeshes[submesh].mIndexCount == 0) return;
+	commandList->DrawIndexedInstanced(mSubmeshes[submesh].mIndexCount, 1, mSubmeshes[submesh].mStartIndex, 0, 0);
 }

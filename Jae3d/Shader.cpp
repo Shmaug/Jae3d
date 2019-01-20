@@ -18,6 +18,8 @@
 #include "MemoryStream.hpp"
 #include "AssetFile.hpp"
 
+#include "IOUtil.hpp"
+
 #include <vector>
 
 using namespace DirectX;
@@ -25,22 +27,22 @@ using namespace Microsoft::WRL;
 
 class CustomInclude : public ID3DInclude {
 public:
-	jwstring mDir;
-	jvector<jwstring> mPaths;
-	CustomInclude(jwstring dir, jvector<jwstring> paths) : mDir(dir), mPaths(paths) {}
+	jstring mDir;
+	jvector<jstring> mPaths;
+	CustomInclude(jstring dir, jvector<jstring> paths) : mDir(dir), mPaths(paths) {}
 
 	HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override {
 		jstring filePath = pFileName;
 		if (IncludeType == D3D_INCLUDE_SYSTEM) {
 			for (unsigned int i = 0; i < mPaths.size(); i++) {
-				jstring p = utf16toUtf8(mPaths[i]) + "\\" + filePath;
+				jstring p = mPaths[i] + "\\" + filePath;
 				if (PathFileExistsA(p.c_str())) {
 					filePath = p;
 					break;
 				}
 			}
 		}else if (IncludeType == D3D_INCLUDE_LOCAL){
-			filePath = utf16toUtf8(mDir) + "\\" + filePath;
+			filePath = mDir + "\\" + filePath;
 		} else
 			return E_FAIL;
 
@@ -86,7 +88,7 @@ jstring Shader::KeywordListToString(jvector<jstring> keywords) {
 }
 
 Shader::Shader(jwstring name) : Asset(name) {}
-Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
+Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name, ms) {
 	uint32_t count = ms.Read<uint32_t>();
 	for (unsigned int j = 0; j < count; j++) {
 		uint8_t mask = ms.Read<uint8_t>();
@@ -113,7 +115,7 @@ Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name) {
 
 	uint32_t pcount = ms.Read<uint32_t>();
 	for (unsigned int i = 0; i < pcount; i++) {
-		jwstring name = ms.ReadString();
+		jstring name = ms.ReadStringA();
 		SHADER_PARAM_TYPE type = (SHADER_PARAM_TYPE)ms.Read<uint32_t>();
 		uint32_t index = ms.Read<uint32_t>();
 		uint32_t offset = ms.Read<uint32_t>();
@@ -138,7 +140,6 @@ Shader::~Shader() {
 }
 uint64_t Shader::TypeId() { return (uint64_t)ASSET_TYPE_SHADER; }
 
-// Set the root signature on the GPU
 bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	if (!mCreated) Upload();
 	if (mRootSignature) {
@@ -148,13 +149,13 @@ bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	return false;
 }
 
-void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state) {
+void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state) {
 	if (mStates.count(state) == 0)
 		mStates.emplace(state, CreatePSO(state));
 	commandList->SetPipelineState(mStates.at(state).Get());
 }
 
-void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderState &state) {
+void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state) {
 	if (!mCreated) Upload();
 
 	if (mRootSignature) {
@@ -165,7 +166,7 @@ void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, ShaderSt
 	}
 }
 
-ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
+ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
 	ComPtr<ID3DBlob>* blobs = mBlobs.at(KeywordListToString(state.keywords));
 
 	if (!blobs[SHADER_STAGE_VERTEX] && !blobs[SHADER_STAGE_HULL] &&
@@ -253,7 +254,7 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(ShaderState &state) {
 	delete[] inputElements;
 	return pso;
 }
-void Shader::CreateComputePSO(ShaderState &state) {
+void Shader::CreateComputePSO(const ShaderState &state) {
 	jstring key = KeywordListToString(state.keywords);
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
@@ -266,12 +267,15 @@ void Shader::Upload() {
 	if (mCreated) return;
 	
 	ComPtr<ID3DBlob> rsblob = mBlobs.at("")[SHADER_STAGE_ROOTSIG];
-	if (rsblob) ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)));
+	if (rsblob) {
+		ThrowIfFailed(Graphics::GetDevice()->CreateRootSignature(1, rsblob->GetBufferPointer(), rsblob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)));
+		mRootSignature->SetName((mName + L" Root Signature").c_str());
+	}
 	
 	mCreated = true;
 }
 
-HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_STAGE stage, jvector<jwstring> &includePaths, jvector<jstring> &keywords) {
+HRESULT Shader::CompileShaderStage(jwstring file, jstring entryPoint, SHADER_STAGE stage, jvector<jstring> &includePaths, jvector<jstring> &keywords) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -330,13 +334,13 @@ HRESULT Shader::CompileShaderStage(jwstring file, jwstring entryPoint, SHADER_ST
 		mBlobs.emplace(key, blobs);
 	}
 
-	CustomInclude inc(GetDirectoryW(GetFullPathW(file)), includePaths);
+	CustomInclude inc(GetDirectoryA(GetFullPathA(utf16toUtf8(file))), includePaths);
 	ID3DBlob *errorBlob = nullptr;
-	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), &inc, utf16toUtf8(entryPoint).c_str(), profile, flags, 0, &blobs[stage], &errorBlob);
+	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), &inc, entryPoint.c_str(), profile, flags, 0, &blobs[stage], &errorBlob);
 
 	if (errorBlob) {
 		char msg[128];
-		sprintf_s(msg, "Error compiling %s with stage %s\n", GetNameExt(utf16toUtf8(file)).c_str(), profile);
+		sprintf_s(msg, "Error compiling %S with stage %s\n", GetNameExtW(file).c_str(), profile);
 		std::cerr << msg;
 		std::cerr << reinterpret_cast<const char*>(errorBlob->GetBufferPointer());
 		errorBlob->Release();
@@ -450,7 +454,7 @@ void Shader::WriteData(MemoryStream &ms) {
 
 	ms.Write((uint32_t)mParams.size());
 	for (const auto& it : mParams){
-		ms.WriteString(it.first);
+		ms.WriteStringA(it.first);
 		ms.Write((uint32_t)it.second.Type());
 		ms.Write(it.second.RootIndex());
 		ms.Write(it.second.CBufferOffset());

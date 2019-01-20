@@ -7,18 +7,8 @@ struct CameraBuffer {
 	float4 Position;
 	float4 Viewport;
 };
-struct Light {
-	float4 Position; // position (xyz) range (w)
-	float4 Color; // color-intensity premultiplied (rgb) intensity (a)
-};
-struct LightBuffer {
-	Light Lights[64];
-	uint LightCount;
-	uint2 LightIndexBufferSize;
-	uint pad;
-	float4 GroundColor;
-	float4 SkyColor;
-};
+
+#include "LightCommon.hlsli"
 
 RWTexture2D<uint2> LightIndexBuffer : register(u0);
 ConstantBuffer<CameraBuffer> Camera : register(b0);
@@ -55,7 +45,7 @@ void main(uint3 index : SV_DispatchThreadID) {
 
 	uint2 v = 0;
 	for (unsigned int i = 0; i < Lighting.LightCount; i++) {
-		if (Sphere(ro, rd, Lighting.Lights[i].Position.xyz, Lighting.Lights[i].Position.w)) {
+		if (Lighting.Lights[i].Color.w == 0 || Sphere(ro, rd, Lighting.Lights[i].Position.xyz, Lighting.Lights[i].Position.w)) {
 			if (i < 32)
 				v.x |= 1 << i;
 			else

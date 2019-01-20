@@ -143,11 +143,48 @@ void SpriteBatch::SpriteContext::Reset() {
 void SpriteBatch::DrawLines(jvector<DirectX::XMFLOAT3> vertices, jvector<DirectX::XMFLOAT4> colors) {
 	mLineDrawQueue.push_back({ vertices, colors });
 }
+
+XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text) {
+	float w = (float)font->GetTexture()->Width();
+	float h = (float)font->GetTexture()->Height();
+	scale *= (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
+	XMFLOAT2 m(0, 0);
+	XMFLOAT2 p(0, 0);
+	FontGlyph g;
+	wchar_t prev = L'\0';
+	for (unsigned int j = 0; j < text.length(); j++) {
+		wchar_t cur = text[j];
+		if (cur == L'\n') {
+			p.x = 0;
+			p.y += scale * font->GetLineSpacing();
+		} else {
+			if (font->HasGlyph(cur))
+				g = font->GetGlyph(cur);
+			else if (font->HasGlyph(L'?'))
+				g = font->GetGlyph(L'?');
+			else {
+				prev = cur;
+				continue;
+			}
+
+			p.x += scale * font->GetKerning(prev, cur);
+			p.x += scale * g.advance;
+		}
+		m.x = fmax(m.x, p.x);
+		m.y = fmax(m.y, p.y);
+		prev = cur;
+	}
+	return m;
+}
+
 void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scale, XMFLOAT4 color, jwstring text) {
+	// TODO: text rendering is slow
+
 	float w = (float)font->GetTexture()->Width();
 	float h = (float)font->GetTexture()->Height();
 	scale *= (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
 	XMFLOAT2 p = pos;
+	FontGlyph g;
 	wchar_t prev = L'\0';
 	for (unsigned int j = 0; j < text.length(); j++) {
 		wchar_t cur = text[j];
@@ -155,7 +192,6 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 			p.x = pos.x;
 			p.y += scale * font->GetLineSpacing();
 		} else {
-			FontGlyph g;
 			if (font->HasGlyph(cur))
 				g = font->GetGlyph(cur);
 			else if (font->HasGlyph(L'?'))
@@ -168,24 +204,22 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 			p.x += scale * font->GetKerning(prev, cur);
 
 			if (g.character != L' ') {
-				SpriteDraw sprite(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
-					XMFLOAT4(
-					p.x + scale * g.ox,
-					p.y - scale * g.oy,
-					p.x + scale * (g.tw + g.ox),
-					p.y + scale * (g.th - g.oy)),
-					XMFLOAT4((float)g.tx0 / w, (float)g.ty0 / h, (float)(g.tx0 + g.tw) / w, (float)(g.ty0 + g.th) / h),
-					color);
-				mQuadDrawQueue.push_back(sprite);
+				mQuadDrawQueue.push_back(
+					SpriteDraw(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
+						XMFLOAT4(
+						p.x + scale * g.ox,
+						p.y - scale * g.oy,
+						p.x + scale * (g.tw + g.ox),
+						p.y + scale * (g.th - g.oy)),
+						XMFLOAT4((float)g.tx0 / w, (float)g.ty0 / h, (float)(g.tx0 + g.tw) / w, (float)(g.ty0 + g.th) / h),
+						color)
+				);
 			}
 
 			p.x += scale * g.advance;
 		}
 		prev = cur;
 	}
-}
-void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scale, XMFLOAT4 color, const wchar_t* text) {
-	DrawText(font, pos, scale, color, jwstring(text));
 }
 void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, XMFLOAT2 pos, float scale, XMFLOAT4 color, jwstring fmt, ...) {
 	wchar_t buf[1025];
@@ -194,64 +228,6 @@ void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 	wvsprintf(buf, fmt.c_str(), args);
 	va_end(args);
 	DrawText(font, pos, scale, color, jwstring(buf));
-}
-
-void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT4 rect, float scale, XMFLOAT4 color, jwstring text) {
-	float w = (float)font->GetTexture()->Width();
-	float h = (float)font->GetTexture()->Height();
-	scale *= (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
-	XMFLOAT2 p(rect.x, rect.y);
-	wchar_t prev = L'\0';
-	for (unsigned int j = 0; j < text.length(); j++) {
-		wchar_t cur = text[j];
-		if (cur == L'\n') {
-			p.x = rect.x;
-			p.y += scale * font->GetLineSpacing();
-		} else {
-			FontGlyph g;
-			if (font->HasGlyph(cur))
-				g = font->GetGlyph(cur);
-			else if (font->HasGlyph(L'?'))
-				g = font->GetGlyph(L'?');
-			else {
-				prev = cur;
-				continue;
-			}
-
-			p.x += scale * font->GetKerning(prev, cur);
-
-			if (p.x + scale * (g.tw + g.ox) > rect.z) {
-				p.x = rect.x;
-				p.y += scale * font->GetHeight();
-			}
-
-			if (g.character != L' ') {
-				SpriteDraw sprite(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
-					XMFLOAT4(
-						p.x + scale * g.ox,
-						p.y - scale * g.oy,
-						p.x + scale * (g.tw + g.ox),
-						p.y + scale * (g.th - g.oy)),
-					XMFLOAT4((float)g.tx0 / w, (float)g.ty0 / h, (float)(g.tx0 + g.tw) / w, (float)(g.ty0 + g.th) / h),
-					color);
-				mQuadDrawQueue.push_back(sprite);
-			}
-
-			p.x += scale * g.advance;
-		}
-		prev = cur;
-	}
-}
-void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT4 rect, float scale, XMFLOAT4 color, const wchar_t* text) {
-	DrawText(font, rect, scale, color, jwstring(text));
-}
-void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, XMFLOAT4 rect, float scale, XMFLOAT4 color, jwstring fmt, ...) {
-	wchar_t buf[1025];
-	va_list args;
-	va_start(args, fmt);
-	wvsprintf(buf, fmt.c_str(), args);
-	va_end(args);
-	DrawText(font, rect, scale, color, jwstring(buf));
 }
 
 void SpriteBatch::DrawTexture(ComPtr<ID3D12DescriptorHeap> mTextureHeap, D3D12_GPU_DESCRIPTOR_HANDLE mTextureSRV, XMFLOAT4 rect, XMFLOAT4 color, XMFLOAT4 srcRect) {
@@ -352,7 +328,7 @@ void SpriteBatch::SpriteContext::DrawQuadGroup(std::shared_ptr<CommandList> comm
 	auto cmdList = commandList->D3DCommandList();
 
 	XMFLOAT4X4 m;
-	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)commandList->GetCamera()->PixelWidth(), (float)commandList->GetCamera()->PixelHeight(), 0, 0, 1.0f));
+	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)commandList->CurrentRenderTargetWidth(), (float)commandList->CurrentRenderTargetHeight(), 0, 0, 1.0f));
 	cmdList->SetGraphicsRoot32BitConstants(0, 16, &m, 0);
 
 	ID3D12DescriptorHeap* heaps = { heap.Get() };

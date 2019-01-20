@@ -4,7 +4,5 @@
 #include <jvector.hpp>
 #include "ImportCommon.hpp"
 
-void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jwstring> includePaths);
-void ReadShader(jwstring path, jvector<AssetMetadata> &meta);
-
-Shader* CompileShader(jwstring path, jvector<jwstring> includePaths);
+void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jstring> includePaths);
+Shader* CompileShader(jwstring path, jvector<jstring> includePaths);

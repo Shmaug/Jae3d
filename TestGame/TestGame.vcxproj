@@ -20,11 +20,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TestGame.cpp" />
-    <ClCompile Include="TiledLighting.cpp" />
+    <ClCompile Include="Lighting.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestGame.hpp" />
-    <ClInclude Include="TiledLighting.hpp" />
+    <ClInclude Include="Lighting.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Jae3d\Jae3d.vcxproj">
@@ -32,6 +32,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Assets\Shaders\LightCommon.hlsli" />
     <None Include="..\Assets\Shaders\Lighting.hlsli" />
     <None Include="..\Assets\Shaders\PBR.hlsli" />
   </ItemGroup>
@@ -45,6 +46,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\LightCompute.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Shaders\Skybox.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Shaders\DepthPass.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
@@ -139,7 +150,8 @@
       <AdditionalLibraryDirectories>$(OutputPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>$(OutputPath)AssetImporter.exe -dr $(SolutionDir)Assets\Shaders -o $(OutputPath)shaders.asset -v -i $(SolutionDir)Assets\Core</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

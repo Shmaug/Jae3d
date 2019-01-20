@@ -6,12 +6,14 @@
 #include "ConstantBuffer.hpp"
 #include "Graphics.hpp"
 #include "DescriptorTable.hpp"
+#include "Profiler.hpp"
 
 using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Material::Material(jwstring name, shared_ptr<Shader> shader) : mName(name) {
+Material::Material(jwstring name, shared_ptr<Shader> shader)
+	: mName(name), mRenderQueue(1000), mZTest(true), mZWrite(true), mBlend(BLEND_STATE_DEFAULT), mCullMode(D3D12_CULL_MODE_BACK) {
 	SetShader(shader, true);
 }
 Material::~Material() {
@@ -68,10 +70,6 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 					v.set(shared_ptr<ConstantBuffer>(nullptr));
 					break;
 				case SHADER_PARAM_TYPE_SRV:
-				case SHADER_PARAM_TYPE_UAV:
-				case SHADER_PARAM_TYPE_SAMPLER:
-					break;
-				case SHADER_PARAM_TYPE_TEXTURE:
 					v.set(shared_ptr<Texture>(nullptr));
 					break;
 				case SHADER_PARAM_TYPE_TABLE:
@@ -143,9 +141,6 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 			switch (sp.Type()) {
 			case SHADER_PARAM_TYPE_CBUFFER:
 			case SHADER_PARAM_TYPE_SRV:
-			case SHADER_PARAM_TYPE_UAV:
-			case SHADER_PARAM_TYPE_SAMPLER:
-			case SHADER_PARAM_TYPE_TEXTURE:
 			case SHADER_PARAM_TYPE_TABLE:
 				break;
 
@@ -215,10 +210,6 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 			it++;
 		} 
 	}
-
-	// re-upload data
-	for (unsigned int i = 0; i < mActive.size(); i++)
-		SetActive(mActive[i]);
 }
 
 bool Material::IsKeywordEnabled(jstring keyword) {
@@ -230,8 +221,6 @@ bool Material::IsKeywordEnabled(jstring keyword) {
 void Material::EnableKeyword(jstring keyword) {
 	if (IsKeywordEnabled(keyword)) return;
 	mKeywords.push_back(keyword);
-	for (unsigned int i = 0; i < mActive.size(); i++)
-		mActive[i]->SetKeywords(mKeywords);
 }
 void Material::DisableKeyword(jstring keyword) {
 	for (unsigned int i = 0; i < mKeywords.size(); i++)
@@ -239,74 +228,107 @@ void Material::DisableKeyword(jstring keyword) {
 			mKeywords.remove(i);
 			break;
 		}
-	for (unsigned int i = 0; i < mActive.size(); i++)
-		mActive[i]->SetKeywords(mKeywords);
 }
 
-void Material::SetFloat(jwstring param, float v, unsigned int frameIndex) {
-	if (!mParamValues.count(param)) return;
+void Material::SetFloat(jstring param, float v, unsigned int frameIndex) {
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetColor3(jwstring param, XMFLOAT3 col, unsigned int frameIndex) {
-	if (!mParamValues.count(param)) return;
+void Material::SetFloat2(jstring param, XMFLOAT2 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat2(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetFloat3(jstring param, XMFLOAT3 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat3(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetFloat4(jstring param, XMFLOAT4 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat4(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+
+void Material::SetInt(jstring param, int v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetInt2(jstring param, XMINT2 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt2(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetInt3(jstring param, XMINT3 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt3(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetInt4(jstring param, XMINT4 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt4(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+
+void Material::SetUInt(jstring param, unsigned int v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetUInt2(jstring param, XMUINT2 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt2(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetUInt3(jstring param, XMUINT3 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt3(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+void Material::SetUInt4(jstring param, XMUINT4 v, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(v);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt4(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
+}
+
+void Material::SetColor3(jstring param, XMFLOAT3 col, unsigned int frameIndex) {
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(col);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat3(col, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-
-void Material::SetTexture(jwstring param, shared_ptr<Texture> tex, unsigned int frameIndex) {
-	if (!mParamValues.count(param)) return;
-	mParamValues.at(param).set(tex);
-
-	if (tex) {
-		const ShaderParameter& sp = mShader->GetParameter(param);
-		ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
-		for (unsigned int i = 0; i < mActive.size(); i++) {
-			mActive[i]->D3DCommandList()->SetDescriptorHeaps(1, &heap);
-			mActive[i]->D3DCommandList()->SetGraphicsRootDescriptorTable(sp.RootIndex(), tex->GetSRVGPUDescriptor());
-		}
-	}
+void Material::SetColor4(jstring param, XMFLOAT4 col, unsigned int frameIndex) {
+	MaterialValue& mv = mParamValues.at(param);
+	mv.set(col);
+	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat4(col, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetCBuffer(jwstring param, shared_ptr<ConstantBuffer> cbuf, unsigned int frameIndex) {
-	if (!mParamValues.count(param)) return;
-	mParamValues.at(param).set(cbuf);
 
-	if (cbuf) {
-		const ShaderParameter& sp = mShader->GetParameter(param);
-		for (unsigned int i = 0; i < mActive.size(); i++)
-			mActive[i]->D3DCommandList()->SetGraphicsRootConstantBufferView(sp.RootIndex(), cbuf->GetGPUAddress(frameIndex));
-	}
+void Material::SetTexture(jstring param, shared_ptr<Texture> tex, unsigned int frameIndex) {
+	mParamValues[param].set(tex);
 }
-void Material::SetDescriptorTable(jwstring param, shared_ptr<DescriptorTable> tbl, unsigned int frameIndex) {
-	if (!mParamValues.count(param)) return;
-	mParamValues.at(param).set(tbl);
-
-	if (tbl) {
-		const ShaderParameter& sp = mShader->GetParameter(param);
-		ID3D12DescriptorHeap* heap = { tbl->D3DHeap().Get() };
-		for (unsigned int i = 0; i < mActive.size(); i++) {
-			mActive[i]->D3DCommandList()->SetDescriptorHeaps(1, &heap);
-			mActive[i]->D3DCommandList()->SetGraphicsRootDescriptorTable(sp.RootIndex(), tbl->GpuDescriptor());
-		}
-	}
+void Material::SetCBuffer(jstring param, shared_ptr<ConstantBuffer> cbuf, unsigned int frameIndex) {
+	mParamValues[param].set(cbuf);
+}
+void Material::SetDescriptorTable(jstring param, shared_ptr<DescriptorTable> tbl, unsigned int frameIndex) {
+	mParamValues[param].set(tbl);
 }
 
 void Material::SetActive(CommandList* commandList) {
-	if (!mShader) return;
+	assert(mShader);
+
 	commandList->SetKeywords(mKeywords);
 	commandList->SetShader(mShader);
+	commandList->SetBlendState(mBlend);
+	commandList->DepthTestEnabled(mZTest);
+	commandList->DepthWriteEnabled(mZWrite);
+	commandList->SetCullMode(mCullMode);
+	
+	for (int i = 0; i < mParamCbufferCount; i++)
+		commandList->SetRootCBV(mParamCbuffers[i].rootIndex, mParamCbuffers[i].cbuffer->GetGPUAddress(commandList->GetFrameIndex()));
 
-	bool f = false;
-	for (unsigned int i = 0; i < mActive.size(); i++)
-		if (mActive[i] == commandList) {
-			f = true;
-			break;
-		}
-	if (!f) mActive.push_back(commandList);
-
-	auto d3dlist = commandList->D3DCommandList();
+	jvector<ID3D12DescriptorHeap*> heaps;
+	jvector<std::pair<UINT, D3D12_GPU_DESCRIPTOR_HANDLE>> tables;
 
 	for (const auto& it : mParamValues) {
 		if (!mShader->HasParameter(it.first)) continue;
@@ -314,33 +336,22 @@ void Material::SetActive(CommandList* commandList) {
 		switch (sp.Type()) {
 		case SHADER_PARAM_TYPE_CBUFFER:
 		{
-			shared_ptr<ConstantBuffer> cb = it.second.cbufferValue;
-			if (cb) d3dlist->SetGraphicsRootConstantBufferView(sp.RootIndex(), cb->GetGPUAddress(commandList->GetFrameIndex()));
+			if (it.second.cbufferValue)
+				commandList->SetRootCBV(sp.RootIndex(), it.second.cbufferValue->GetGPUAddress(commandList->GetFrameIndex()));
 			break;
 		}
-		case SHADER_PARAM_TYPE_TEXTURE:
+		case SHADER_PARAM_TYPE_SRV:
 		{
-			shared_ptr<Texture> tex = it.second.textureValue;
-			if (tex) {
-				ID3D12DescriptorHeap* heap = { tex->GetSRVDescriptorHeap().Get() };
-				d3dlist->SetDescriptorHeaps(1, &heap);
-				d3dlist->SetGraphicsRootDescriptorTable(sp.RootIndex(), tex->GetSRVGPUDescriptor());
-			}
+			if (it.second.textureValue)
+				commandList->SetRootDescriptorTable(sp.RootIndex(), it.second.textureValue->GetSRVDescriptorHeap().Get(), it.second.textureValue->GetSRVGPUDescriptor());
 			break;
 		}
 		case SHADER_PARAM_TYPE_TABLE:
 		{
-			shared_ptr<DescriptorTable> tbl = it.second.tableValue;
-			if (tbl && tbl->Size() > 0) {
-				ID3D12DescriptorHeap* heap = { tbl->D3DHeap().Get() };
-				d3dlist->SetDescriptorHeaps(1, &heap);
-				d3dlist->SetGraphicsRootDescriptorTable(sp.RootIndex(), tbl->GpuDescriptor());
-			}
+			if (it.second.tableValue && it.second.tableValue->Size() > 0)
+				commandList->SetRootDescriptorTable(sp.RootIndex(), it.second.tableValue->D3DHeap().Get(), it.second.tableValue->GpuDescriptor());
 			break;
 		}
 		}
 	}
-
-	for (int i = 0; i < mParamCbufferCount; i++)
-		d3dlist->SetGraphicsRootConstantBufferView(mParamCbuffers[i].rootIndex, mParamCbuffers[i].cbuffer->GetGPUAddress(commandList->GetFrameIndex()));
 }

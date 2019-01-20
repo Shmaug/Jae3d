@@ -189,15 +189,24 @@ inline size_t BitsPerPixel(_In_ DXGI_FORMAT fmt) {
 	}
 }
 
+Texture::Texture(jwstring name, unsigned int width, unsigned int height, DXGI_FORMAT format, unsigned int mipLevels)
+	: Asset(name), mWidth(width), mHeight(height), mDepth(1), mDimension(D3D12_RESOURCE_DIMENSION_TEXTURE2D), mArraySize(1),
+	mFormat(format), mMipLevels(mipLevels), mData(nullptr), mDataSize(0), mIsDDS(false) {}
+
+Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth, DXGI_FORMAT format, unsigned int mipLevels)
+	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(D3D12_RESOURCE_DIMENSION_TEXTURE3D), mArraySize(1),
+	mFormat(format), mMipLevels(mipLevels), mData(nullptr), mDataSize(0), mIsDDS(false) {}
+
 Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth,
 	D3D12_RESOURCE_DIMENSION dimension, unsigned int arraySize,
-	DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS)
-	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(dimension), mArraySize(arraySize), mFormat(format), mAlphaMode(alphaMode), mMipLevels(mipLevels), mDataSize(dataSize), mIsDDS(isDDS) {
-	mData = new uint8_t[mDataSize];
-	if (data)
+	DXGI_FORMAT format, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS)
+	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(dimension), mArraySize(arraySize),
+	mFormat(format), mMipLevels(mipLevels), mDataSize(dataSize), mIsDDS(isDDS) {
+
+	if (data) {
+		mData = new uint8_t[mDataSize];
 		memcpy(mData, data, mDataSize);
-	else
-		ZeroMemory(mData, mDataSize);
+	}
 }
 
 Texture::Texture(jwstring name, MemoryStream &ms) : Asset(name, ms) {
@@ -208,7 +217,6 @@ Texture::Texture(jwstring name, MemoryStream &ms) : Asset(name, ms) {
 	mArraySize = ms.Read<uint32_t>();
 	mMipLevels = ms.Read<uint32_t>();
 	mFormat = (DXGI_FORMAT)ms.Read<uint32_t>();
-	mAlphaMode = (ALPHA_MODE)ms.Read<uint32_t>();
 
 	mIsDDS = ms.Read<uint8_t>();
 	mDataSize = ms.Read<uint64_t>();
@@ -232,7 +240,6 @@ void Texture::WriteData(MemoryStream &ms) {
 	ms.Write((uint32_t)mArraySize);
 	ms.Write((uint32_t)mMipLevels);
 	ms.Write((uint32_t)mFormat);
-	ms.Write((uint32_t)mAlphaMode);
 	ms.Write((uint8_t)(mIsDDS ? 1 : 0));
 
 	ms.Write((uint64_t)mDataSize);
@@ -249,13 +256,15 @@ void Texture::SetPixelData(const void* data) {
 }
 
 void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
-	if (mDataSize == 0 || !mData) return;
 	auto device = Graphics::GetDevice();
-
 	mTexture.Reset();
+
+	uint8_t* data = mData;
 
 	vector<D3D12_SUBRESOURCE_DATA> subresources;
 	if (mIsDDS) {
+		if (mDataSize == 0 || !mData) return;
+
 		HRESULT hr = FAILED(LoadDDSTextureFromMemory(device.Get(), reinterpret_cast<const uint8_t*>(mData), mDataSize, mTexture.ReleaseAndGetAddressOf(), subresources));
 
 		if (FAILED(hr)) {
@@ -289,12 +298,19 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 
 		size_t stride = mWidth * (BitsPerPixel(mFormat) / 8);
 
+		if (!data || mDataSize == 0) {
+			data = new uint8_t[mHeight * stride * desc.DepthOrArraySize];
+			ZeroMemory(data, mHeight * stride * desc.DepthOrArraySize);
+		}
+
 		D3D12_SUBRESOURCE_DATA subrsrc;
-		subrsrc.pData = mData;
+		subrsrc.pData = data;
 		subrsrc.RowPitch = stride;
 		subrsrc.SlicePitch = stride * mHeight;
 		subresources.push_back(subrsrc);
 	}
+
+	mTexture->SetName(mName.c_str());
 
 	auto commandQueue = Graphics::GetCommandQueue();
 	auto commandList = commandQueue->GetCommandList(0);
@@ -302,7 +318,7 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mTexture.Get(), 0, static_cast<UINT>(subresources.size()));
 
 	// Create the GPU upload buffer.
-	ComPtr<ID3D12Resource> uploadHeap;
+	ComPtr<ID3D12Resource> uploadBuffer;
 	ThrowIfFailed(
 		device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -310,54 +326,63 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&uploadHeap)));
-
-	UpdateSubresources(commandList->D3DCommandList().Get(), mTexture.Get(), uploadHeap.Get(), 0, 0, static_cast<UINT>(subresources.size()), subresources.data());
+			IID_PPV_ARGS(&uploadBuffer)));
+	uploadBuffer->SetName(L"Texture Upload Buffer");
+	UpdateSubresources(commandList->D3DCommandList().Get(), mTexture.Get(), uploadBuffer.Get(), 0, 0, static_cast<UINT>(subresources.size()), subresources.data());
 
 	commandList->TransitionResource(mTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	commandQueue->WaitForFenceValue(commandQueue->Execute(commandList));
+
+	if (data != mData) delete[] data;
 
 	mHasDescriptorHeaps = makeHeaps;
 	if (makeHeaps) {
 		D3D12_RESOURCE_DESC desc = mTexture->GetDesc();
 
-		D3D12_SRV_DIMENSION srvdim;
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = desc.Format;
+
 		D3D12_UAV_DIMENSION uavdim;
 		switch (desc.Dimension) {
 		default:
 		case (D3D12_RESOURCE_DIMENSION_UNKNOWN):
-			srvdim = D3D12_SRV_DIMENSION_UNKNOWN;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_UNKNOWN;
 			uavdim = D3D12_UAV_DIMENSION_UNKNOWN;
 			break;
-		case (D3D12_RESOURCE_DIMENSION_BUFFER):
-			srvdim = D3D12_SRV_DIMENSION_BUFFER;
-			uavdim = D3D12_UAV_DIMENSION_BUFFER;
-			break;
 		case (D3D12_RESOURCE_DIMENSION_TEXTURE1D):
-			srvdim = D3D12_SRV_DIMENSION_TEXTURE1D;
+			srvDesc.Texture1D.MipLevels = desc.MipLevels;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
 			uavdim = D3D12_UAV_DIMENSION_TEXTURE1D;
 			break;
 		case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
-			srvdim = D3D12_SRV_DIMENSION_TEXTURE2D;
-			uavdim = D3D12_UAV_DIMENSION_TEXTURE2D;
+			if (mArraySize > 1) {
+				if (mArraySize == 6) {
+					srvDesc.TextureCube.MipLevels = desc.MipLevels;
+					srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+				} else
+					srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+				uavdim = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+			} else {
+				srvDesc.Texture2D.MipLevels = desc.MipLevels;
+				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				uavdim = D3D12_UAV_DIMENSION_TEXTURE2D;
+			}
 			break;
 		case (D3D12_RESOURCE_DIMENSION_TEXTURE3D):
-			srvdim = D3D12_SRV_DIMENSION_TEXTURE3D;
+			srvDesc.Texture3D.MipLevels = desc.MipLevels;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 			uavdim = D3D12_UAV_DIMENSION_TEXTURE3D;
 			break;
 		}
 
 		mSRVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = srvdim;
-		srvDesc.Format = desc.Format;
-		srvDesc.Texture2D.MipLevels = desc.MipLevels;
 		device->CreateShaderResourceView(mTexture.Get(), &srvDesc, mSRVHeap->GetCPUDescriptorHandleForHeapStart());
+		mSRVHeap->SetName((mName + L" SRV Heap").c_str());
 
 		if (flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
 			mUAVHeap = Graphics::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+			mUAVHeap->SetName((mName + L" UAV Heap").c_str());
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 			uavDesc.ViewDimension = uavdim;
 			uavDesc.Format = desc.Format;

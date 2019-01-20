@@ -20,9 +20,11 @@ public:
 	JAE_API Scene();
 	JAE_API ~Scene();
 
-	JAE_API void Draw(std::shared_ptr<CommandList> commandList, DirectX::BoundingFrustum cullFrustum);
-	JAE_API void DebugDraw(std::shared_ptr<CommandList> commandList, DirectX::BoundingFrustum cullFrustum);
-	JAE_API void CollectLights(DirectX::BoundingFrustum &frustum, jvector<Light*> &lights);
+	JAE_API void DrawSkybox(std::shared_ptr<CommandList> commandList);
+	// Draws the scene, according to each renderer's RenderQueue()
+	JAE_API void Draw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera, std::shared_ptr<Material> materialOverride = nullptr);
+	JAE_API void DebugDraw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
+	JAE_API void CollectLights(const DirectX::BoundingFrustum &frustum, jvector<Light*> &lights);
 
 	// Creates an object in this scene
 	template<class T>
@@ -83,6 +85,9 @@ public:
 		return r;
 	}
 
+	void Skybox(std::shared_ptr<Material> s) { mSkybox = s; }
+	std::shared_ptr<Material> Skybox() const { return mSkybox; }
+
 private:
 	jvector<std::shared_ptr<Object>> mObjects;
 	jvector<Renderer*> mRenderers;
@@ -90,5 +95,10 @@ private:
 
 	std::shared_ptr<Shader> mDebugShader;
 	std::shared_ptr<Mesh> mDebugCube;
+
+	std::shared_ptr<Mesh> mSkyCube;
+	std::shared_ptr<Material> mSkybox;
+
+	JAE_API void DebugDrawBox(std::shared_ptr<CommandList> commandList, const DirectX::BoundingOrientedBox &box, const DirectX::XMMATRIX &vp);
 };
 

@@ -19,13 +19,9 @@ public:
 
 	JAE_API void DrawLines(jvector<DirectX::XMFLOAT3> vertices, jvector<DirectX::XMFLOAT4> colors);
 
-	JAE_API void DrawText (std::shared_ptr<Font> font, DirectX::XMFLOAT2 pos, float scale, DirectX::XMFLOAT4 color, const wchar_t* text);
+	JAE_API DirectX::XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text);
 	JAE_API void DrawText (std::shared_ptr<Font> font, DirectX::XMFLOAT2 pos, float scale, DirectX::XMFLOAT4 color, jwstring text);
 	JAE_API void DrawTextf(std::shared_ptr<Font> font, DirectX::XMFLOAT2 pos, float scale, DirectX::XMFLOAT4 color, jwstring text, ...);
-
-	JAE_API void DrawText (std::shared_ptr<Font> font, DirectX::XMFLOAT4 rect, float scale, DirectX::XMFLOAT4 color, const wchar_t* text);
-	JAE_API void DrawText (std::shared_ptr<Font> font, DirectX::XMFLOAT4 rect, float scale, DirectX::XMFLOAT4 color, jwstring text);
-	JAE_API void DrawTextf(std::shared_ptr<Font> font, DirectX::XMFLOAT4 rect, float scale, DirectX::XMFLOAT4 color, jwstring text, ...);
 
 	JAE_API void SpriteBatch::DrawTexture(_WRL::ComPtr<ID3D12DescriptorHeap> srvHeap, D3D12_GPU_DESCRIPTOR_HANDLE srv, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 color = { 1, 1, 1, 1 }, DirectX::XMFLOAT4 srcRect = { 0, 0, 1, 1 });
 	JAE_API void SpriteBatch::DrawTexture(std::shared_ptr<Texture> texture, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 color = { 1, 1, 1, 1 }, DirectX::XMFLOAT4 srcRect = { 0, 0, 1, 1 });

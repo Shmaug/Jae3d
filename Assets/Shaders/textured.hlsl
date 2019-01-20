@@ -13,17 +13,15 @@
 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |" \
 	      "DENY_DOMAIN_SHADER_ROOT_ACCESS |" \
           "DENY_GEOMETRY_SHADER_ROOT_ACCESS |" \
-          "DENY_HULL_SHADER_ROOT_ACCESS )," \
+          "DENY_HULL_SHADER_ROOT_ACCESS)," \
 RootSigCore \
 RootSigLighting \
 RootSigPBR \
-"DescriptorTable(SRV(t2), SRV(t3), SRV(t4), visibility=SHADER_VISIBILITY_PIXEL)," \
-"StaticSampler(s1, filter=FILTER_MIN_MAG_MIP_LINEAR, visibility=SHADER_VISIBILITY_PIXEL)"
+"DescriptorTable(SRV(t3), SRV(t4), SRV(t5), visibility=SHADER_VISIBILITY_PIXEL)"
 
-Texture2D<float4> CombinedTex : register(t2);
-Texture2D<float3> NormalTex   : register(t3);
-Texture2D<float>  MetallicTex : register(t4);
-sampler Sampler : register(s1);
+Texture2D<float4> CombinedTex : register(t3);
+Texture2D<float3> NormalTex   : register(t4);
+Texture2D<float>  MetallicTex : register(t5);
 
 struct v2f {
 	float4 pos : SV_Position;
@@ -68,16 +66,16 @@ float4 psmain(v2f i) : SV_Target{
 
 	float4 tex = CombinedTex.Sample(Sampler, uv);
 
-	float3 bump = normalize(NormalTex.Sample(Sampler, uv).rgb * 2 - 1);
 	float metallic = MetallicTex.Sample(Sampler, uv).r;
 
 	Surface sfc;
 	sfc.albedo = tex.rgb;
 	sfc.metallic = metallic;
-	sfc.roughness = tex.a;
+	sfc.smoothness = tex.a;
+	float3 bump = normalize(NormalTex.Sample(Sampler, uv).rgb * 2 - 1);
 	sfc.normal = normalize(tangent * bump.x + binormal * bump.y + normal * bump.z);
 	sfc.worldPos = worldPos;
 
 	float3 light = ShadePoint(sfc, i.pos, view);
-	return float4(light, 1.0);
+	return float4(light, Material.alpha);
 }

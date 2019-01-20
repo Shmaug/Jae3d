@@ -40,11 +40,11 @@ float4 psmain(v2f i) : SV_Target{
 
 	Surface sfc;
 	sfc.albedo = 1.0;
-	sfc.metallic = 0.0;
-	sfc.roughness = .5;
+	sfc.metallic = 1.0;
+	sfc.smoothness = 1.0;
 	sfc.normal = normalize(i.normal);
 	sfc.worldPos = i.worldPos;
 
 	float3 light = ShadePoint(sfc, i.pos, view);
-	return float4(light, 1.0);
+	return float4(light, Material.alpha);
 }

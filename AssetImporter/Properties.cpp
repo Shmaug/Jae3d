@@ -110,27 +110,6 @@ void UpdateField(UpdateArgs<DXGI_FORMAT> &args) {
 		}
 	}
 }
-template<>
-void UpdateField(UpdateArgs<ALPHA_MODE> &args) {
-	if (args.draw) DrawTextW(args.args.hdc, args.name.c_str(), (int)args.name.length(), &args.rect, DT_LEFT);
-
-	RECT r = { args.rect.right - 150, args.rect.top + 1, args.rect.right - 10, args.rect.bottom - 1 };
-
-	if (args.draw) {
-		FillRect(args.args.hdc, &r, Brushes::bgBrush);
-		r.left += 2;
-		r.right -= 2;
-		r.top++;
-		r.bottom--;
-
-		jwstring fmt = AlphaModeToString.at(*args.field).upper();
-		DrawTextW(args.args.hdc, fmt.c_str(), (int)fmt.length(), &r, DT_CENTER | DT_VCENTER);
-	} else {
-		if (args.args.input.lmbFirst) {
-			// TODO enum picker
-		}
-	}
-}
 
 void Properties::Draw(HDC hdc, RECT &window, bool force) {
 	if (!mDirty && !force) return;

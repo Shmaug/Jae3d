@@ -256,6 +256,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Animation.cpp" />
     <ClCompile Include="Asset.cpp" />
     <ClCompile Include="AssetDatabase.cpp" />
     <ClCompile Include="AssetFile.cpp" />
@@ -287,6 +288,7 @@
     <ClCompile Include="Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Animation.hpp" />
     <ClInclude Include="Asset.hpp" />
     <ClInclude Include="AssetDatabase.hpp" />
     <ClInclude Include="AssetFile.hpp" />
@@ -344,6 +346,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Core\SpriteColored.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Core\ColoredRoot.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

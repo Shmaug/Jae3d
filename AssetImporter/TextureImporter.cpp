@@ -40,7 +40,7 @@ Texture* ConvertTexture(unique_ptr<ScratchImage> &image, AssetMetadata &meta, jw
 	}
 	return new Texture(
 		name, (unsigned int)info.width, (unsigned int)info.height, (unsigned int)info.depth, dim,
-		(unsigned int)info.arraySize, info.format, meta.textureAlphaMode,
+		(unsigned int)info.arraySize, info.format,
 		(unsigned int)info.mipLevels, blob.GetBufferPointer(), blob.GetBufferSize(), true);
 }
 
@@ -87,18 +87,15 @@ Texture* ProcessImage(unique_ptr<ScratchImage> &image, AssetMetadata &meta, jwst
 	return ConvertTexture(image, meta, name);
 }
 
-// Imports a texture and metadata and stores in meta
 void ImportTexture(jwstring path, jvector<AssetMetadata> &meta) {
 	AssetMetadata m(path);
 	m.asset = std::shared_ptr<Asset>(ImportTexture(path, m));
 	meta.push_back(m);
 }
-// Imports a texture with settings in a file [path].meta
 Texture* ImportTexture(jwstring path) {
 	AssetMetadata metadata(path);
 	return ImportTexture(path, metadata);
 }
-// Imports a texture with the settings in metadata
 Texture* ImportTexture(jwstring path, AssetMetadata &metadata) {
 	jwstring ext = GetExtW(path).lower();
 	TexMetadata info;

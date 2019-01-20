@@ -53,10 +53,16 @@ public:
 	JAE_API friend jstring operator +(const char lhs, const jstring &rhs);
 	JAE_API friend jstring operator +(const char* lhs, const jstring &rhs);
 
+	friend bool operator >(jstring &lhs, jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) > 0; }
+	friend bool operator <(jstring &lhs, jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; }
 	friend bool operator >(const jstring &lhs, const jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) > 0; }
+	friend bool operator <(const jstring &lhs, const jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; }
+	friend bool operator >(const jstring &lhs, const char* rhs) { return strcmp(lhs.c_str(), rhs) > 0; }
 	friend bool operator <(const jstring &lhs, const char* rhs) { return strcmp(lhs.c_str(), rhs) < 0; }
 
 	friend bool operator >=(const jstring &lhs, const jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) >= 0; }
+	friend bool operator <=(const jstring &lhs, const jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) <= 0; }
+	friend bool operator >=(const jstring &lhs, const char* rhs) { return strcmp(lhs.c_str(), rhs) >= 0; }
 	friend bool operator <=(const jstring &lhs, const char* rhs) { return strcmp(lhs.c_str(), rhs) <= 0; }
 
 	friend bool operator ==(const jstring &lhs, const jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) == 0; }
@@ -116,10 +122,16 @@ public:
 	JAE_API friend jwstring operator +(const wchar_t lhs, const jwstring &rhs);
 	JAE_API friend jwstring operator +(const wchar_t* lhs, const jwstring &rhs);
 
+	friend bool operator >(jwstring &lhs, jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) > 0; }
+	friend bool operator <(jwstring &lhs, jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) < 0; }
 	friend bool operator >(const jwstring &lhs, const jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) > 0; }
+	friend bool operator <(const jwstring &lhs, const jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) < 0; }
+	friend bool operator >(const jwstring &lhs, const wchar_t* rhs) { return wcscmp(lhs.c_str(), rhs) > 0; }
 	friend bool operator <(const jwstring &lhs, const wchar_t* rhs) { return wcscmp(lhs.c_str(), rhs) < 0; }
 
 	friend bool operator >=(const jwstring &lhs, const jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) >= 0; }
+	friend bool operator <=(const jwstring &lhs, const jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) <= 0; }
+	friend bool operator >=(const jwstring &lhs, const wchar_t* rhs) { return wcscmp(lhs.c_str(), rhs) >= 0; }
 	friend bool operator <=(const jwstring &lhs, const wchar_t* rhs) { return wcscmp(lhs.c_str(), rhs) <= 0; }
 
 	friend bool operator ==(const jwstring &lhs, const jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) == 0; }
@@ -144,27 +156,13 @@ namespace std {
 	template<>
 	struct hash<jstring> {
 		size_t operator()(jstring const& jstr) const noexcept {
-			size_t h = 0;
-			for (size_t i = 0; i < jstr.length(); i++) {
-				h = (h << 4) + jstr[i];
-				size_t g = h & 0xF0000000L;
-				if (g != 0) h ^= g >> 24;
-				h &= ~g;
-			}
-			return h;
+			return std::hash<string>()(string(jstr.c_str()));
 		}
 	};
 	template<>
 	struct hash<jwstring> {
 		size_t operator()(jwstring const& jstr) const noexcept {
-			size_t h = 0;
-			for (size_t i = 0; i < jstr.length(); i++) {
-				h = (h << 4) + jstr[i];
-				size_t g = h & 0xF0000000L;
-				if (g != 0) h ^= g >> 24;
-				h &= ~g;
-			}
-			return h;
+			return std::hash<wstring>()(wstring(jstr.c_str()));
 		}
 	};
 }

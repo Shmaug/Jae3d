@@ -200,7 +200,7 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 
 	shared_ptr<Texture> tex = shared_ptr<Texture>(new Texture(
 		L"Font Texture", textureWidth, textureHeight, 1,
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D, 1, textureFormat, ALPHA_MODE_TRANSPARENCY, 1,
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D, 1, textureFormat, 1,
 		texture, textureWidth * textureHeight * 4, false));
 
 	for (int i = 0; i < bitmaps.size(); i++)

@@ -1,0 +1,3 @@
+Format = R8_UNORM;
+Linear = true;
+MipMaps = true;

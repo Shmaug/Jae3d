@@ -9,12 +9,14 @@
 #include "AssetDatabase.hpp"
 #include "Graphics.hpp"
 #include "Window.hpp"
+#include "Profiler.hpp"
 
 using namespace std;
 using namespace Microsoft::WRL;
 using namespace DirectX;
 
-CommandList::CommandList(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type, ComPtr<ID3D12CommandAllocator> allocator) {
+CommandList::CommandList(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type, ComPtr<ID3D12CommandAllocator> allocator) :
+	mTrianglesDrawn(0) {
 	ThrowIfFailed(device->CreateCommandList(0, type, allocator.Get(), nullptr, IID_PPV_ARGS(&mCommandList)));
 }
 CommandList::~CommandList() {}
@@ -22,10 +24,14 @@ CommandList::~CommandList() {}
 void CommandList::Reset(ComPtr<ID3D12CommandAllocator> allocator, unsigned int frameIndex) {
 	ThrowIfFailed(mCommandList->Reset(allocator.Get(), nullptr));
 	mActiveShader = nullptr;
-	mActiveCamera = nullptr;
-	mActiveMaterial = nullptr;
+	mActiveRootParameters.clear();
 	mFrameIndex = frameIndex;
+	mTrianglesDrawn = 0;
 	mState = ShaderState();
+	mRTWidth = 0;
+	mRTHeight = 0;
+	mHeaps.clear();
+	while (!mStateStack.empty()) mStateStack.pop();
 	mGlobals.clear();
 }
 
@@ -45,42 +51,65 @@ void CommandList::SetShader(shared_ptr<Shader> shader) {
 	if (mActiveShader == shader) return;
 
 	if (shader) shader->SetActive(mCommandList);
+	mActiveRootParameters.clear();
 	mActiveShader = shader;
 }
 void CommandList::SetMaterial(shared_ptr<Material> material) {
-	if (mActiveMaterial == material) return;
-
 	if (material) {
-		material->SetActive(this);
-		SetGlobals();
-	}
-
-	if (mActiveMaterial) {
-		for (int i = 0; i < mActiveMaterial->mActive.size(); i++)
-			if (mActiveMaterial->mActive[i] == this) {
-				mActiveMaterial->mActive.remove(i);
+		for (const auto &it : mGlobals) {
+			switch (it.second.type) {
+			case SHADER_PARAM_TYPE_CBUFFER:
+				material->SetCBuffer(it.first, it.second.value.cbufferValue, mFrameIndex);
 				break;
+			case SHADER_PARAM_TYPE_SRV:
+				material->SetTexture(it.first, it.second.value.textureValue, mFrameIndex);
+				break;
+			case SHADER_PARAM_TYPE_TABLE:
+				material->SetDescriptorTable(it.first, it.second.value.tableValue, mFrameIndex);
+				break;
+			case SHADER_PARAM_TYPE_FLOAT:
+				material->SetFloat(it.first, it.second.value.floatValue, mFrameIndex);
+				break;
+				// TODO: the rest of the types
 			}
+		}
+		material->SetActive(this);
 	}
-	mActiveMaterial = material;
 }
 void CommandList::SetCamera(shared_ptr<Camera> camera) {
-	if (mActiveCamera == camera) return;
-
+	SetCamera(camera, CD3DX12_VIEWPORT(0.f, 0.f, (float)camera->mPixelWidth, (float)camera->mPixelHeight));
+}
+void CommandList::SetCamera(shared_ptr<Camera> camera, D3D12_VIEWPORT& vp) {
 	if (camera) {
-		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.f, 0.f, (float)camera->mPixelWidth, (float)camera->mPixelHeight);
-		D3D12_RECT sr = { 0, 0, (long)camera->mPixelWidth, (long)camera->mPixelHeight };
+		mRTWidth = camera->mPixelWidth;
+		mRTHeight = camera->mPixelHeight;
+		D3D12_RECT sr = { 0, 0, (LONG)camera->mPixelWidth, (LONG)camera->mPixelHeight };
 		mCommandList->RSSetViewports(1, &vp);
 		mCommandList->RSSetScissorRects(1, &sr);
 		mCommandList->OMSetRenderTargets(1, &camera->RTVHandle(), FALSE, &camera->DSVHandle());
-		
+
 		camera->WriteCBuffer(mFrameIndex);
-		SetGlobalCBuffer(L"CameraBuffer", camera->mCBuffer);
-		mState.msaaSamples = camera->mMSAACount;
+		SetGlobalCBuffer("CameraBuffer", camera->mCBuffer);
+		mState.msaaSamples = camera->mSampleCount;
 		mState.depthFormat = camera->mDepthFormat;
 		mState.renderFormat = camera->mRenderFormat;
 	}
-	mActiveCamera = camera;
+}
+
+void CommandList::SetRootCBV(unsigned int index, D3D12_GPU_VIRTUAL_ADDRESS cbuffer) {
+	if (mActiveRootParameters.size() > index && mActiveRootParameters[index].cbufferValue == cbuffer) return;
+	while (mActiveRootParameters.size() <= index) mActiveRootParameters.push_back({ 0 });
+
+	mActiveRootParameters[index].cbufferValue = cbuffer;
+	mCommandList->SetGraphicsRootConstantBufferView(index, cbuffer);
+}
+void CommandList::SetRootDescriptorTable(unsigned int index, ID3D12DescriptorHeap* heap, D3D12_GPU_DESCRIPTOR_HANDLE table) {
+	if (mActiveRootParameters.size() > index && mActiveRootParameters[index].tableValue.ptr == table.ptr) return;
+	while (mActiveRootParameters.size() <= index) mActiveRootParameters.push_back({ 0 });
+	mActiveRootParameters[index].tableValue.ptr = table.ptr;
+
+	mCommandList->SetDescriptorHeaps(1, &heap);
+	mCommandList->SetGraphicsRootDescriptorTable(index, table);
 }
 
 bool CommandList::IsKeywordEnabled(jstring keyword) {
@@ -104,21 +133,43 @@ void CommandList::SetKeywords(jvector<jstring> &keywords) {
 	mState.keywords = keywords;
 }
 
-void CommandList::SetGlobalTexture(jwstring param, shared_ptr<Texture> tex) {
+void CommandList::SetGlobalFloat(jstring param, float val) {
 	if (mGlobals.count(param)) {
 		GlobalParam& p = mGlobals.at(param);
-		p.type = SHADER_PARAM_TYPE_TEXTURE;
+		p.type = SHADER_PARAM_TYPE_FLOAT;
+		p.value.set(val);
+	} else {
+		GlobalParam p;
+		p.type = SHADER_PARAM_TYPE_FLOAT;
+		p.value.set(val);
+		mGlobals.emplace(param, p);
+	}
+}
+void CommandList::SetGlobalTexture(jstring param, shared_ptr<Texture> tex) {
+	if (mGlobals.count(param)) {
+		GlobalParam& p = mGlobals.at(param);
+		p.type = SHADER_PARAM_TYPE_SRV;
 		p.value.set(tex);
 	} else {
 		GlobalParam p;
-		p.type = SHADER_PARAM_TYPE_TEXTURE;
+		p.type = SHADER_PARAM_TYPE_SRV;
 		p.value.set(tex);
 		mGlobals.emplace(param, p);
 	}
-
-	if (mActiveMaterial) mActiveMaterial->SetTexture(param, tex, mFrameIndex);
 }
-void CommandList::SetGlobalCBuffer(jwstring param, shared_ptr<ConstantBuffer> cbuf) {
+void CommandList::SetGlobalTable(jstring param, shared_ptr<DescriptorTable> tex) {
+	if (mGlobals.count(param)) {
+		GlobalParam& p = mGlobals.at(param);
+		p.type = SHADER_PARAM_TYPE_TABLE;
+		p.value.set(tex);
+	} else {
+		GlobalParam p;
+		p.type = SHADER_PARAM_TYPE_TABLE;
+		p.value.set(tex);
+		mGlobals.emplace(param, p);
+	}
+}
+void CommandList::SetGlobalCBuffer(jstring param, shared_ptr<ConstantBuffer> cbuf) {
 	if (mGlobals.count(param)) {
 		GlobalParam& p = mGlobals.at(param);
 		p.type = SHADER_PARAM_TYPE_CBUFFER;
@@ -128,36 +179,16 @@ void CommandList::SetGlobalCBuffer(jwstring param, shared_ptr<ConstantBuffer> cb
 		p.type = SHADER_PARAM_TYPE_CBUFFER;
 		p.value.set(cbuf);
 		mGlobals.emplace(param, p);
-	}
-
-	if (mActiveMaterial) mActiveMaterial->SetCBuffer(param, cbuf, mFrameIndex);
-}
-void CommandList::SetGlobals() {
-	if (!mActiveMaterial) return;
-
-	for (const auto &it : mGlobals){
-		switch (it.second.type) {
-		case SHADER_PARAM_TYPE_CBUFFER:
-			mActiveMaterial->SetCBuffer(it.first, it.second.value.cbufferValue, mFrameIndex);
-			break;
-		case SHADER_PARAM_TYPE_TEXTURE:
-			mActiveMaterial->SetTexture(it.first, it.second.value.textureValue, mFrameIndex);
-			break;
-		case SHADER_PARAM_TYPE_TABLE:
-			mActiveMaterial->SetDescriptorTable(it.first, it.second.value.tableValue, mFrameIndex);
-			break;
-			// TODO: the rest of the types
-		}
 	}
 }
 
 void CommandList::SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend) {
 	mState.blendState = blend;
 }
-void CommandList::SetDepthWrite(bool depthWrite) {
+void CommandList::DepthWriteEnabled(bool depthWrite) {
 	mState.zwrite = depthWrite;
 }
-void CommandList::SetDepthTest(bool depthTest) {
+void CommandList::DepthTestEnabled(bool depthTest) {
 	mState.ztest = depthTest;
 }
 void CommandList::SetFillMode(D3D12_FILL_MODE fillMode) {
@@ -173,7 +204,8 @@ void CommandList::DrawUserMesh(MESH_SEMANTIC input, D3D12_PRIMITIVE_TOPOLOGY_TYP
 	mState.topology = topology;
 	mActiveShader->SetPSO(mCommandList, mState);
 }
-void CommandList::DrawMesh(Mesh &mesh) {
+void CommandList::DrawMesh(Mesh &mesh, unsigned int submesh) {
 	DrawUserMesh(mesh.Semantics(), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	mesh.Draw(mCommandList);
+	mesh.Draw(mCommandList, submesh);
+	mTrianglesDrawn += mesh.mSubmeshes[submesh].mIndexCount / 3;
 }

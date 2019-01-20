@@ -7,15 +7,16 @@
 #include <iostream>
 #include <fstream>
 
-JAE_API jstring GetFullPath(jstring str);
-JAE_API jstring GetExt(jstring path);
-JAE_API jstring GetName(jstring path);
-JAE_API jstring GetNameExt(jstring path);
-JAE_API jwstring GetFullPathW(jwstring str);
-JAE_API jwstring GetExtW(jwstring path);
-JAE_API jwstring GetNameW(jwstring path);
-JAE_API jwstring GetNameExtW(jwstring path);
-JAE_API jwstring GetDirectoryW(jwstring file);
+JAE_API jstring GetFullPathA(const jstring &str);
+JAE_API jstring GetExtA(const jstring &str);
+JAE_API jstring GetNameA(const jstring &str);
+JAE_API jstring GetNameExtA(const jstring &str);
+JAE_API jstring GetDirectoryA(const jstring &str);
+JAE_API jwstring GetFullPathW(const jwstring &str);
+JAE_API jwstring GetExtW(const jwstring &str);
+JAE_API jwstring GetNameW(const jwstring &str);
+JAE_API jwstring GetNameExtW(const jwstring &str);
+JAE_API jwstring GetDirectoryW(const jwstring &file);
 
 JAE_API jwstring utf8toUtf16(const jstring &str);
 JAE_API jstring utf16toUtf8(const jwstring &wstr);

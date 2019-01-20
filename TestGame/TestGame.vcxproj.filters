@@ -16,12 +16,15 @@
     <None Include="..\Assets\Shaders\Textured.hlsl" />
     <None Include="..\Assets\Shaders\Lighting.hlsli" />
     <None Include="..\Assets\Shaders\LightCompute.hlsl" />
+    <None Include="..\Assets\Shaders\LightCommon.hlsli" />
+    <None Include="..\Assets\Shaders\Skybox.hlsl" />
+    <None Include="..\Assets\Shaders\DepthPass.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TestGame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TiledLighting.cpp">
+    <ClCompile Include="Lighting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,7 +32,7 @@
     <ClInclude Include="TestGame.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TiledLighting.hpp">
+    <ClInclude Include="Lighting.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

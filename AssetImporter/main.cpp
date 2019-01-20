@@ -52,7 +52,7 @@ std::shared_ptr<Viewport> viewport;
 std::shared_ptr<Properties> properties;
 HWND vphwnd = 0;
 
-void LoadFile(jwstring file, jvector<AssetMetadata> &meta, jvector<jwstring> shaderIncludePaths) {
+void LoadFile(jwstring file, jvector<AssetMetadata> &meta, jvector<jstring> shaderIncludePaths) {
 	if (PathFileExistsW(file.c_str()) != 1) {
 		wprintf(L"Could not find %s\n", file.c_str());
 		return;
@@ -61,11 +61,11 @@ void LoadFile(jwstring file, jvector<AssetMetadata> &meta, jvector<jwstring> sha
 	jwstring ext = GetExtW(file);
 
 	if (ext == L"obj")
-		ImportMesh(file, meta);
+		ImportScene(file, meta);
 	else if (ext == L"fbx")
-		ImportMesh(file, meta);
+		ImportScene(file, meta);
 	else if (ext == L"blend")
-		ImportMesh(file, meta);
+		ImportScene(file, meta);
 	
 	else if (ext == L"png")
 		ImportTexture(file, meta);
@@ -131,7 +131,7 @@ void UILoadFolder() {
 }
 void UIClickFile(jwstring path) {
 	jvector<AssetMetadata> assets;
-	LoadFile(path, assets, jvector<jwstring>());
+	LoadFile(path, assets, jvector<jstring>());
 	if (!assets.empty()) {
 		viewport->Show(assets[0]);
 		properties->Show(assets[0]);
@@ -385,7 +385,7 @@ int cmdMain(int argc, char** argv) {
 	jwstring input;
 	bool compress = true;
 
-	jvector<jwstring> includePaths;
+	jvector<jstring> includePaths;
 
 	int mode = 0;
 	for (int i = 1; i < argc; i++) {
@@ -424,7 +424,7 @@ int cmdMain(int argc, char** argv) {
 				LoadDirectory(str, &files, true);
 				break;
 			case 5:
-				includePaths.push_back(GetFullPathW(str));
+				includePaths.push_back(GetFullPathA(utf16toUtf8(str)));
 				break;
 			}
 		}

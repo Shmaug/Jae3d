@@ -5,7 +5,7 @@
 
 #include <codecvt>
 
-jstring GetFullPath(jstring str) {
+jstring GetFullPathA(const jstring &str) {
 	char buf[MAX_PATH];
 	if (GetFullPathNameA(str.c_str(), 256, buf, nullptr) == 0) {
 		printf("Failed to get full file path of %s (%d)", str.c_str(), GetLastError());
@@ -13,12 +13,12 @@ jstring GetFullPath(jstring str) {
 	}
 	return jstring(buf);
 }
-jstring GetExt(jstring path) {
+jstring GetExtA(const jstring &path) {
 	size_t k = path.rfind('.');
 	if (k == jstring::npos) return "";
 	return path.substr((int)k + 1);
 }
-jstring GetName(jstring path) {
+jstring GetNameA(const jstring &path) {
 	char const *str = path.c_str();
 
 	int f = 0;
@@ -32,13 +32,18 @@ jstring GetName(jstring path) {
 
 	return path.substr(f, l - f);
 }
-jstring GetNameExt(jstring path) {
+jstring GetNameExtA(const jstring &path) {
 	size_t k = path.rfind('\\');
 	if (k == jstring::npos) return "";
 	return path.substr((int)k + 1);
 }
+jstring GetDirectoryA(const jstring &file) {
+	size_t k = file.rfind('\\');
+	if (k == jstring::npos) return "";
+	return file.substr(0, (int)k);
+}
 
-jwstring GetFullPathW(jwstring str) {
+jwstring GetFullPathW(const jwstring &str) {
 	wchar_t buf[MAX_PATH];
 	if (GetFullPathNameW(str.c_str(), 256, buf, nullptr) == 0) {
 		printf("Failed to get full file path of %S (%d)", str.c_str(), GetLastError());
@@ -46,12 +51,12 @@ jwstring GetFullPathW(jwstring str) {
 	}
 	return jwstring(buf);
 }
-jwstring GetExtW(jwstring path) {
+jwstring GetExtW(const jwstring &path) {
 	size_t k = path.rfind(L'.');
 	if (k == jwstring::npos) return L"";
 	return path.substr((int)k + 1);
 }
-jwstring GetNameW(jwstring path) {
+jwstring GetNameW(const jwstring &path) {
 	wchar_t const *str = path.c_str();
 
 	int f = 0;
@@ -65,12 +70,12 @@ jwstring GetNameW(jwstring path) {
 
 	return path.substr(f, l - f);
 }
-jwstring GetNameExtW(jwstring path) {
+jwstring GetNameExtW(const jwstring &path) {
 	size_t k = path.rfind(L'\\');
 	if (k == jwstring::npos) return L"";
 	return path.substr((int)k + 1);
 }
-jwstring GetDirectoryW(jwstring file) {
+jwstring GetDirectoryW(const jwstring &file) {
 	size_t k = file.rfind(L'\\');
 	if (k == jwstring::npos) return L"";
 	return file.substr(0, (int)k);

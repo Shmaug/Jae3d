@@ -10,6 +10,18 @@ private:
 	JAE_API static std::unordered_map<jwstring, std::shared_ptr<Asset>> assets;
 
 public:
+	class LoadAssetOperation {
+	public:
+		DWORD mThreadId;
+		HANDLE mThreadHandle;
+		jwstring mFile;
+		float mProgress;
+		bool mDone;
+		jvector<std::shared_ptr<Asset>> mLoadedAssets;
+	};
+
+	JAE_API static LoadAssetOperation* LoadAssetsAsync(jwstring assetFile);
+	JAE_API static void FinishLoadAssetsAsync(LoadAssetOperation* operation);
 	JAE_API static void LoadAssets(jwstring assetFile);
 	JAE_API static void UnloadAssets();
 	JAE_API static std::shared_ptr<Asset> GetAsset(jwstring name);

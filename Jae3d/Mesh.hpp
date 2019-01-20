@@ -10,45 +10,38 @@ public:
 	JAE_API Mesh(jwstring name, MemoryStream &ms);
 	JAE_API ~Mesh();
 
-	JAE_API void LoadCube(float size);
-	JAE_API void LoadQuad(float size);
+	JAE_API void WriteData(MemoryStream &ms) override;
+	JAE_API uint64_t TypeId() override;
+
+	JAE_API void LoadCube(float size, unsigned int submesh = 0);
+	JAE_API void LoadQuad(float size, unsigned int submesh = 0);
 	// Copies the mesh to the GPU
 	JAE_API void UploadStatic();
 	JAE_API void ReleaseGpu();
-
-	JAE_API void WriteData(MemoryStream &ms);
-	JAE_API uint64_t TypeId();
 
 #pragma region Getters/Setters
 	JAE_API void Clear();
 
 	JAE_API void Use32BitIndices(bool v);
-	bool Use32BitIndices() const { return m32BitIndices; }
-	void AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2) {
-		if (m32BitIndices) {
-			mIndices32.push_back(i0);
-			mIndices32.push_back(i1);
-			mIndices32.push_back(i2);
-		} else {
-			mIndices16.push_back((uint16_t)i0);
-			mIndices16.push_back((uint16_t)i1);
-			mIndices16.push_back((uint16_t)i2);
-		}
-	}
+	inline bool Use32BitIndices() const { return m32BitIndices; }
+	JAE_API void AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2, unsigned int submesh = 0);
 
-	unsigned int VertexCount() const { return (unsigned int)mVertices.size(); }
-	unsigned int IndexCount() const { return(unsigned int)(m32BitIndices ? mIndices32.size() : mIndices16.size()); }
+	inline unsigned int VertexCount() const { return (unsigned int)mVertices.size(); }
+	inline unsigned int IndexCount(unsigned int submesh = 0) const { return(unsigned int)(m32BitIndices ? mSubmeshes[submesh].mIndices32.size() : mSubmeshes[submesh].mIndices16.size()); }
+	// Sets the VertexCount by adding empty vertices, normals, colors, etc...
+	// Assign data to the vertices by using GetVertices(), GetNormals(), etc... after setting VertexCount()
 	JAE_API void VertexCount(unsigned int size, bool shrink = true);
+	inline unsigned int SubmeshCount() const { return (unsigned int)mSubmeshes.size(); }
 
-	JAE_API void AddIndices(unsigned int count, unsigned int* indices);
+	JAE_API void AddIndices(unsigned int count, unsigned int* indices, unsigned int submesh = 0);
 	JAE_API unsigned int AddVertex(DirectX::XMFLOAT3 &v);
 
 	JAE_API void HasSemantic(MESH_SEMANTIC s, bool v);
-	bool HasSemantic(MESH_SEMANTIC s) const { if (s == MESH_SEMANTIC_POSITION) return true; return mSemantics & s; }
-	MESH_SEMANTIC Semantics() const { return mSemantics; }
+	inline bool HasSemantic(MESH_SEMANTIC s) const { if (s == MESH_SEMANTIC_POSITION) return true; return mSemantics & s; }
+	inline MESH_SEMANTIC Semantics() const { return mSemantics; }
 
 	template<typename T>
-	T* GetSemantic(MESH_SEMANTIC s) {
+	inline T* GetSemantic(MESH_SEMANTIC s) {
 		switch (s) {
 		case MESH_SEMANTIC_POSITION:
 			static_assert(std::is_same(T, DirectX::XMFLOAT3), "T must be XMFLOAT3");
@@ -126,16 +119,25 @@ public:
 	inline DirectX::XMUINT4*  GetBlendIndices() const { return mBlendIndices.data(); }
 	inline DirectX::XMFLOAT4* GetBlendWeights() const { return mBlendWeights.data(); }
 
-	uint16_t* GetIndices16() const { return mIndices16.data(); }
-	uint32_t* GetIndices32() const { return mIndices32.data(); }
+	inline uint16_t* GetIndices16(unsigned int submesh) const { return mSubmeshes[submesh].mIndices16.data(); }
+	inline uint32_t* GetIndices32(unsigned int submesh) const { return mSubmeshes[submesh].mIndices32.data(); }
 #pragma endregion
 
-	JAE_API void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	JAE_API void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int submesh = 0, D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 private:
+	friend class CommandList;
+
+	struct Submesh {
+		jvector<uint16_t> mIndices16;
+		jvector<uint32_t> mIndices32;
+
+		UINT mStartIndex;
+		UINT mIndexCount;
+	};
+
 	bool m32BitIndices = false;
 	bool mDataUploaded = false;
-	bool mDataMapped = false;
 
 	DirectX::BoundingBox mBounds;
 
@@ -154,17 +156,13 @@ private:
 	jvector<DirectX::XMFLOAT4> mColor1;
 	jvector<DirectX::XMUINT4>  mBlendIndices;
 	jvector<DirectX::XMFLOAT4> mBlendWeights;
-	jvector<uint16_t> mIndices16;
-	jvector<uint32_t> mIndices32;
+	jvector<Submesh> mSubmeshes;
 
 	JAE_API size_t VertexSize();
 	JAE_API void WriteVertexArray(BYTE* dst);
 
 	_WRL::ComPtr<ID3D12Resource> mVertexBuffer;
 	_WRL::ComPtr<ID3D12Resource> mIndexBuffer;
-	void* mMappedVertexBuffer;
-	void* mMappedIndexBuffer;
-	UINT mIndexCount;
 	D3D12_VERTEX_BUFFER_VIEW mVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW mIndexBufferView;
 };

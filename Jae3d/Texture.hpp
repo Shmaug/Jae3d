@@ -11,17 +11,21 @@ public:
 		return HighBit + 1;
 	}
 
+	JAE_API Texture(jwstring name, unsigned int width, unsigned int height, DXGI_FORMAT format, unsigned int mipLevels = 1);
+	JAE_API Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth, DXGI_FORMAT format, unsigned int mipLevels = 1);
 	JAE_API Texture(jwstring name,
 		unsigned int width, unsigned int height, unsigned int depth,
 		D3D12_RESOURCE_DIMENSION dimension, unsigned int arraySize,
-		DXGI_FORMAT format, ALPHA_MODE alphaMode, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS);
+		DXGI_FORMAT format, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS);
 
 	JAE_API Texture(jwstring name, MemoryStream &ms);
 	JAE_API ~Texture();
 
-	JAE_API void WriteData(MemoryStream &ms);
-	JAE_API uint64_t TypeId();
+	JAE_API void WriteData(MemoryStream &ms) override;
+	JAE_API uint64_t TypeId() override;
 
+	// Upload pixel data to the GPU
+	// Create SRV (and UAV if flags has D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) in descriptor tables if makeHeaps is true
 	JAE_API void Upload(D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE, bool makeHeaps = true);
 
 	JAE_API void SetPixelData(const void* data);
@@ -33,7 +37,6 @@ public:
 	D3D12_RESOURCE_DIMENSION Dimension() const { return mDimension; }
 	unsigned int MipLevels() const { return mMipLevels; }
 	DXGI_FORMAT Format() const { return mFormat; }
-	ALPHA_MODE AlphaMode() const { return mAlphaMode; }
 
 	bool HasDescriptors() const { return mHasDescriptorHeaps; }
 
@@ -53,7 +56,6 @@ private:
 	D3D12_RESOURCE_DIMENSION mDimension;
 	unsigned int mMipLevels;
 	DXGI_FORMAT mFormat;
-	ALPHA_MODE mAlphaMode;
 
 	size_t mDataSize;
 	uint8_t* mData;
