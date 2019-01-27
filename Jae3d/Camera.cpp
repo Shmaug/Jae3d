@@ -114,9 +114,8 @@ void Camera::CreateRenderBuffers(){
 #pragma endregion
 }
 
-void Camera::Clear(shared_ptr<CommandList> commandList) {
-	DirectX::XMFLOAT4 clearColor = { 0.0f, 0.0f, 0.0f, 1.f };
-	commandList->D3DCommandList()->ClearRenderTargetView(RTVHandle(), (float*)&clearColor, 0, nullptr);
+void Camera::Clear(shared_ptr<CommandList> commandList, XMFLOAT4 color) {
+	commandList->D3DCommandList()->ClearRenderTargetView(RTVHandle(), (float*)&color, 0, nullptr);
 	commandList->D3DCommandList()->ClearDepthStencilView(DSVHandle(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
 

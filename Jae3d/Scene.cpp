@@ -24,8 +24,6 @@ Scene::~Scene() {
 void Scene::DebugDrawBox(shared_ptr<CommandList> commandList, const BoundingOrientedBox &box, const XMMATRIX &vp) {
 	if (!mDebugCube) {
 		mDebugCube = std::shared_ptr<Mesh>(new Mesh(L"Cube"));
-		mDebugCube->LoadCube(1.0);
-		
 		mDebugCube->VertexCount(8);
 		auto verts = mDebugCube->GetVertices();
 		unsigned int i = 0;
@@ -50,8 +48,7 @@ void Scene::DebugDrawBox(shared_ptr<CommandList> commandList, const BoundingOrie
 	XMFLOAT4X4 m;
 	XMStoreFloat4x4(&m, XMMatrixAffineTransformation(XMLoadFloat3(&box.Extents), XMVectorZero(), XMLoadFloat4(&box.Orientation), XMLoadFloat3(&box.Center)) * vp);
 	commandList->D3DCommandList()->SetGraphicsRoot32BitConstants(0, 16, &m, 0);
-	commandList->DrawUserMesh(MESH_SEMANTIC_POSITION, D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
-	mDebugCube->Draw(commandList->D3DCommandList(), D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+	commandList->DrawMesh(*mDebugCube);
 }
 
 void Scene::DrawSkybox(shared_ptr<CommandList> commandList) {
@@ -108,7 +105,7 @@ void Scene::DebugDraw(shared_ptr<CommandList> commandList, shared_ptr<Camera> ca
 	commandList->D3DCommandList()->SetGraphicsRoot32BitConstants(0, 4, &white, 16);
 
 	for (unsigned int i = 0; i < mRenderers.size(); i++){
-		if (!mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
+		if (!mRenderers[i]->Visible() || !mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
 		DebugDrawBox(commandList, mRenderers[i]->Bounds(), vp);
 	}
 

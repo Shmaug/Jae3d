@@ -7,8 +7,7 @@
 #pragma Parameter float(0,10)	envIntensity	1.0
 #pragma Parameter srv			EnvironmentMap
 
-#define RootSigPBR "CBV(b3, visibility=SHADER_VISIBILITY_PIXEL),"\
-"DescriptorTable(SRV(t2)),"\
+#define RootSigPBR "CBV(b3, visibility=SHADER_VISIBILITY_PIXEL), DescriptorTable(SRV(t2)),"\
 "StaticSampler(s0, filter=FILTER_MIN_MAG_MIP_LINEAR, visibility=SHADER_VISIBILITY_PIXEL),"
 
 struct MaterialBuffer {

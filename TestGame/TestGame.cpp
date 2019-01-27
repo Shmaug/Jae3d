@@ -224,26 +224,26 @@ void TestGame::InitializeScene() {
 	a7e->SetMaterial(redLightMaterial, 0); // red lights
 	a7e->SetMaterial(a7eMaterial, 1);
 	a7e->SetMaterial(glassMaterial, 2); // canopy glass
-	a7e->LocalPosition(7, .95, 0);
+	a7e->LocalPosition(7, .95f, 0);
 	a7e->LocalRotation(XMQuaternionRotationRollPitchYaw(XMConvertToRadians(-2.5f), 0, 0));
 
 	auto a7eSeat = mScene->AddObject<MeshRenderer>(L"A7E Seat");
 	a7eSeat->Parent(a7e);
 	a7eSeat->SetMesh(a7eSeatMesh);
 	a7eSeat->SetMaterial(a7eSeatMaterial);
-	a7eSeat->LocalPosition(0, .01976f, 1.99565);
+	a7eSeat->LocalPosition(0, .01976f, 1.99565f);
 
 	auto a7eTankLeft = mScene->AddObject<MeshRenderer>(L"A7E Drop Tank");
 	a7eTankLeft->Parent(a7e);
 	a7eTankLeft->SetMesh(a7eTankMesh);
 	a7eTankLeft->SetMaterial(a7eTankMaterial);
-	a7eTankLeft->LocalPosition(-1.08257f, -0.20482f, -0.30395);
+	a7eTankLeft->LocalPosition(-1.08257f, -0.20482f, -0.30395f);
 
 	auto a7eTankRight = mScene->AddObject<MeshRenderer>(L"A7E Drop Tank");
 	a7eTankRight->Parent(a7e);
 	a7eTankRight->SetMesh(a7eTankMesh);
 	a7eTankRight->SetMaterial(a7eTankMaterial);
-	a7eTankRight->LocalPosition(1.08257f, -0.20482f, -0.30395);
+	a7eTankRight->LocalPosition(1.08257f, -0.20482f, -0.30395f);
 
 	auto barrel = mScene->AddObject<MeshRenderer>(L"Barrel");
 	barrel->SetMesh(barrelMesh);

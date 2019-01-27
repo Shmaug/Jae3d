@@ -64,7 +64,7 @@ public:
 
 	JAE_API void CreateRenderBuffers();
 	JAE_API bool UpdateTransform() override;
-	JAE_API void Clear(std::shared_ptr<CommandList> commandList);
+	JAE_API void Clear(std::shared_ptr<CommandList> commandList, DirectX::XMFLOAT4 color = { 0.0f, 0.0f, 0.0f, 1.f });
 
 private:
 	friend class CommandList;

@@ -40,7 +40,7 @@ public:
 
 	JAE_API void GatherRenderJobs(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera, jvector<RenderJob*> &list) override;
 	bool Visible() override { return mVisible; }
-	DirectX::BoundingOrientedBox Bounds() override;
+	JAE_API DirectX::BoundingOrientedBox Bounds() override;
 
 	bool mVisible;
 

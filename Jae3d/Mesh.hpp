@@ -14,7 +14,7 @@ public:
 	JAE_API uint64_t TypeId() override;
 
 	JAE_API void LoadCube(float size, unsigned int submesh = 0);
-	JAE_API void LoadQuad(float size, unsigned int submesh = 0);
+	JAE_API void LoadQuad(float size, unsigned int submesh = 0, unsigned int axis = 0);
 	// Copies the mesh to the GPU
 	JAE_API void UploadStatic();
 	JAE_API void ReleaseGpu();
@@ -122,9 +122,6 @@ public:
 	inline uint16_t* GetIndices16(unsigned int submesh) const { return mSubmeshes[submesh].mIndices16.data(); }
 	inline uint32_t* GetIndices32(unsigned int submesh) const { return mSubmeshes[submesh].mIndices32.data(); }
 #pragma endregion
-
-	JAE_API void Draw(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int submesh = 0, D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 private:
 	friend class CommandList;
 
@@ -142,6 +139,7 @@ private:
 	DirectX::BoundingBox mBounds;
 
 	MESH_SEMANTIC mSemantics = MESH_SEMANTIC_POSITION;
+	D3D_PRIMITIVE_TOPOLOGY mTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	jvector<MeshBone> bones;
 	jvector<DirectX::XMFLOAT3> mVertices;

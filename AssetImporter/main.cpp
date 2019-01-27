@@ -105,8 +105,7 @@ void LoadDirectory(jwstring dir, jvector<jwstring>* files, bool recursive) {
 		if (GetExtW(c) == L"meta") continue;
 
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-			if (recursive)
-				LoadDirectory(c.c_str(), files, recursive);
+			if (recursive) LoadDirectory(c.c_str(), files, recursive);
 		} else
 			files->push_back(GetFullPathW(c));
 	} while (FindNextFileW(hFind, &ffd) != 0);

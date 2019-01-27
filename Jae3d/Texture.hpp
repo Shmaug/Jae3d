@@ -28,6 +28,7 @@ public:
 	// Create SRV (and UAV if flags has D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) in descriptor tables if makeHeaps is true
 	JAE_API void Upload(D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE, bool makeHeaps = true);
 
+	const void* GetPixelData() const { return mData; };
 	JAE_API void SetPixelData(const void* data);
 
 	unsigned int Width() const { return mWidth; }

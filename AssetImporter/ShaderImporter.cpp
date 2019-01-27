@@ -452,8 +452,9 @@ Shader* CompileShader(jwstring path, jvector<jstring> includePaths) {
 		for (unsigned int j = 0; j < stages.size(); j++) {
 			HRESULT hr = shader->CompileShaderStage(path, stages[j].entryPoint, stages[j].stage, includePaths, keywords[i]);
 			if (FAILED(hr)) {
-				_com_error err(hr);
-				wprintf(L"%s\n", err.ErrorMessage());
+				// always just "unspecified error"
+				//_com_error err(hr);
+				//wprintf(L"%s\n", err.ErrorMessage());
 			}
 		}
 	}

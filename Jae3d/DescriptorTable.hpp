@@ -9,6 +9,15 @@ public:
 	JAE_API DescriptorTable(jwstring name, unsigned int size);
 	JAE_API ~DescriptorTable();
 
+	template<typename... Args>
+	static DescriptorTable* Create(jwstring name, const Args& ...args) {
+		std::vector<std::shared_ptr<Texture>> vec { args... };
+		DescriptorTable* tbl = new DescriptorTable(name, (unsigned int)vec.size());
+		for (unsigned int i = 0; i < vec.size(); i++)
+			tbl->SetSRV(i, vec[i]);
+		return tbl;
+	}
+
 	void SetSRV(unsigned int i, std::shared_ptr<Texture> &value) { SetTexture(i, value, false); }
 	void SetUAV(unsigned int i, std::shared_ptr<Texture> &value) { SetTexture(i, value, true); }
 

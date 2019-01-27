@@ -10,14 +10,14 @@ namespace Profiler {
 		jvector<ProfilerSample> children;
 		ProfilerSample *parent;
 		jwstring name;
+		double time;
 		double startTime;
-		double endTime;
 
-		ProfilerSample() : name(L""), startTime(0), parent(nullptr) {}
-		ProfilerSample(jwstring name, double startTime) : name(name), startTime(startTime), parent(nullptr) {}
+		ProfilerSample() : name(L""), parent(nullptr), time(0), startTime(0) {}
+		ProfilerSample(jwstring name, double startTime) : name(name), parent(nullptr), time(0), startTime(startTime) {}
 	};
 
-	JAE_API void BeginSample(jwstring name);
+	JAE_API void BeginSample(jwstring name, bool resume = false);
 	JAE_API void EndSample();
 	JAE_API void FrameStart();
 	JAE_API void FrameEnd();

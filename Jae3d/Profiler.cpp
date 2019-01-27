@@ -14,14 +14,23 @@ ProfilerSample* currentSample = nullptr; // most recent sample created from the 
 const std::chrono::high_resolution_clock timer;
 auto start = timer.now();
 
-void Profiler::BeginSample(jwstring name) {
+void Profiler::BeginSample(jwstring name, bool resume) {
+	if (resume) {
+		for (unsigned int i = 0; i < currentSample->children.size(); i++)
+			if (currentSample->children[i].name == name) {
+				currentSample->children[i].startTime = (timer.now() - start).count() * 1e-9;
+				currentSample = &currentSample->children[i];
+				return;
+			}
+	}
 	ProfilerSample& s = currentSample->children.push_back(ProfilerSample(name, (timer.now() - start).count() * 1e-9));
 	s.parent = currentSample;
 	currentSample = &s;
 }
 void Profiler::EndSample() {
 	assert(currentSample->parent);
-	currentSample->endTime = (timer.now() - start).count() * 1e-9;
+	double now = (timer.now() - start).count() * 1e-9;
+	currentSample->time += now - currentSample->startTime;
 	currentSample = currentSample->parent;
 }
 
@@ -35,8 +44,8 @@ void Profiler::FrameStart() {
 	currentSample = &frames[i];
 }
 void Profiler::FrameEnd() {
-	frames[curFrame % frameCount].endTime = (timer.now() - start).count() * 1e-9;
-	lastFrameTime = frames[curFrame % frameCount].endTime - frames[curFrame % frameCount].startTime;
+	double now = (timer.now() - start).count() * 1e-9;
+	lastFrameTime = frames[curFrame % frameCount].time = now - frames[curFrame % frameCount].startTime;
 	curFrame++;
 }
 double Profiler::LastFrameTime() {
@@ -47,7 +56,7 @@ void PrintSample(wchar_t *buffer, int size, int &c, ProfilerSample *s, int tabLe
 	for (int i = 0; i < tabLevel; i++)
 		c += swprintf_s(buffer + c, size - c, L"  ");
 
-	c += swprintf_s(buffer + c, size - c, L"%s: %.2fms\n", s->name.c_str(), (s->endTime - s->startTime) * 1000);
+	c += swprintf_s(buffer + c, size - c, L"%s: %.2fms\n", s->name.c_str(), s->time * 1000);
 	for (int i = 0; i < s->children.size(); i++)
 		PrintSample(buffer, size, c, &s->children[i], tabLevel + 1);
 }

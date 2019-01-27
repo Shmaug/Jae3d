@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Common.hpp"
-#include <unordered_map>
 
 #include "Asset.hpp"
 #include "Texture.hpp"
@@ -18,7 +17,7 @@ public:
 		unsigned int lineSpacing,
 		unsigned int texDpi,
 		std::shared_ptr<Texture> tex,
-		jvector<FontGlyph> glyphs, jvector<FontKerning> kernings);
+		jvector<FontGlyph>& glyphs, jvector<FontKerning>& kernings);
 	JAE_API Font(jwstring name, MemoryStream &ms);
 	JAE_API ~Font();
 
@@ -27,9 +26,8 @@ public:
 
 	JAE_API std::shared_ptr<Texture> GetTexture() const { return mTexture; };
 
-	JAE_API int GetKerning(wchar_t from, wchar_t to) const;
-	JAE_API const FontGlyph& GetGlyph(wchar_t c) const;
-	JAE_API bool HasGlyph(wchar_t c) const;
+	JAE_API int GetKerning(const wchar_t from, const wchar_t to) const;
+	JAE_API bool GetGlyph(const wchar_t c, FontGlyph& g) const;
 
 	unsigned int GetSize() const { return mSize; };
 	unsigned int GetLineSpacing() const { return mLineSpace; };
@@ -46,7 +44,9 @@ private:
 	unsigned int mLineSpace;
 	unsigned int mTexDpi;
 
-	std::unordered_map<wchar_t, FontGlyph> mGlyphs;
+	// TODO: something more memory efficient?
+	jvector<FontGlyph> mGlyphs;
+	jvector<unsigned int> mGlyphIndices;
 	std::unordered_map<uint32_t, int> mKerning;
 	std::shared_ptr<Texture> mTexture;
 };

@@ -39,6 +39,19 @@ public:
 	JAE_API void SetKeywords(jvector<jstring> &keywords);
 
 	JAE_API void SetGlobalFloat(jstring param, float v);
+	JAE_API void SetGlobalFloat2(jstring param, DirectX::XMFLOAT2 v);
+	JAE_API void SetGlobalFloat3(jstring param, DirectX::XMFLOAT3 v);
+	JAE_API void SetGlobalFloat4(jstring param, DirectX::XMFLOAT4 v);
+	JAE_API void SetGlobalColor3(jstring param, DirectX::XMFLOAT3 v);
+	JAE_API void SetGlobalColor4(jstring param, DirectX::XMFLOAT4 v);
+	JAE_API void SetGlobalInt(jstring param, int v);
+	JAE_API void SetGlobalInt2(jstring param, DirectX::XMINT2 v);
+	JAE_API void SetGlobalInt3(jstring param, DirectX::XMINT3 v);
+	JAE_API void SetGlobalInt4(jstring param, DirectX::XMINT4 v);
+	JAE_API void SetGlobalUInt(jstring param, unsigned int v);
+	JAE_API void SetGlobalUInt2(jstring param, DirectX::XMUINT2 v);
+	JAE_API void SetGlobalUInt3(jstring param, DirectX::XMUINT3 v);
+	JAE_API void SetGlobalUInt4(jstring param, DirectX::XMUINT4 v);
 	JAE_API void SetGlobalTexture(jstring param, std::shared_ptr<Texture> tex);
 	JAE_API void SetGlobalTable(jstring param, std::shared_ptr<DescriptorTable> tex);
 	JAE_API void SetGlobalCBuffer(jstring param, std::shared_ptr<ConstantBuffer> tex);
@@ -58,6 +71,8 @@ public:
 	JAE_API void DrawMesh(Mesh &mesh, unsigned int submesh = 0);
 	// Sets up the command list to render a mesh with the given input and topology, with the active shader
 	JAE_API void DrawUserMesh(MESH_SEMANTIC input, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+
+	JAE_API void CommandList::Draw(const D3D12_VERTEX_BUFFER_VIEW* vb, const D3D12_INDEX_BUFFER_VIEW* ib, D3D12_PRIMITIVE_TOPOLOGY topology, UINT indexCount, UINT baseIndex, UINT baseVertex);
 
 	inline _WRL::ComPtr<ID3D12GraphicsCommandList2> D3DCommandList() const { return mCommandList; }
 
@@ -92,8 +107,10 @@ private:
 
 	std::shared_ptr<Shader> mActiveShader;
 	jvector<RootParameterEntry> mActiveRootParameters;
-
-	jvector<ID3D12DescriptorHeap*> mHeaps;
+	const D3D12_VERTEX_BUFFER_VIEW* mActiveVBO;
+	const D3D12_INDEX_BUFFER_VIEW* mActiveIBO;
+	D3D12_PRIMITIVE_TOPOLOGY mActiveTopology;
+	_WRL::ComPtr<ID3D12PipelineState> mActivePSO;
 
 	unsigned int mRTWidth;
 	unsigned int mRTHeight;
@@ -101,7 +118,6 @@ private:
 	ShaderState mState;
 
 	std::stack<ShaderState> mStateStack;
-
 	_WRL::ComPtr<ID3D12GraphicsCommandList2> mCommandList;
 
 	unsigned int mFrameIndex;

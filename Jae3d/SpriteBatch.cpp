@@ -8,6 +8,7 @@
 #include "Window.hpp"
 #include "Texture.hpp"
 #include "Camera.hpp"
+#include "Profiler.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -158,11 +159,7 @@ XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text) {
 			p.x = 0;
 			p.y += scale * font->GetLineSpacing();
 		} else {
-			if (font->HasGlyph(cur))
-				g = font->GetGlyph(cur);
-			else if (font->HasGlyph(L'?'))
-				g = font->GetGlyph(L'?');
-			else {
+			if (!font->GetGlyph(cur, g) && !font->GetGlyph(L'?', g)) {
 				prev = cur;
 				continue;
 			}
@@ -178,32 +175,32 @@ XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text) {
 }
 
 void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scale, XMFLOAT4 color, jwstring text) {
-	// TODO: text rendering is slow
-
 	float w = (float)font->GetTexture()->Width();
 	float h = (float)font->GetTexture()->Height();
 	scale *= (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
 	XMFLOAT2 p = pos;
-	FontGlyph g;
 	wchar_t prev = L'\0';
+	FontGlyph g;
 	for (unsigned int j = 0; j < text.length(); j++) {
 		wchar_t cur = text[j];
 		if (cur == L'\n') {
 			p.x = pos.x;
 			p.y += scale * font->GetLineSpacing();
 		} else {
-			if (font->HasGlyph(cur))
-				g = font->GetGlyph(cur);
-			else if (font->HasGlyph(L'?'))
-				g = font->GetGlyph(L'?');
-			else {
+			Profiler::BeginSample(L"Find Glyph", true);
+			if (!font->GetGlyph(cur, g) && !font->GetGlyph(L'?', g)) {
 				prev = cur;
+				Profiler::EndSample();
 				continue;
 			}
+			Profiler::EndSample();
 
+			Profiler::BeginSample(L"Kerning", true);
 			p.x += scale * font->GetKerning(prev, cur);
+			Profiler::EndSample();
 
 			if (g.character != L' ') {
+				Profiler::BeginSample(L"Submit SpriteDraw", true);
 				mQuadDrawQueue.push_back(
 					SpriteDraw(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
 						XMFLOAT4(
@@ -214,6 +211,7 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 						XMFLOAT4((float)g.tx0 / w, (float)g.ty0 / h, (float)(g.tx0 + g.tw) / w, (float)(g.ty0 + g.th) / h),
 						color)
 				);
+				Profiler::EndSample();
 			}
 
 			p.x += scale * g.advance;
@@ -363,6 +361,7 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		D3D12_GPU_DESCRIPTOR_HANDLE curSRV = { 0 };
 
 		if (!mTexturedShader) CreateShader();
+		commandList->SetMaterial(nullptr);
 		commandList->SetShader(mTexturedShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
 		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_TEXCOORD0 | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
@@ -395,6 +394,7 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 		ctx->ResizeLines(lsize);
 
 		if (!mColoredShader) CreateShader();
+		commandList->SetMaterial(nullptr);
 		commandList->SetShader(mColoredShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
 		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);

@@ -266,7 +266,6 @@
       <Filter>Header Files\dds</Filter>
     </None>
     <None Include="..\Assets\Core\Core.hlsli" />
-    <None Include="..\Assets\Core\Colored.hlsl" />
     <None Include="..\Assets\Core\SpriteTextured.hlsl" />
     <None Include="..\Assets\Core\SpriteColored.hlsl" />
     <None Include="..\Assets\Core\ColoredRoot.hlsl" />

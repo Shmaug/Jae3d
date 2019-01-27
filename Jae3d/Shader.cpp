@@ -69,21 +69,21 @@ public:
 	}
 };
 
-jstring Shader::KeywordListToString(jvector<jstring> keywords) {
-	for (unsigned int i = 0; i < keywords.size(); i++) {
-		if (mKeywords.count(i) == 0 || keywords[i].empty()) {
-			keywords.remove(i);
-			i--;
-		}
-	}
-	if (keywords.size() == 0) return "";
-
-	std::sort(keywords.data(), keywords.data() + keywords.size(), [](const jstring& lhs, const jstring& rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; });
-
-	jstring str;
+jstring Shader::KeywordListToString(const jvector<jstring>& keywords) const {
+	jvector<jstring> tmp;
+	unsigned int s = 0;
 	for (unsigned int i = 0; i < keywords.size(); i++)
-		str += keywords[i] + " ";
+		if (!keywords[i].empty() && mKeywords.count(i)) {
+			tmp.push_back(keywords[i]);
+			s += (unsigned int)keywords[i].length();
+		}
+	if (tmp.size() == 0) return "";
 
+	std::sort(tmp.data(), tmp.data() + tmp.size(), [](const jstring& lhs, const jstring& rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; });
+
+	jstring str(s);
+	for (unsigned int i = 0; i < tmp.size(); i++)
+		str += tmp[i] + " ";
 	return str;
 }
 
@@ -149,10 +149,13 @@ bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
 	return false;
 }
 
-void Shader::SetPSO(ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state) {
-	if (mStates.count(state) == 0)
-		mStates.emplace(state, CreatePSO(state));
-	commandList->SetPipelineState(mStates.at(state).Get());
+ComPtr<ID3D12PipelineState> Shader::GetOrCreatePSO(const ShaderState &state) {
+	if (mStates.count(state) == 0) {
+		auto pso = CreatePSO(state);
+		mStates.emplace(state, pso.Get());
+		return pso;
+	} else
+		return mStates.at(state);
 }
 
 void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state) {
@@ -167,7 +170,8 @@ void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, const Sh
 }
 
 ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
-	ComPtr<ID3DBlob>* blobs = mBlobs.at(KeywordListToString(state.keywords));
+	jstring keywords = KeywordListToString(state.keywords);
+	ComPtr<ID3DBlob>* blobs = mBlobs.at(keywords);
 
 	if (!blobs[SHADER_STAGE_VERTEX] && !blobs[SHADER_STAGE_HULL] &&
 		!blobs[SHADER_STAGE_DOMAIN] && !blobs[SHADER_STAGE_GEOMETRY] && !blobs[SHADER_STAGE_PIXEL]){
@@ -339,12 +343,14 @@ HRESULT Shader::CompileShaderStage(jwstring file, jstring entryPoint, SHADER_STA
 	HRESULT hr = D3DCompileFromFile(file.c_str(), defines.data(), &inc, entryPoint.c_str(), profile, flags, 0, &blobs[stage], &errorBlob);
 
 	if (errorBlob) {
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_RED);
 		char msg[128];
 		sprintf_s(msg, "Error compiling %S with stage %s\n", GetNameExtW(file).c_str(), profile);
 		std::cerr << msg;
 		std::cerr << reinterpret_cast<const char*>(errorBlob->GetBufferPointer());
 		errorBlob->Release();
 		blobs[stage].Reset();
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 	}
 
 	return hr;

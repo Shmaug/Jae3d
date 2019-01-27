@@ -45,7 +45,7 @@ public:
 	std::unordered_map<jstring, ShaderParameter>::const_iterator ParameterBegin() { return mParams.begin(); }
 	std::unordered_map<jstring, ShaderParameter>::const_iterator ParameterEnd() { return mParams.end(); }
 
-	JAE_API jstring KeywordListToString(jvector<jstring> keywords);
+	JAE_API jstring KeywordListToString(const jvector<jstring>& keywords) const;
 
 	void AddParameter(jstring name, ShaderParameter &param) {
 		mParams.emplace(name, param);
@@ -61,7 +61,7 @@ private:
 	// Sets the root signature of this shader on the GPU (called by CommandList)
 	JAE_API bool SetActive(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 	// Sets a PSO with this shader and the passed in state (called by CommandList)
-	JAE_API void SetPSO(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state);
+	JAE_API _WRL::ComPtr<ID3D12PipelineState> GetOrCreatePSO(const ShaderState &state);
 	// Sets the compute root signature and PSO on the GPU
 	JAE_API void SetCompute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state);
 

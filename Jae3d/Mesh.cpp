@@ -209,6 +209,9 @@ unsigned int Mesh::AddVertex(XMFLOAT3 &v) {
 }
 
 void Mesh::AddIndices(unsigned int count, unsigned int* indices, unsigned int submesh) {
+	while (submesh >= mSubmeshes.size())
+		mSubmeshes.push_back({});
+
 	if (m32BitIndices) {
 		mSubmeshes[submesh].mIndices32.reserve(mSubmeshes[submesh].mIndices32.size() + count);
 		for (unsigned int i = 0; i < count; i++)
@@ -314,51 +317,53 @@ void Mesh::HasSemantic(MESH_SEMANTIC s, bool v) {
 }
 
 void Mesh::LoadCube(float s, unsigned int submesh) {
-	HasSemantic(MESH_SEMANTIC_NORMAL, true);
 	HasSemantic(MESH_SEMANTIC_TEXCOORD0, true);
+	HasSemantic(MESH_SEMANTIC_NORMAL, true);
+	HasSemantic(MESH_SEMANTIC_TANGENT, true);
 	int si = VertexCount();
 	VertexCount(VertexCount() + 24);
 
 	XMFLOAT3* v = GetVertices();
 	XMFLOAT3* n = GetNormals();
 	XMFLOAT4* t = GetTexcoords(0);
+	XMFLOAT3* g = GetTangents();
 
 	int i = si;
 	// top
-	v[i] = XMFLOAT3( s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 0
-	v[i] = XMFLOAT3(-s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 1
-	v[i] = XMFLOAT3( s, s, -s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 2
-	v[i] = XMFLOAT3(-s, s, -s); n[i] = XMFLOAT3(0, 1.0f, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 3
+	v[i] = XMFLOAT3( s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(1, 1, 0, 0); // 0
+	v[i] = XMFLOAT3(-s, s,  s); n[i] = XMFLOAT3(0, 1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(0, 1, 0, 0); // 1
+	v[i] = XMFLOAT3( s, s, -s); n[i] = XMFLOAT3(0, 1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(1, 0, 0, 0); // 2
+	v[i] = XMFLOAT3(-s, s, -s); n[i] = XMFLOAT3(0, 1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(0, 0, 0, 0); // 3
 		
 	// bottom
-	v[i] = XMFLOAT3( s, -s,  s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 4
-	v[i] = XMFLOAT3( s, -s, -s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 5
-	v[i] = XMFLOAT3(-s, -s,  s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 6
-	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(0, -1.0f, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 7
+	v[i] = XMFLOAT3( s, -s,  s); n[i] = XMFLOAT3(0, -1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(1, 1, 0, 0); // 4
+	v[i] = XMFLOAT3( s, -s, -s); n[i] = XMFLOAT3(0, -1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(1, 0, 0, 0); // 5
+	v[i] = XMFLOAT3(-s, -s,  s); n[i] = XMFLOAT3(0, -1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(0, 1, 0, 0); // 6
+	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(0, -1.0f, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(0, 0, 0, 0); // 7
 		
 	// right
-	v[i] = XMFLOAT3(s,  s,  s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 8
-	v[i] = XMFLOAT3(s, -s,  s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 9
-	v[i] = XMFLOAT3(s,  s, -s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 10
-	v[i] = XMFLOAT3(s, -s, -s); n[i] = XMFLOAT3(1.0f, 0, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 11
+	v[i] = XMFLOAT3(s,  s,  s); n[i] = XMFLOAT3(1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 1, 0, 0); // 8
+	v[i] = XMFLOAT3(s, -s,  s); n[i] = XMFLOAT3(1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 0, 0, 0); // 9
+	v[i] = XMFLOAT3(s,  s, -s); n[i] = XMFLOAT3(1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 1, 0, 0); // 10
+	v[i] = XMFLOAT3(s, -s, -s); n[i] = XMFLOAT3(1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 0, 0, 0); // 11
 
 	// left
-	v[i] = XMFLOAT3(-s,  s,  s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(1, 1, 0, 0); // 12
-	v[i] = XMFLOAT3(-s, -s,  s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(1, 0, 0, 0); // 13
-	v[i] = XMFLOAT3(-s,  s, -s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(0, 1, 0, 0); // 14
-	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(-1.0f, 0, 0); t[i++] = XMFLOAT4(0, 0, 0, 0); // 15
+	v[i] = XMFLOAT3(-s,  s,  s); n[i] = XMFLOAT3(-1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 1, 0, 0); // 12
+	v[i] = XMFLOAT3(-s, -s,  s); n[i] = XMFLOAT3(-1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 0, 0, 0); // 13
+	v[i] = XMFLOAT3(-s,  s, -s); n[i] = XMFLOAT3(-1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 1, 0, 0); // 14
+	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(-1.0f, 0, 0); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 0, 0, 0); // 15
 
 	// forward
-	v[i] = XMFLOAT3( s,  s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(1, 1, 0, 0); // 16
-	v[i] = XMFLOAT3(-s,  s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(1, 0, 0, 0); // 17
-	v[i] = XMFLOAT3( s, -s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(0, 1, 0, 0); // 18
-	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); t[i++] = XMFLOAT4(0, 0, 0, 0); // 19
+	v[i] = XMFLOAT3( s,  s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 1, 0, 0); // 16
+	v[i] = XMFLOAT3(-s,  s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 0, 0, 0); // 17
+	v[i] = XMFLOAT3( s, -s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 1, 0, 0); // 18
+	v[i] = XMFLOAT3(-s, -s, -s); n[i] = XMFLOAT3(0, 0, -1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 0, 0, 0); // 19
 
 	// back
-	v[i] = XMFLOAT3( s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(1, 1, 0, 0); // 20
-	v[i] = XMFLOAT3( s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(0, 1, 0, 0); // 21
-	v[i] = XMFLOAT3(-s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(1, 0, 0, 0); // 22
-	v[i] = XMFLOAT3(-s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); t[i++] = XMFLOAT4(0, 0, 0, 0); // 23
+	v[i] = XMFLOAT3( s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 1, 0, 0); // 20
+	v[i] = XMFLOAT3( s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 1, 0, 0); // 21
+	v[i] = XMFLOAT3(-s,  s, s); n[i] = XMFLOAT3(0, 0, 1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(1, 0, 0, 0); // 22
+	v[i] = XMFLOAT3(-s, -s, s); n[i] = XMFLOAT3(0, 0, 1.0f); g[i] = XMFLOAT3(0, -1, 1); t[i++] = XMFLOAT4(0, 0, 0, 0); // 23
 
 	AddTriangle(si + 1,  si + 0,  si + 2, submesh);
 	AddTriangle(si + 1,  si + 2,  si + 3, submesh);
@@ -373,21 +378,40 @@ void Mesh::LoadCube(float s, unsigned int submesh) {
 	AddTriangle(si + 21, si + 20, si + 22, submesh);
 	AddTriangle(si + 21, si + 22, si + 23, submesh);
 }
-void Mesh::LoadQuad(float s, unsigned int submesh) {
+void Mesh::LoadQuad(float s, unsigned int submesh, unsigned int axis) {
 	HasSemantic(MESH_SEMANTIC_TEXCOORD0, true);
+	HasSemantic(MESH_SEMANTIC_NORMAL, true);
+	HasSemantic(MESH_SEMANTIC_TANGENT, true);
 	int si = VertexCount();
 	VertexCount(VertexCount() + 4);
 
 	XMFLOAT3* v = GetVertices();
 	XMFLOAT4* t = GetTexcoords(0);
+	XMFLOAT3* n = GetNormals();
+	XMFLOAT3* g = GetTangents();
 
 	int i = si;
-	// top
-	v[i] = XMFLOAT3(-s, -s, 0); t[i++] = XMFLOAT4(0, 1, 0, 0);
-	v[i] = XMFLOAT3(-s,  s, 0); t[i++] = XMFLOAT4(0, 0, 0, 0);
-	v[i] = XMFLOAT3( s,  s, 0); t[i++] = XMFLOAT4(1, 0, 0, 0);
-	v[i] = XMFLOAT3( s, -s, 0); t[i++] = XMFLOAT4(1, 1, 0, 0);
-
+	switch (axis) {
+	case 0:
+		v[i] = XMFLOAT3(0, -s, -s); n[i] = XMFLOAT3(1, 0, 0); g[i] = XMFLOAT3(0, 1, 1); t[i++] = XMFLOAT4(0, 1, 0, 0);
+		v[i] = XMFLOAT3(0, -s,  s); n[i] = XMFLOAT3(1, 0, 0); g[i] = XMFLOAT3(0, 1, 1); t[i++] = XMFLOAT4(0, 0, 0, 0);
+		v[i] = XMFLOAT3(0,  s,  s); n[i] = XMFLOAT3(1, 0, 0); g[i] = XMFLOAT3(0, 1, 1); t[i++] = XMFLOAT4(1, 0, 0, 0);
+		v[i] = XMFLOAT3(0,  s, -s); n[i] = XMFLOAT3(1, 0, 0); g[i] = XMFLOAT3(0, 1, 1); t[i++] = XMFLOAT4(1, 1, 0, 0);
+		break;
+	case 1:
+		v[i] = XMFLOAT3(-s, 0, -s); n[i] = XMFLOAT3(0, 1, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(0, 1, 0, 0);
+		v[i] = XMFLOAT3(-s, 0,  s); n[i] = XMFLOAT3(0, 1, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(0, 0, 0, 0);
+		v[i] = XMFLOAT3( s, 0,  s); n[i] = XMFLOAT3(0, 1, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(1, 0, 0, 0);
+		v[i] = XMFLOAT3( s, 0, -s); n[i] = XMFLOAT3(0, 1, 0); g[i] = XMFLOAT3(1, 0, 1); t[i++] = XMFLOAT4(1, 1, 0, 0);
+		break;
+	default:
+	case 2:
+		v[i] = XMFLOAT3(-s, -s, 0); n[i] = XMFLOAT3(0, 0, 1); g[i] = XMFLOAT3(1, 1, 0); t[i++] = XMFLOAT4(0, 1, 0, 0);
+		v[i] = XMFLOAT3(-s,  s, 0); n[i] = XMFLOAT3(0, 0, 1); g[i] = XMFLOAT3(1, 1, 0); t[i++] = XMFLOAT4(0, 0, 0, 0);
+		v[i] = XMFLOAT3( s,  s, 0); n[i] = XMFLOAT3(0, 0, 1); g[i] = XMFLOAT3(1, 1, 0); t[i++] = XMFLOAT4(1, 0, 0, 0);
+		v[i] = XMFLOAT3( s, -s, 0); n[i] = XMFLOAT3(0, 0, 1); g[i] = XMFLOAT3(1, 1, 0); t[i++] = XMFLOAT4(1, 1, 0, 0);
+		break;
+	}
 	AddTriangle(si + 0, si + 1, si + 2, submesh);
 	AddTriangle(si + 0, si + 2, si + 3, submesh);
 }
@@ -589,14 +613,4 @@ void Mesh::UploadStatic() {
 void Mesh::ReleaseGpu() {
 	mVertexBuffer.Reset();
 	mDataUploaded = false;
-}
-void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList2> commandList, unsigned int submesh, D3D_PRIMITIVE_TOPOLOGY topology) {
-	if (!mDataUploaded) return;
-
-	commandList->IASetPrimitiveTopology(topology);
-	commandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
-	commandList->IASetIndexBuffer(&mIndexBufferView);
-
-	if (mSubmeshes[submesh].mIndexCount == 0) return;
-	commandList->DrawIndexedInstanced(mSubmeshes[submesh].mIndexCount, 1, mSubmeshes[submesh].mStartIndex, 0, 0);
 }

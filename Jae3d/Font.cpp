@@ -17,8 +17,11 @@ Font::Font(jwstring name, MemoryStream &ms) : Asset(name, ms) {
 	mAscender = ms.Read<uint32_t>();
 	mDescender = ms.Read<uint32_t>();
 
-	mGlyphs = std::unordered_map<wchar_t, FontGlyph>(251);
+	mGlyphIndices.resize(0xFFFF);
+
 	uint32_t c = ms.Read<uint32_t>();
+	mGlyphs.reserve(c);
+
 	for (unsigned int i = 0; i < c; i++) {
 		FontGlyph g;
 		g.character = (wchar_t)ms.Read<int16_t>();
@@ -29,11 +32,13 @@ Font::Font(jwstring name, MemoryStream &ms) : Asset(name, ms) {
 		g.ty0 = ms.Read<uint32_t>();
 		g.tw = ms.Read<uint32_t>();
 		g.th = ms.Read<uint32_t>();
-		mGlyphs.emplace(g.character, g);
+		mGlyphIndices[g.character] = (unsigned int)mGlyphs.size();
+		mGlyphs.push_back(g);
 	}
 
-	mKerning = std::unordered_map<uint32_t, int>(251);
 	uint32_t kc = ms.Read<uint32_t>();
+	mKerning = std::unordered_map<uint32_t, int>(kc);
+
 	for (unsigned int i = 0; i < kc; i++) {
 		uint32_t k = ms.Read<uint32_t>();
 		int32_t kv = ms.Read<int32_t>();
@@ -49,30 +54,33 @@ Font::Font(jwstring name,
 	unsigned int lineSpacing,
 	unsigned int texDpi,
 	std::shared_ptr<Texture> tex,
-	jvector<FontGlyph> glyphs, jvector<FontKerning> kernings)
+	jvector<FontGlyph>& glyphs, jvector<FontKerning>& kernings)
 	: Asset(name), mSize(size), mHeight(height), mAscender(ascender), mDescender(descender), mLineSpace(lineSpacing),
-	mTexDpi(texDpi), mTexture(tex), mGlyphs(std::unordered_map<wchar_t, FontGlyph>(251)), mKerning(std::unordered_map<uint32_t, int>(251))
+	mTexDpi(texDpi), mTexture(tex)
 {
-	for (int i = 0; i < glyphs.size(); i++)
-		mGlyphs.emplace(glyphs[i].character, glyphs[i]);
+	mGlyphIndices.resize(0xFFFF);
+	mGlyphs = glyphs;
 
-	for (int i = 0; i < kernings.size(); i++) {
-		unsigned int key = (unsigned int)kernings[i].to | ((unsigned int)kernings[i].from << 16);
-		mKerning.emplace(key, kernings[i].offset);
-	}
+	for (unsigned int i = 0; i < mGlyphs.size(); i++)
+		mGlyphIndices[mGlyphs[i].character] = i;
+
+	mKerning = std::unordered_map<uint32_t, int>(kernings.size());
+	for (int i = 0; i < kernings.size(); i++)
+		mKerning.emplace((unsigned int)kernings[i].to | ((unsigned int)kernings[i].from << 16), kernings[i].offset);
 }
 Font::~Font() {}
 uint64_t Font::TypeId() { return ASSET_TYPE_FONT; }
 
-const FontGlyph& Font::GetGlyph(wchar_t c) const {
-	return mGlyphs.at(c);
-}
-bool Font::HasGlyph(wchar_t c) const {
-	return mGlyphs.count(c);
+bool Font::GetGlyph(const wchar_t c, FontGlyph &g) const {
+	if (mGlyphs[mGlyphIndices[c]].character) {
+		g = mGlyphs[mGlyphIndices[c]];
+		return true;
+	}
+	return false;
 }
 
-int Font::GetKerning(wchar_t from, wchar_t to) const {
-	unsigned int key = (unsigned int)to | ((unsigned int)from << 16);
+int Font::GetKerning(const wchar_t from, const wchar_t to) const {
+	uint32_t key = (unsigned int)to | ((unsigned int)from << 16);
 	if (mKerning.count(key))
 		return mKerning.at(key);
 	return 0;
@@ -90,16 +98,16 @@ void Font::WriteData(MemoryStream &ms) {
 	size_t pos = ms.Tell();
 	ms.Write((uint32_t)0);
 	if (!mGlyphs.empty()) {
-		int i = 0;
+		unsigned int i = 0;
 		for (const auto &it : mGlyphs) {
-			ms.Write((int16_t)it.second.character);
-			ms.Write((uint32_t)it.second.advance);
-			ms.Write((uint32_t)it.second.ox);
-			ms.Write((uint32_t)it.second.oy);
-			ms.Write((uint32_t)it.second.tx0);
-			ms.Write((uint32_t)it.second.ty0);
-			ms.Write((uint32_t)it.second.tw);
-			ms.Write((uint32_t)it.second.th);
+			ms.Write((int16_t) it.character);
+			ms.Write((uint32_t)it.advance);
+			ms.Write((uint32_t)it.ox);
+			ms.Write((uint32_t)it.oy);
+			ms.Write((uint32_t)it.tx0);
+			ms.Write((uint32_t)it.ty0);
+			ms.Write((uint32_t)it.tw);
+			ms.Write((uint32_t)it.th);
 			i++;
 		}
 		size_t posc = ms.Tell();

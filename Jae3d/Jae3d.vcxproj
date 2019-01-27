@@ -335,11 +335,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Assets\Core\Colored.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\Assets\Core\SpriteTextured.hlsl">
       <FileType>Document</FileType>
     </None>

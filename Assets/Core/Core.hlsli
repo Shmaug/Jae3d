@@ -17,6 +17,4 @@ ConstantBuffer<CameraBuffer> Camera : register(b1);
 #pragma Parameter cbuf ObjectBuffer
 #pragma Parameter cbuf CameraBuffer
 
-#define RootSigCore \
-	"CBV(b0)," \
-	"CBV(b1),"
+#define RootSigCore  "CBV(b0), CBV(b1),"
