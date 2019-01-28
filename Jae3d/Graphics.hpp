@@ -40,7 +40,7 @@ public:
 	JAE_API static std::shared_ptr<Window> GetWindow();
 	JAE_API static std::shared_ptr<SpriteBatch> GetSpriteBatch();
 
-	JAE_API static void Initialize(HWND hWnd, unsigned int bufferCount);
+	JAE_API static void Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing);
 	JAE_API static void Destroy();
 	JAE_API static bool FrameReady();
 

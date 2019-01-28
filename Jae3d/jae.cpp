@@ -168,7 +168,7 @@ void RegisterWindowClass(HINSTANCE hInst, const wchar_t* windowClassName) {
 	assert(SUCCEEDED(hr));
 }
 
-HWND JaeCreateWindow(LPCWSTR title, int width, int height, unsigned int bufferCount) {
+HWND JaeCreateWindow(LPCWSTR title, int width, int height, unsigned int bufferCount, bool allowTearing) {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// Using this awareness context allows the client area of the window 
 	// to achieve 100% scaling while still allowing non-client window content to 
@@ -199,7 +199,7 @@ HWND JaeCreateWindow(LPCWSTR title, int width, int height, unsigned int bufferCo
 	if (RegisterRawInputDevices(rID, 2, sizeof(RAWINPUTDEVICE)) == FALSE)
 		OutputDebugString(L"Failed to register raw input device(s)\n");
 
-	Graphics::Initialize(hWnd, bufferCount);
+	Graphics::Initialize(hWnd, bufferCount, allowTearing);
 	ShowWindow(hWnd, SW_SHOW);
 
 	return hWnd;

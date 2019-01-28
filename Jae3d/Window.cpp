@@ -8,15 +8,13 @@
 using namespace Microsoft::WRL;
 using namespace std;
 
-Window::Window(HWND hWnd, UINT bufferCount) : mhWnd(hWnd), mBufferCount(bufferCount) {
+Window::Window(HWND hWnd, UINT bufferCount, bool allowTearing) : mhWnd(hWnd), mBufferCount(bufferCount), mTearingAllowed(allowTearing) {
 	mRenderBuffers = new ComPtr<ID3D12Resource>[mBufferCount];
 	mFenceValues = new uint64_t[mBufferCount];
 	
 	ZeroMemory(mRenderBuffers, sizeof(ComPtr<ID3D12Resource>) * mBufferCount);
 	ZeroMemory(mFenceValues, sizeof(uint64_t) * mBufferCount);
 	
-	mTearingSupported = Graphics::CheckTearingSupport();
-
 	GetWindowRect(mhWnd, &mWindowRect);
 
 	RECT crect;
@@ -38,6 +36,9 @@ Window::Window(HWND hWnd, UINT bufferCount) : mhWnd(hWnd), mBufferCount(bufferCo
 	CreateBuffers();
 }
 Window::~Window() {
+	if (mWindowState == WINDOW_STATE_FULLSCREEN)
+		mSwapChain->SetFullscreenState(FALSE, NULL);
+
 	delete[] mRenderBuffers;
 	delete[] mFenceValues;
 }
@@ -57,7 +58,7 @@ void Window::CreateSwapChain() {
 	swapChainDesc.Height = mClientHeight;
 	swapChainDesc.Format = mDisplayFormat;
 	swapChainDesc.Stereo = FALSE;
-	swapChainDesc.SampleDesc = { 1,0 };
+	swapChainDesc.SampleDesc = { 1, 0 };
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.BufferCount = mBufferCount;
 	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -65,7 +66,7 @@ void Window::CreateSwapChain() {
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 
 	// It is recommended to always allow tearing if tearing support is available.
-	swapChainDesc.Flags = Graphics::CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	swapChainDesc.Flags = mTearingAllowed ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 	ComPtr<IDXGISwapChain1> swapChain1;
 	ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
@@ -99,11 +100,20 @@ void Window::CreateBuffers() {
 	}
 #pragma endregion
 }
-void Window::SetFullscreen(bool fullscreen) {
-	if (mFullscreen == fullscreen) return;
-	mFullscreen = fullscreen;
+void Window::SetWindowState(WINDOW_STATE state) {
+	if (mWindowState == state) return;
 
-	if (mFullscreen) // Switching to fullscreen.
+	if (mWindowState == WINDOW_STATE_FULLSCREEN)
+		// un-fullscreening
+		mSwapChain->SetFullscreenState(FALSE, NULL);
+
+	switch (state) {
+	case WINDOW_STATE_FULLSCREEN:
+		if (mTearingAllowed) return;
+		mSwapChain->SetFullscreenState(TRUE, NULL);
+		break;
+
+	case WINDOW_STATE_BORDERLESS:
 	{
 		// Store the current window dimensions so they can be restored 
 		// when switching out of fullscreen state.
@@ -118,7 +128,7 @@ void Window::SetFullscreen(bool fullscreen) {
 		// Query the name of the nearest display device for the window.
 		// This is required to set the fullscreen dimensions of the window
 		// when using a multi-monitor setup.
-		HMONITOR hMonitor = ::MonitorFromWindow(mhWnd, MONITOR_DEFAULTTONEAREST);
+		HMONITOR hMonitor = MonitorFromWindow(mhWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFOEX monitorInfo = {};
 		monitorInfo.cbSize = sizeof(MONITORINFOEX);
 		GetMonitorInfo(hMonitor, &monitorInfo);
@@ -131,7 +141,9 @@ void Window::SetFullscreen(bool fullscreen) {
 			SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
 		ShowWindow(mhWnd, SW_MAXIMIZE);
-	} else {
+		break;
+	}
+	case WINDOW_STATE_WINDOWED:
 		// Restore all the window decorators.
 		SetWindowLong(mhWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
@@ -143,7 +155,10 @@ void Window::SetFullscreen(bool fullscreen) {
 			SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
 		ShowWindow(mhWnd, SW_NORMAL);
+		break;
 	}
+
+	mWindowState = state;
 }
 
 void Window::Resize() {
@@ -204,7 +219,7 @@ void Window::Present(std::shared_ptr<CommandList> commandList, shared_ptr<Comman
 	mFenceValues[mCurrentBackBufferIndex] = commandQueue->Execute(commandList);
 
 	UINT syncInterval = mVSync ? 1 : 0;
-	UINT flags = mTearingSupported && !mVSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+	UINT flags = (mTearingAllowed && !mVSync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
 	ThrowIfFailed(mSwapChain->Present(syncInterval, flags));
 	mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 }

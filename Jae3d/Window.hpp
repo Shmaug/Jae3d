@@ -16,13 +16,21 @@ class CommandList;
 
 class Window {
 public:
-	JAE_API Window(HWND hWnd, UINT bufferCount);
+	enum WINDOW_STATE {
+		WINDOW_STATE_WINDOWED,
+		WINDOW_STATE_BORDERLESS,
+		WINDOW_STATE_FULLSCREEN,
+	};
+
+	// Creates swapchain and buffers
+	// allowTearing must be false to allow WINDOW_STATE_FULLSCREEN
+	JAE_API Window(HWND hWnd, UINT bufferCount, bool allowTearing);
 	JAE_API ~Window();
 
-	bool IsFullscreen() const { return mFullscreen; };
+	WINDOW_STATE GetWindowState() const { return mWindowState; };
 	bool VSyncOn() const { return mVSync; };
 	void SetVSync(bool vsync) { mVSync = vsync; };
-	JAE_API void SetFullscreen(bool fullscreen);
+	JAE_API void SetWindowState(WINDOW_STATE state);
 	JAE_API void Resize();
 	JAE_API void Close();
 
@@ -51,8 +59,6 @@ private:
 	HWND mhWnd;
 	RECT mWindowRect;
 
-	bool mTearingSupported;
-
 	uint32_t mClientWidth = 1280;
 	uint32_t mClientHeight = 720;
 	UINT mLogPixelsX;
@@ -60,7 +66,7 @@ private:
 
 	UINT mBufferCount = 3;
 
-	bool mFullscreen = false;
+	WINDOW_STATE mWindowState = WINDOW_STATE_WINDOWED;
 	bool mVSync = true;
 	DXGI_FORMAT mDisplayFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -69,6 +75,7 @@ private:
 
 	uint64_t* mFenceValues = nullptr;
 
+	bool mTearingAllowed;
 	_WRL::ComPtr<IDXGISwapChain4> mSwapChain;
 
 	_WRL::ComPtr<ID3D12Resource>* mRenderBuffers = nullptr;

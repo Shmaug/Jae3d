@@ -180,7 +180,7 @@ UINT Graphics::DescriptorIncrement(D3D12_DESCRIPTOR_HEAP_TYPE type) {
 
 #pragma region runtime
 
-void Graphics::Initialize(HWND hWnd, unsigned int bufferCount) {
+void Graphics::Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing) {
 #ifdef _DEBUG
 	// Always enable the debug layer before doing anything DX12 related
 	// so all possible errors generated while creating DX12 objects
@@ -198,7 +198,7 @@ void Graphics::Initialize(HWND hWnd, unsigned int bufferCount) {
 	mComputeCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_COMPUTE));
 	mCopyCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_COPY));
 
-	mWindow = shared_ptr<Window>(new Window(hWnd, bufferCount));
+	mWindow = shared_ptr<Window>(new Window(hWnd, bufferCount, allowTearing));
 	mSpriteBatch = shared_ptr<SpriteBatch>(new SpriteBatch());
 
 	mInitialized = true;

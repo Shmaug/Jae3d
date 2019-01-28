@@ -16,8 +16,42 @@
 #define JAE_API __declspec(dllimport)
 #endif
 
+inline void OutputDebugHR(HRESULT hr) throw() {
+	#ifdef UNICODE
+	wchar_t* msg = new wchar_t[1024];
+	#else
+	char* msg = new char[1024];
+	#endif
+
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		hr,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPTSTR)&msg,
+		0,
+		NULL);
+
+	#ifdef UNICODE
+	size_t const nLen = wcslen(msg);
+	#else
+	size_t const nLen = strlen(msg);
+	#endif
+	if (nLen > 1 && msg[nLen - 1] == '\n') {
+		msg[nLen - 1] = 0;
+		if (msg[nLen - 2] == '\r') {
+			msg[nLen - 2] = 0;
+		}
+	}
+
+	OutputDebugString(msg);
+}
+
 inline void ThrowIfFailed(HRESULT hr) {
 	if (FAILED(hr)) {
+		OutputDebugHR(hr);
+		OutputDebugString(L"\n");
 		throw std::exception();
 	}
 }

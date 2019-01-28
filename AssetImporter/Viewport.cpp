@@ -28,7 +28,7 @@ shared_ptr<Shader> meshShader;
 shared_ptr<Camera> camera;
 
 void Viewport::Init(HWND hwnd){
-	Graphics::Initialize(hwnd, 2);
+	Graphics::Initialize(hwnd, 2, false);
 	
 	const char meshrootsig[] = 
 " #define RootSig "

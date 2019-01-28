@@ -29,7 +29,7 @@ using namespace std;
 #define F2D(x) (int)x, (int)(abs(x - (int)x)*1000)
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
-	HWND hWnd = JaeCreateWindow(L"Jae3d Test", 1600, 900, 3);
+	HWND hWnd = JaeCreateWindow(L"Jae3d Test", 1600, 900, 3, Graphics::CheckTearingSupport());
 	Graphics::GetWindow()->SetVSync(false);
 	
 	TestGame* game = new TestGame();
@@ -283,7 +283,7 @@ void TestGame::OnResize() {
 void TestGame::Update(double total, double delta) {
 	auto window = Graphics::GetWindow();
 	if (Input::OnKeyDown(KeyCode::Enter) && Input::KeyDown(KeyCode::AltKey))
-		window->SetFullscreen(!window->IsFullscreen());
+		window->SetWindowState(window->GetWindowState() == Window::WINDOW_STATE_WINDOWED ? Window::WINDOW_STATE_BORDERLESS : Window::WINDOW_STATE_WINDOWED);
 	if (Input::OnKeyDown(KeyCode::F4) && Input::KeyDown(KeyCode::AltKey))
 		window->Close();
 
