@@ -123,3 +123,20 @@ void Scene::CollectLights(const BoundingFrustum &frustum, jvector<Light*> &light
 		if (mLights[i]->mMode == Light::LIGHTMODE_DIRECTIONAL || mLights[i]->Bounds().Intersects(frustum))
 			lights.push_back(mLights[i]);
 }
+
+void Scene::IntersectPoint(DirectX::XMVECTOR point, jvector<std::shared_ptr<Object>>& result) const {
+	for (int i = 0; i < mObjects.size(); i++)
+		if (mObjects[i]->Bounds().Contains(point))
+			result.push_back(mObjects[i]);
+}
+void Scene::IntersectPoint(DirectX::XMFLOAT3 point, jvector<std::shared_ptr<Object>>& result) const {
+	XMVECTOR pt = XMLoadFloat3(&point);
+	for (int i = 0; i < mObjects.size(); i++)
+		if (mObjects[i]->Bounds().Contains(pt))
+			result.push_back(mObjects[i]);
+}
+void Scene::IntersectBounds(DirectX::BoundingOrientedBox bounds, jvector<std::shared_ptr<Object>>& result) const {
+	for (int i = 0; i < mObjects.size(); i++)
+		if (mObjects[i]->Bounds().Intersects(bounds))
+			result.push_back(mObjects[i]);
+}

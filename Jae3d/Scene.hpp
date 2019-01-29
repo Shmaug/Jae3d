@@ -26,6 +26,10 @@ public:
 	JAE_API void DebugDraw(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera);
 	JAE_API void CollectLights(const DirectX::BoundingFrustum &frustum, jvector<Light*> &lights);
 
+	JAE_API void IntersectPoint(DirectX::XMVECTOR point, jvector<std::shared_ptr<Object>>& result) const;
+	JAE_API void IntersectPoint(DirectX::XMFLOAT3 point, jvector<std::shared_ptr<Object>>& result) const;
+	JAE_API void IntersectBounds(DirectX::BoundingOrientedBox bounds, jvector<std::shared_ptr<Object>>& result) const;
+
 	// Creates an object in this scene
 	template<class T>
 	std::shared_ptr<T> AddObject(jwstring name) {
