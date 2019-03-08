@@ -22,45 +22,46 @@ void DescriptorTable::SetTexture(unsigned int i, std::shared_ptr<Texture> tex, b
 
 	D3D12_RESOURCE_DESC desc = tex->GetTexture()->GetDesc();
 
-	D3D12_SRV_DIMENSION srvdim;
-	D3D12_UAV_DIMENSION uavdim;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = desc.Format;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = desc.Format;
+	srvDesc.Texture2D.MipLevels = desc.MipLevels;
+
 	switch (desc.Dimension) {
 	default:
 	case (D3D12_RESOURCE_DIMENSION_UNKNOWN):
-		srvdim = D3D12_SRV_DIMENSION_UNKNOWN;
-		uavdim = D3D12_UAV_DIMENSION_UNKNOWN;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_UNKNOWN;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_UNKNOWN;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_BUFFER):
-		srvdim = D3D12_SRV_DIMENSION_BUFFER;
-		uavdim = D3D12_UAV_DIMENSION_BUFFER;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_TEXTURE1D):
-		srvdim = D3D12_SRV_DIMENSION_TEXTURE1D;
-		uavdim = D3D12_UAV_DIMENSION_TEXTURE1D;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
+		srvDesc.Texture1D.MipLevels = desc.MipLevels;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
-		srvdim = D3D12_SRV_DIMENSION_TEXTURE2D;
-		uavdim = D3D12_UAV_DIMENSION_TEXTURE2D;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
 		break;
 	case (D3D12_RESOURCE_DIMENSION_TEXTURE3D):
-		srvdim = D3D12_SRV_DIMENSION_TEXTURE3D;
-		uavdim = D3D12_UAV_DIMENSION_TEXTURE3D;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+		srvDesc.Texture3D.MipLevels = desc.MipLevels;
+		uavDesc.Texture3D.WSize = -1;
 		break;
 	}
 
-	if (uav) {
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-		uavDesc.ViewDimension = uavdim;
-		uavDesc.Format = desc.Format;
+	if (uav)
 		Graphics::GetDevice()->CreateUnorderedAccessView(tex->GetTexture().Get(), 0, &uavDesc, handle);
-	} else {
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = srvdim;
-		srvDesc.Format = desc.Format;
-		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+	else
 		Graphics::GetDevice()->CreateShaderResourceView(tex->GetTexture().Get(), &srvDesc, handle);
-	}
 
 	mTable[i] = tex;
 }

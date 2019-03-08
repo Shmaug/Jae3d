@@ -42,18 +42,18 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 		return nullptr;
 	}
 
-	FT_CharMap found = nullptr;
-	for (auto i = 0; i < face->num_charmaps; i++) {
-		const auto charmap = face->charmaps[i];
-		if ((charmap->platform_id == 3 && charmap->encoding_id == 1) /* Windows Unicode */
-			|| (charmap->platform_id == 3 && charmap->encoding_id == 0) /* Windows Symbol */
-			|| (charmap->platform_id == 2 && charmap->encoding_id == 1) /* ISO Unicode */
-			|| (charmap->platform_id == 0)) { /* Apple Unicode */
-			found = charmap;
-			break;
-		}
-	}
-	if (found) FT_Set_Charmap(face, found);
+	//FT_CharMap found = nullptr;
+	//for (auto i = 0; i < face->num_charmaps; i++) {
+	//	const auto charmap = face->charmaps[i];
+	//	if ((charmap->platform_id == 3 && charmap->encoding_id == 1) /* Windows Unicode */
+	//		|| (charmap->platform_id == 3 && charmap->encoding_id == 0) /* Windows Symbol */
+	//		|| (charmap->platform_id == 2 && charmap->encoding_id == 1) /* ISO Unicode */
+	//		|| (charmap->platform_id == 0)) { /* Apple Unicode */
+	//		found = charmap;
+	//		break;
+	//	}
+	//}
+	//if (found) FT_Set_Charmap(face, found);
 
 	unsigned int ascent;
 	unsigned int descent;

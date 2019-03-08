@@ -184,9 +184,9 @@ public:
 	JAE_API void set(DirectX::XMUINT2 val);
 	JAE_API void set(DirectX::XMUINT3 val);
 	JAE_API void set(DirectX::XMUINT4 val);
-	JAE_API void set(std::shared_ptr<Texture> val);
-	JAE_API void set(std::shared_ptr<ConstantBuffer> val);
-	JAE_API void set(std::shared_ptr<DescriptorTable> val);
+	JAE_API void set(const std::shared_ptr<Texture>& val);
+	JAE_API void set(const std::shared_ptr<ConstantBuffer>& val);
+	JAE_API void set(const std::shared_ptr<DescriptorTable>& val);
 	 
 	JAE_API MaterialValue& operator=(const MaterialValue &rhs);
 };
@@ -195,7 +195,7 @@ struct MaterialParameterCBuffer {
 	int rootIndex;
 	std::shared_ptr<ConstantBuffer> cbuffer;
 	MaterialParameterCBuffer() : rootIndex(-1), cbuffer(nullptr) {}
-	MaterialParameterCBuffer(int rootIndex, std::shared_ptr<ConstantBuffer> cbuffer) : rootIndex(rootIndex), cbuffer(cbuffer) {}
+	MaterialParameterCBuffer(int rootIndex, const std::shared_ptr<ConstantBuffer>& cbuffer) : rootIndex(rootIndex), cbuffer(cbuffer) {}
 };
 
 // Stores information about a shader parameter and a default value if it is a numeric type
@@ -235,7 +235,7 @@ public:
 
 	ShaderParameter() : type(SHADER_PARAM_TYPE_FLOAT), rootIndex(0), cbufferOffset(-1) {}
 
-	ShaderParameter(SHADER_PARAM_TYPE type, unsigned int rootIndex, unsigned int cbufferOffset, ShaderValue value)
+	ShaderParameter(SHADER_PARAM_TYPE type, unsigned int rootIndex, unsigned int cbufferOffset, const ShaderValue& value)
 		: type(type), rootIndex(rootIndex), tableSize(-1), cbufferOffset(cbufferOffset), defaultValue(value) {}
 	ShaderParameter(SHADER_PARAM_TYPE type, unsigned int rootIndex, unsigned int tableSize)
 		: type(type), rootIndex(rootIndex), tableSize(tableSize), cbufferOffset(-1), defaultValue(0) {}
@@ -352,7 +352,7 @@ struct MeshBone {
 
 	MeshBone() : mName(L""), mBoneToMesh(DirectX::XMFLOAT4X4()) {}
 	MeshBone(const MeshBone &b) : mName(b.mName), mBoneToMesh(b.mBoneToMesh) {}
-	MeshBone(jwstring name, DirectX::XMFLOAT4X4 m) : mName(name), mBoneToMesh(m) {}
+	MeshBone(const jwstring& name, DirectX::XMFLOAT4X4 m) : mName(name), mBoneToMesh(m) {}
 
 	MeshBone& operator=(const MeshBone &rhs) {
 		if (&rhs == this) return *this;

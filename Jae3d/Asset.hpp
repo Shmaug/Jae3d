@@ -19,8 +19,8 @@ public:
 	jwstring mName;
 	jwstring mGroup;
 
-	JAE_API Asset(jwstring name);
-	JAE_API Asset(jwstring name, MemoryStream &ms);
+	JAE_API Asset(const jwstring& name);
+	JAE_API Asset(const jwstring& name, MemoryStream &ms);
 	JAE_API ~Asset();
 	
 	JAE_API virtual void WriteData(MemoryStream &ms) = 0;

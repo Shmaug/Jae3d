@@ -22,23 +22,23 @@ public:
 		std::shared_ptr<Material> mMaterial;
 		std::shared_ptr<ConstantBuffer> mObjectBuffer;
 
-		SubmeshRenderJob(unsigned int queue, std::shared_ptr<Mesh> mesh, unsigned int submesh, std::shared_ptr<Material> mat, std::shared_ptr<ConstantBuffer> buf)
+		SubmeshRenderJob(unsigned int queue, const std::shared_ptr<Mesh>& mesh, unsigned int submesh, const std::shared_ptr<Material>& mat, const std::shared_ptr<ConstantBuffer>& buf)
 			: RenderJob(queue), mMesh(mesh), mSubmesh(submesh), mMaterial(mat), mObjectBuffer(buf) {}
 
-		JAE_API void Execute(std::shared_ptr<CommandList> commandList, std::shared_ptr<Material> materialOverride) override;
+		JAE_API void Execute(const std::shared_ptr<CommandList>& commandList, const std::shared_ptr<Material>& materialOverride) override;
 		JAE_API bool LessThan(RenderJob* b) override;
 	};
 
 	JAE_API MeshRenderer();
-	JAE_API MeshRenderer(jwstring name);
+	JAE_API MeshRenderer(const jwstring& name);
 	JAE_API ~MeshRenderer();
 
-	JAE_API void SetMesh(std::shared_ptr<Mesh> mesh);
+	JAE_API void SetMesh(const std::shared_ptr<Mesh>& mesh);
 	inline std::shared_ptr<Mesh> GetMesh() { return mMesh; };
-	inline void SetMaterial(std::shared_ptr<Material> material, unsigned int submesh = 0) { mMaterials[submesh] = material; };
+	inline void SetMaterial(const std::shared_ptr<Material>& material, unsigned int submesh = 0) { mMaterials[submesh] = material; };
 	inline std::shared_ptr<Material> GetMaterial(unsigned int submesh = 0) { return mMaterials[submesh]; };
 
-	JAE_API void GatherRenderJobs(std::shared_ptr<CommandList> commandList, std::shared_ptr<Camera> camera, jvector<RenderJob*> &list) override;
+	JAE_API void GatherRenderJobs(const std::shared_ptr<CommandList>& commandList, const std::shared_ptr<Camera>& camera, jvector<RenderJob*> &list) override;
 	bool Visible() override { return mVisible; }
 	JAE_API DirectX::BoundingOrientedBox Bounds() override;
 

@@ -5,8 +5,14 @@
 using namespace DirectX;
 using namespace std;
 
-Object::Object(jwstring name) : mName(name), mScene(nullptr) {}
-Object::~Object() {}
+Object::Object(const jwstring& name) : mName(name), mScene(nullptr), mParent(nullptr) {}
+Object::~Object() {
+	for (size_t i = 0; i < mChildren.size(); i++)
+		if (shared_ptr<Object> o = mChildren[i].lock())
+			o->Parent(mParent);
+	mChildren.clear();
+	Parent(nullptr);
+}
 
 bool Object::UpdateTransform() {
 	if (!mTransformDirty) return false;
@@ -17,7 +23,7 @@ bool Object::UpdateTransform() {
 
 	XMMATRIX o2w = XMMatrixAffineTransformation(localScale, XMVectorZero(), localRot, localPos);
 	if (mParent) {
-		o2w = o2w * XMLoadFloat4x4(&mParent->ObjectToWorld());
+		o2w = XMMatrixMultiply(o2w, XMLoadFloat4x4(&mParent->ObjectToWorld()));
 
 		XMStoreFloat3(&mWorldPosition, XMVector3Transform(localPos, o2w));
 		XMStoreFloat4(&mWorldRotation, XMQuaternionMultiply(XMLoadFloat4(&mParent->WorldRotation()), localRot));
@@ -36,12 +42,12 @@ bool Object::UpdateTransform() {
 	mTransformDirty = false;
 	return true;
 }
-void Object::Parent(shared_ptr<Object> p){
+void Object::Parent(shared_ptr<Object> p) {
+	if (p == mParent) return;
 	if (mParent) {
-		shared_ptr<Object> t = shared_from_this();
 		for (int i = 0; i < mParent->mChildren.size(); i++) {
 			shared_ptr<Object> c = mParent->mChildren[i].lock();
-			if (c && c == t)
+			if (c && c.get() == this)
 				mParent->mChildren.remove(i);
 		}
 	}
@@ -49,12 +55,11 @@ void Object::Parent(shared_ptr<Object> p){
 	if (p) p->mChildren.push_back(weak_from_this());
 	SetTransformsDirty();
 }
-void Object::SetTransformsDirty(){
+void Object::SetTransformsDirty() {
 	mTransformDirty = true;
-	for (size_t i = 0; i < mChildren.size(); i++) {
-		shared_ptr<Object> o = mChildren[i].lock();
-		if (o) o->SetTransformsDirty();
-	}
+	for (size_t i = 0; i < mChildren.size(); i++)
+		if (shared_ptr<Object> o = mChildren[i].lock())
+			o->SetTransformsDirty();
 }
 
 void Object::SetScene(Scene* scene) {

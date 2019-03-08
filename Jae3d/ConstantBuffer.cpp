@@ -8,7 +8,7 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 
 ConstantBuffer::ConstantBuffer() : mName(L"") {}
-ConstantBuffer::ConstantBuffer(size_t size, jwstring name, unsigned int count) : mName(name), mCBufferCount(count) {
+ConstantBuffer::ConstantBuffer(size_t size, const jwstring& name, unsigned int count) : mName(name), mCBufferCount(count) {
 	if (count == 0) mCBufferCount = Graphics::BufferCount();
 
 	ComPtr<ID3D12Device> device = Graphics::GetDevice();
@@ -52,48 +52,48 @@ void ConstantBuffer::Write(const void* ptr, size_t size, unsigned int pos, unsig
 		memcpy(mMappedCBuffers[frameIndex] + pos, ptr, size);
 }
 
-void ConstantBuffer::WriteFloat(float &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteFloat (const float &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(float), pos, frameIndex);
 }
-void ConstantBuffer::WriteFloat2(XMFLOAT2 &v, unsigned int pos, unsigned int frameIndex){
+void ConstantBuffer::WriteFloat2(const XMFLOAT2 &v, unsigned int pos, unsigned int frameIndex){
 	Write(&v, sizeof(XMFLOAT2), pos, frameIndex);
 }
-void ConstantBuffer::WriteFloat3(XMFLOAT3 &v, unsigned int pos, unsigned int frameIndex){
+void ConstantBuffer::WriteFloat3(const XMFLOAT3 &v, unsigned int pos, unsigned int frameIndex){
 	Write(&v, sizeof(XMFLOAT3), pos, frameIndex);
 }
-void ConstantBuffer::WriteFloat4(XMFLOAT4 &v, unsigned int pos, unsigned int frameIndex){
+void ConstantBuffer::WriteFloat4(const XMFLOAT4 &v, unsigned int pos, unsigned int frameIndex){
 	Write(&v, sizeof(XMFLOAT4), pos, frameIndex);
 }
-void ConstantBuffer::WriteFloat4x4(XMFLOAT4X4 &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteFloat4x4(const XMFLOAT4X4 &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(XMFLOAT4X4), pos, frameIndex);
 }
-void ConstantBuffer::WriteFloat3x3(XMFLOAT3X3 &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteFloat3x3(const XMFLOAT3X3 &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(XMFLOAT3X3), pos, frameIndex);
 }
 
-void ConstantBuffer::WriteInt(int &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteInt (const int &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(int), pos, frameIndex);
 }
-void ConstantBuffer::WriteInt2(XMINT2 &v, unsigned int pos, unsigned int frameIndex){
+void ConstantBuffer::WriteInt2(const XMINT2 &v, unsigned int pos, unsigned int frameIndex){
 	Write(&v, sizeof(XMINT2), pos, frameIndex);
 }
-void ConstantBuffer::WriteInt3(XMINT3 &v, unsigned int pos, unsigned int frameIndex){
+void ConstantBuffer::WriteInt3(const XMINT3 &v, unsigned int pos, unsigned int frameIndex){
 	Write(&v, sizeof(XMINT3), pos, frameIndex);
 }
-void ConstantBuffer::WriteInt4(XMINT4 &v, unsigned int pos, unsigned int frameIndex){
+void ConstantBuffer::WriteInt4(const XMINT4 &v, unsigned int pos, unsigned int frameIndex){
 	Write(&v, sizeof(XMINT4), pos, frameIndex);
 }
 
-void ConstantBuffer::WriteUInt(unsigned int &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteUInt (const unsigned int &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(unsigned int), pos, frameIndex);
 }
-void ConstantBuffer::WriteUInt2(XMUINT2 &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteUInt2(const XMUINT2 &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(XMUINT2), pos, frameIndex);
 }
-void ConstantBuffer::WriteUInt3(XMUINT3 &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteUInt3(const XMUINT3 &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(XMUINT3), pos, frameIndex);
 }
-void ConstantBuffer::WriteUInt4(XMUINT4 &v, unsigned int pos, unsigned int frameIndex) {
+void ConstantBuffer::WriteUInt4(const XMUINT4 &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(XMUINT4), pos, frameIndex);
 }
 

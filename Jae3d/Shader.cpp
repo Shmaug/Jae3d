@@ -87,8 +87,8 @@ jstring Shader::KeywordListToString(const jvector<jstring>& keywords) const {
 	return str;
 }
 
-Shader::Shader(jwstring name) : Asset(name) {}
-Shader::Shader(jwstring name, MemoryStream &ms) : Asset(name, ms) {
+Shader::Shader(const jwstring& name) : Asset(name) {}
+Shader::Shader(const jwstring& name, MemoryStream &ms) : Asset(name, ms) {
 	uint32_t count = ms.Read<uint32_t>();
 	for (unsigned int j = 0; j < count; j++) {
 		uint8_t mask = ms.Read<uint8_t>();
@@ -140,15 +140,6 @@ Shader::~Shader() {
 }
 uint64_t Shader::TypeId() { return (uint64_t)ASSET_TYPE_SHADER; }
 
-bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
-	if (!mCreated) Upload();
-	if (mRootSignature) {
-		commandList->SetGraphicsRootSignature(mRootSignature.Get());
-		return true;
-	}
-	return false;
-}
-
 ComPtr<ID3D12PipelineState> Shader::GetOrCreatePSO(const ShaderState &state) {
 	if (mStates.count(state) == 0) {
 		auto pso = CreatePSO(state);
@@ -158,14 +149,23 @@ ComPtr<ID3D12PipelineState> Shader::GetOrCreatePSO(const ShaderState &state) {
 		return mStates.at(state);
 }
 
-void Shader::SetCompute(ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state) {
+bool Shader::SetActive(ComPtr<ID3D12GraphicsCommandList2> commandList) {
+	if (!mCreated) Upload();
+	if (mRootSignature) {
+		commandList->SetGraphicsRootSignature(mRootSignature.Get());
+		return true;
+	}
+	return false;
+}
+
+void Shader::SetCompute(const ComPtr<ID3D12GraphicsCommandList2>& commandList, const ShaderState &state) {
 	if (!mCreated) Upload();
 
 	if (mRootSignature) {
 		commandList->SetComputeRootSignature(mRootSignature.Get());
 
-		if (!mComputePSO) CreateComputePSO(state);
-		commandList->SetPipelineState(mComputePSO.Get());
+		if (!mComputeStates.count(state)) CreateComputePSO(state);
+		commandList->SetPipelineState(mComputeStates.at(state).Get());
 	}
 }
 
@@ -174,7 +174,7 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
 	ComPtr<ID3DBlob>* blobs = mBlobs.at(keywords);
 
 	if (!blobs[SHADER_STAGE_VERTEX] && !blobs[SHADER_STAGE_HULL] &&
-		!blobs[SHADER_STAGE_DOMAIN] && !blobs[SHADER_STAGE_GEOMETRY] && !blobs[SHADER_STAGE_PIXEL]){
+		!blobs[SHADER_STAGE_DOMAIN] && !blobs[SHADER_STAGE_GEOMETRY] && !blobs[SHADER_STAGE_PIXEL]) {
 		// no applicable shaders!
 		return nullptr;
 	}
@@ -259,12 +259,15 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
 	return pso;
 }
 void Shader::CreateComputePSO(const ShaderState &state) {
-	jstring key = KeywordListToString(state.keywords);
+	jstring keywords = KeywordListToString(state.keywords);
+	ComPtr<ID3DBlob> blob = mBlobs.at(keywords)[SHADER_STAGE_COMPUTE];
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = mRootSignature.Get();
-	psoDesc.CS = CD3DX12_SHADER_BYTECODE(mBlobs.at(key)[SHADER_STAGE_COMPUTE].Get());
-	Graphics::GetDevice()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&mComputePSO));
+	psoDesc.CS = CD3DX12_SHADER_BYTECODE(blob.Get());
+	ComPtr<ID3D12PipelineState> pso;
+	Graphics::GetDevice()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pso));
+	mComputeStates.emplace(state, pso);
 }
 
 void Shader::Upload() {
@@ -279,7 +282,7 @@ void Shader::Upload() {
 	mCreated = true;
 }
 
-HRESULT Shader::CompileShaderStage(jwstring file, jstring entryPoint, SHADER_STAGE stage, jvector<jstring> &includePaths, jvector<jstring> &keywords) {
+HRESULT Shader::CompileShaderStage(const jwstring& file, const jstring& entryPoint, SHADER_STAGE stage, const jvector<jstring> &includePaths, const jvector<jstring> &keywords) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -355,7 +358,7 @@ HRESULT Shader::CompileShaderStage(jwstring file, jstring entryPoint, SHADER_STA
 
 	return hr;
 }
-HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage, jvector<jstring> &keywords) {
+HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage, const jvector<jstring> &keywords) {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	flags |= D3DCOMPILE_DEBUG;
@@ -411,6 +414,7 @@ HRESULT Shader::CompileShaderStage(const char* text, const char* entryPoint, SHA
 	else {
 		blobs = new ComPtr<ID3DBlob>[7];
 		ZeroMemory(blobs, 7 * sizeof(ComPtr<ID3DBlob>));
+		mBlobs.emplace(key, blobs);
 	}
 
 	ID3DBlob* errorBlob = nullptr;

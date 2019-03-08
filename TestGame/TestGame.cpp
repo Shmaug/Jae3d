@@ -19,6 +19,7 @@
 #include <DescriptorTable.hpp>
 #include <ConstantBuffer.hpp>
 #include <SpriteBatch.hpp>
+#include <TextRenderer.hpp>
 
 #include "Lighting.hpp"
 
@@ -66,6 +67,7 @@ void TestGame::InitializeScene() {
 	shared_ptr<Shader> shader = AssetDatabase::GetAsset<Shader>(L"Default");
 	shared_ptr<Shader> textured = AssetDatabase::GetAsset<Shader>(L"Textured");
 	shared_ptr<Shader> skybox = AssetDatabase::GetAsset<Shader>(L"Skybox");
+	shared_ptr<Shader> texturedcore = AssetDatabase::GetAsset<Shader>(L"CoreTextured");
 
 	mLighting = make_shared<Lighting>();
 
@@ -145,6 +147,8 @@ void TestGame::InitializeScene() {
 	shared_ptr<Material> redLightMaterial = shared_ptr<Material>(new Material(L"Red Light", shader));
 	shared_ptr<Material> glassMaterial = shared_ptr<Material>(new Material(L"Glass", textured));
 	shared_ptr<Material> skyboxMaterial = shared_ptr<Material>(new Material(L"Skybox", skybox));
+	shared_ptr<Material> fontMaterial = shared_ptr<Material>(new Material(L"Font", texturedcore));
+	fontMaterial->RenderQueue(5000);
 
 	shared_ptr<DescriptorTable> barrelTable = shared_ptr<DescriptorTable>(new DescriptorTable(3));
 	barrelTable->SetSRV(0, barrelTexture);
@@ -199,6 +203,12 @@ void TestGame::InitializeScene() {
 	#pragma endregion
 
 	#pragma region Objects
+	auto text = mScene->AddObject<TextRenderer>(L"Text");
+	text->Font(mArialFont);
+	text->Material(fontMaterial);
+	text->Text(L"TEXT0123456789\nasdkjhjsadfjh, fuck..");
+	text->LocalPosition(0, 1, 1);
+
 	auto rifle = mScene->AddObject<MeshRenderer>(L"Rifle");
 	rifle->Parent(mCamera);
 	rifle->SetMesh(rifleMesh);
@@ -361,6 +371,7 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 	unsigned int i = commandList->GetFrameIndex();
 
 	shared_ptr<SpriteBatch> sb = Graphics::GetSpriteBatch();
+	sb->Reset(commandList);
 
 	if (!mLoading) {
 		Profiler::BeginSample(L"Calculate Tiled Lighting");
@@ -379,6 +390,7 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 
 		Profiler::BeginSample(L"Draw Scene");
 		mScene->Draw(commandList, mCamera);
+
 		Profiler::EndSample();
 
 		Profiler::BeginSample(L"Draw Scene Debug");
@@ -420,8 +432,10 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 		Profiler::EndSample();
 	}
 #pragma endregion
-	
+
+	Profiler::BeginSample(L"Flush SpriteBatch");
 	sb->Flush(commandList);
+	Profiler::EndSample();
 }
 
 void TestGame::DoFrame(){

@@ -258,7 +258,7 @@ struct ShaderStageCompile {
 	jstring entryPoint;
 	SHADER_STAGE stage;
 };
-void ParseShader(Shader* shader, std::istream &infile, int &rootParamIndex, jstring path, jvector<jstring> includePaths, jvector<jvector<jstring>> &keywords, jvector<ShaderStageCompile> &stages) {
+void ParseShader(Shader* shader, std::istream &infile, int& rootParamIndex, const jstring& path, const jvector<jstring>& includePaths, jvector<jvector<jstring>>& keywords, jvector<ShaderStageCompile>& stages) {
 	int cbo = 0;
 	int linenum = 0;
 	std::string line;
@@ -431,7 +431,7 @@ void ParseShader(Shader* shader, std::istream &infile, int &rootParamIndex, jstr
 	}
 }
 
-Shader* CompileShader(jwstring path, jvector<jstring> includePaths) {
+Shader* CompileShader(const jwstring& path, const jvector<jstring>& includePaths) {
 	Shader* shader = new Shader(GetNameW(path));
 
 	wprintf(L"Compiling %s\n", shader->mName.c_str());
@@ -461,7 +461,7 @@ Shader* CompileShader(jwstring path, jvector<jstring> includePaths) {
 
 	return shader;
 }
-void CompileShader(jwstring path, jvector<AssetMetadata> &meta, jvector<jstring> includePaths) {
+void CompileShader(const jwstring& path, jvector<AssetMetadata> &meta, const jvector<jstring>& includePaths) {
 	AssetMetadata m(path);
 	m.asset = std::shared_ptr<Asset>(CompileShader(path, includePaths));
 	meta.push_back(m);

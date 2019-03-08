@@ -17,7 +17,7 @@ using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Camera::Camera(jwstring name) 
+Camera::Camera(const jwstring& name)
 	: Object(name), mFieldOfView(70.0f), mNear(.1f), mFar(1000.0f), mOrthographicSize(2.0f), mOrthographic(false),
 	mDepthFormat(DXGI_FORMAT_D32_FLOAT), mRenderFormat(DXGI_FORMAT_R8G8B8A8_UNORM), mSampleCount(4) {
 
@@ -114,7 +114,7 @@ void Camera::CreateRenderBuffers(){
 #pragma endregion
 }
 
-void Camera::Clear(shared_ptr<CommandList> commandList, XMFLOAT4 color) {
+void Camera::Clear(const shared_ptr<CommandList>& commandList, const XMFLOAT4& color) {
 	commandList->D3DCommandList()->ClearRenderTargetView(RTVHandle(), (float*)&color, 0, nullptr);
 	commandList->D3DCommandList()->ClearDepthStencilView(DSVHandle(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
@@ -138,7 +138,7 @@ bool Camera::UpdateTransform(){
 	}
 	XMStoreFloat4x4(&mView, view);
 	XMStoreFloat4x4(&mProjection, proj);
-	XMStoreFloat4x4(&mViewProjection, view * proj);
+	XMStoreFloat4x4(&mViewProjection, XMMatrixMultiply(view, proj));
 	XMStoreFloat4x4(&mInverseProj, XMMatrixInverse(&XMMatrixDeterminant(proj), proj));
 
 	BoundingFrustum::CreateFromMatrix(mFrustum, proj);

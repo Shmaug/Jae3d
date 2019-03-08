@@ -119,9 +119,6 @@
     <ClCompile Include="IOUtil.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
-    <ClCompile Include="MemoryStream.cpp">
-      <Filter>Source Files\Util</Filter>
-    </ClCompile>
     <ClCompile Include="Scene.cpp">
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
@@ -136,6 +133,12 @@
     </ClCompile>
     <ClCompile Include="Animation.cpp">
       <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="TextRenderer.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryStream.cpp">
+      <Filter>Source Files\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -259,6 +262,9 @@
     <ClInclude Include="Animation.hpp">
       <Filter>Header Files\Assets</Filter>
     </ClInclude>
+    <ClInclude Include="TextRenderer.hpp">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -269,5 +275,6 @@
     <None Include="..\Assets\Core\SpriteTextured.hlsl" />
     <None Include="..\Assets\Core\SpriteColored.hlsl" />
     <None Include="..\Assets\Core\ColoredRoot.hlsl" />
+    <None Include="..\Assets\Core\CoreTextured.hlsl" />
   </ItemGroup>
 </Project>

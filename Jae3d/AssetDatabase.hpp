@@ -20,14 +20,14 @@ public:
 		jvector<std::shared_ptr<Asset>> mLoadedAssets;
 	};
 
-	JAE_API static LoadAssetOperation* LoadAssetsAsync(jwstring assetFile);
+	JAE_API static LoadAssetOperation* LoadAssetsAsync(const jwstring& assetFile);
 	JAE_API static void FinishLoadAssetsAsync(LoadAssetOperation* operation);
-	JAE_API static void LoadAssets(jwstring assetFile);
+	JAE_API static void LoadAssets(const jwstring& assetFile);
 	JAE_API static void UnloadAssets();
-	JAE_API static std::shared_ptr<Asset> GetAsset(jwstring name);
+	JAE_API static std::shared_ptr<Asset> GetAsset(const jwstring& name);
 
 	template<class T>
-	static std::shared_ptr<T> GetAsset(jwstring name) {
+	static std::shared_ptr<T> GetAsset(const jwstring& name) {
 		static_assert(std::is_base_of<Asset, T>::value, "T must be an Asset!");
 		return std::static_pointer_cast<T>(assets.at(name.lower()));
 	}

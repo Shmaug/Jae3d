@@ -8,8 +8,8 @@
 
 class Font : public Asset {
 public:
-	JAE_API Font(jwstring name);
-	JAE_API Font(jwstring name,
+	JAE_API Font(const jwstring& name);
+	JAE_API Font(const jwstring& name,
 		unsigned int size,
 		unsigned int height,
 		unsigned int ascender,
@@ -18,23 +18,23 @@ public:
 		unsigned int texDpi,
 		std::shared_ptr<Texture> tex,
 		jvector<FontGlyph>& glyphs, jvector<FontKerning>& kernings);
-	JAE_API Font(jwstring name, MemoryStream &ms);
+	JAE_API Font(const jwstring& name, MemoryStream &ms);
 	JAE_API ~Font();
 
 	JAE_API void WriteData(MemoryStream &ms) override;
 	JAE_API uint64_t TypeId() override;
 
-	JAE_API std::shared_ptr<Texture> GetTexture() const { return mTexture; };
+	inline std::shared_ptr<Texture> GetTexture() const { return mTexture; };
 
 	JAE_API int GetKerning(const wchar_t from, const wchar_t to) const;
 	JAE_API bool GetGlyph(const wchar_t c, FontGlyph& g) const;
 
-	unsigned int GetSize() const { return mSize; };
-	unsigned int GetLineSpacing() const { return mLineSpace; };
-	unsigned int GetHeight() const { return mHeight; };
-	unsigned int GetAscender() const { return mAscender; };
-	unsigned int GetDescender() const { return mDescender; };
-	unsigned int GetTextureDpi() const { return mTexDpi; }
+	inline unsigned int GetSize() const { return mSize; };
+	inline unsigned int GetLineSpacing() const { return mLineSpace; };
+	inline unsigned int GetHeight() const { return mHeight; };
+	inline unsigned int GetAscender() const { return mAscender; };
+	inline unsigned int GetDescender() const { return mDescender; };
+	inline unsigned int GetTextureDpi() const { return mTexDpi; }
 
 private:
 	unsigned int mSize;

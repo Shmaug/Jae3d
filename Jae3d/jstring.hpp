@@ -23,9 +23,9 @@ public:
 
 	JAE_API void reserve(size_t cap);
 
-	bool empty() const { return mLength == 0; }
-	const char* c_str() const { return mCStr; }
-	size_t length() const { return mLength; }
+	inline bool empty() const { return mLength == 0; }
+	inline const char* c_str() const { return mCStr; }
+	inline size_t length() const { return mLength; }
 
 	JAE_API jstring substr(int pos) const;
 	JAE_API jstring substr(size_t pos, size_t length) const;
@@ -52,6 +52,8 @@ public:
 
 	JAE_API friend jstring operator +(const char lhs, const jstring &rhs);
 	JAE_API friend jstring operator +(const char* lhs, const jstring &rhs);
+	JAE_API friend jstring operator +(const jstring &rhs, const char lhs);
+	JAE_API friend jstring operator +(const jstring &rhs, const char* lhs);
 
 	friend bool operator >(jstring &lhs, jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) > 0; }
 	friend bool operator <(jstring &lhs, jstring &rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; }
@@ -90,9 +92,9 @@ public:
 
 	JAE_API void reserve(size_t cap);
 
-	bool empty() const { return mLength == 0; }
-	const wchar_t* c_str() const { return mCStr; }
-	size_t length() const { return mLength; }
+	inline bool empty() const { return mLength == 0; }
+	inline const wchar_t* c_str() const { return mCStr; }
+	inline size_t length() const { return mLength; }
 
 	JAE_API jwstring substr(int pos) const;
 	JAE_API jwstring substr(size_t pos, size_t length) const;
@@ -155,13 +157,13 @@ jwstring to_wstring(T &t) {
 namespace std {
 	template<>
 	struct hash<jstring> {
-		size_t operator()(jstring const& jstr) const noexcept {
+		inline size_t operator()(jstring const& jstr) const noexcept {
 			return std::hash<string>()(string(jstr.c_str()));
 		}
 	};
 	template<>
 	struct hash<jwstring> {
-		size_t operator()(jwstring const& jstr) const noexcept {
+		inline size_t operator()(jwstring const& jstr) const noexcept {
 			return std::hash<wstring>()(wstring(jstr.c_str()));
 		}
 	};

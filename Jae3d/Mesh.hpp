@@ -6,8 +6,8 @@
 
 class Mesh : public Asset {
 public:
-	JAE_API Mesh(jwstring name);
-	JAE_API Mesh(jwstring name, MemoryStream &ms);
+	JAE_API Mesh(const jwstring& name);
+	JAE_API Mesh(const jwstring& name, MemoryStream &ms);
 	JAE_API ~Mesh();
 
 	JAE_API void WriteData(MemoryStream &ms) override;
@@ -33,8 +33,11 @@ public:
 	JAE_API void VertexCount(unsigned int size, bool shrink = true);
 	inline unsigned int SubmeshCount() const { return (unsigned int)mSubmeshes.size(); }
 
-	JAE_API void AddIndices(unsigned int count, unsigned int* indices, unsigned int submesh = 0);
-	JAE_API unsigned int AddVertex(DirectX::XMFLOAT3 &v);
+	inline D3D_PRIMITIVE_TOPOLOGY Topology() const { return mTopology; }
+	inline void Topology(D3D_PRIMITIVE_TOPOLOGY t) { mTopology = t; }
+
+	JAE_API void AddIndices(unsigned int count, const unsigned int* indices, unsigned int submesh = 0);
+	JAE_API unsigned int AddVertex(const DirectX::XMFLOAT3 &v);
 
 	JAE_API void HasSemantic(MESH_SEMANTIC s, bool v);
 	inline bool HasSemantic(MESH_SEMANTIC s) const { if (s == MESH_SEMANTIC_POSITION) return true; return mSemantics & s; }

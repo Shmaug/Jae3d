@@ -218,3 +218,18 @@ jstring operator +(const char* lhs, const jstring &rhs) {
 	strcpy_s(s.mCStr + l, s.mCapacity - l, rhs.mCStr);
 	return s;
 }
+
+jstring operator +(const jstring &lhs, const char rhs) {
+	jstring s(lhs.mLength + 1);
+	strcpy_s(s.mCStr, s.mCapacity - 1, lhs.mCStr);
+	s.mCStr[lhs.mLength] = rhs;
+	return s;
+}
+jstring operator +(const jstring &lhs, const char* rhs) {
+	size_t l = strlen(rhs);
+	jstring s(lhs.mLength + l + 1);
+	s.mLength = lhs.mLength + l;
+	strcpy_s(s.mCStr, s.mCapacity, lhs.mCStr);
+	strcpy_s(s.mCStr + lhs.mLength, s.mCapacity - lhs.mLength, rhs);
+	return s;
+}

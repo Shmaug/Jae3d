@@ -283,6 +283,7 @@
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SpriteBatch.cpp" />
+    <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="Shader.cpp" />
@@ -324,6 +325,7 @@
     <ClInclude Include="Renderer.hpp" />
     <ClInclude Include="Scene.hpp" />
     <ClInclude Include="SpriteBatch.hpp" />
+    <ClInclude Include="TextRenderer.hpp" />
     <ClInclude Include="Texture.hpp" />
     <ClInclude Include="Window.hpp" />
     <ClInclude Include="Shader.hpp" />
@@ -346,6 +348,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Core\ColoredRoot.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Assets\Core\CoreTextured.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

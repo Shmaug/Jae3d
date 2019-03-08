@@ -189,15 +189,15 @@ inline size_t BitsPerPixel(_In_ DXGI_FORMAT fmt) {
 	}
 }
 
-Texture::Texture(jwstring name, unsigned int width, unsigned int height, DXGI_FORMAT format, unsigned int mipLevels)
+Texture::Texture(const jwstring& name, unsigned int width, unsigned int height, DXGI_FORMAT format, unsigned int mipLevels)
 	: Asset(name), mWidth(width), mHeight(height), mDepth(1), mDimension(D3D12_RESOURCE_DIMENSION_TEXTURE2D), mArraySize(1),
 	mFormat(format), mMipLevels(mipLevels), mData(nullptr), mDataSize(0), mIsDDS(false) {}
 
-Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth, DXGI_FORMAT format, unsigned int mipLevels)
+Texture::Texture(const jwstring& name, unsigned int width, unsigned int height, unsigned int depth, DXGI_FORMAT format, unsigned int mipLevels)
 	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(D3D12_RESOURCE_DIMENSION_TEXTURE3D), mArraySize(1),
 	mFormat(format), mMipLevels(mipLevels), mData(nullptr), mDataSize(0), mIsDDS(false) {}
 
-Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth,
+Texture::Texture(const jwstring& name, unsigned int width, unsigned int height, unsigned int depth,
 	D3D12_RESOURCE_DIMENSION dimension, unsigned int arraySize,
 	DXGI_FORMAT format, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS)
 	: Asset(name), mWidth(width), mHeight(height), mDepth(depth), mDimension(dimension), mArraySize(arraySize),
@@ -209,7 +209,7 @@ Texture::Texture(jwstring name, unsigned int width, unsigned int height, unsigne
 	}
 }
 
-Texture::Texture(jwstring name, MemoryStream &ms) : Asset(name, ms) {
+Texture::Texture(const jwstring& name, MemoryStream &ms) : Asset(name, ms) {
 	mWidth = ms.Read<uint32_t>();
 	mHeight = ms.Read<uint32_t>();
 	mDepth = ms.Read<uint32_t>();
@@ -343,6 +343,19 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.Format = desc.Format;
 
+		switch (mDimension) {
+		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+			srvDesc.Texture1D.MipLevels = mMipLevels;
+			break;
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			srvDesc.Texture2D.MipLevels = mMipLevels;
+			break;
+		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+			srvDesc.Texture3D.MipLevels = mMipLevels;
+			break;
+		}
+		srvDesc.Texture3D.MipLevels = mMipLevels;
+
 		D3D12_UAV_DIMENSION uavdim;
 		switch (desc.Dimension) {
 		default:
@@ -386,6 +399,15 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 			uavDesc.ViewDimension = uavdim;
 			uavDesc.Format = desc.Format;
+			switch (mDimension) {
+			case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+				break;
+			case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+				break;
+			case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+				uavDesc.Texture3D.WSize = -1;
+				break;
+			}
 			device->CreateUnorderedAccessView(mTexture.Get(), 0, &uavDesc, mUAVHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 	}

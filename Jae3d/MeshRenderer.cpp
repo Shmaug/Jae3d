@@ -12,7 +12,7 @@ using namespace std;
 using namespace DirectX;
 
 MeshRenderer::MeshRenderer() : MeshRenderer(L"") {}
-MeshRenderer::MeshRenderer(jwstring name) : Renderer(name), mVisible(true) { 
+MeshRenderer::MeshRenderer(const jwstring& name) : Renderer(name), mVisible(true) {
 	mCBuffer = shared_ptr<ConstantBuffer>(new ConstantBuffer(sizeof(XMFLOAT4X4) * 2, L"MeshRenderer CB", Graphics::BufferCount()));
 }
 MeshRenderer::~MeshRenderer() {}
@@ -28,7 +28,7 @@ DirectX::BoundingOrientedBox MeshRenderer::Bounds() {
 	}
 	return BoundingOrientedBox(WorldPosition(), XMFLOAT3(0, 0, 0), WorldRotation());
 }
-void MeshRenderer::SetMesh(shared_ptr<Mesh> mesh) {
+void MeshRenderer::SetMesh(const shared_ptr<Mesh>& mesh) {
 	mMesh = mesh;
 	if (mMesh) {
 		while (mMaterials.size() < mesh->SubmeshCount())
@@ -38,19 +38,19 @@ void MeshRenderer::SetMesh(shared_ptr<Mesh> mesh) {
 
 bool MeshRenderer::SubmeshRenderJob::LessThan(RenderJob* b) {
 	if (RenderJob::LessThan(b)) return true;
+	return false;
 	SubmeshRenderJob* j = dynamic_cast<SubmeshRenderJob*>(b);
 	if (!j) return true;
-	return false;
 	return j->mMaterial->mName < mMaterial->mName;
 }
-void MeshRenderer::SubmeshRenderJob::Execute(shared_ptr<CommandList> commandList, std::shared_ptr<Material> materialOverride){
+void MeshRenderer::SubmeshRenderJob::Execute(const shared_ptr<CommandList>& commandList, const std::shared_ptr<Material>& materialOverride){
 	if (materialOverride) mMaterial = materialOverride;
 	mMaterial->SetCBuffer("ObjectBuffer", mObjectBuffer, commandList->GetFrameIndex());
 	commandList->SetMaterial(mMaterial);
 	commandList->DrawMesh(*mMesh, mSubmesh);
 }
 
-void MeshRenderer::GatherRenderJobs(shared_ptr<CommandList> commandList, shared_ptr<Camera> camera, jvector<RenderJob*> &list) {
+void MeshRenderer::GatherRenderJobs(const shared_ptr<CommandList>& commandList, const shared_ptr<Camera>& camera, jvector<RenderJob*>& list) {
 	if (!mMesh) return;
 	UpdateTransform();
 

@@ -19,7 +19,7 @@ class Light;
 
 class Camera : public Object {
 public:
-	JAE_API Camera(jwstring name);
+	JAE_API Camera(const jwstring& name);
 	JAE_API ~Camera();
 
 	inline DirectX::XMFLOAT4 PerspectiveBounds() const { return mPerspectiveBounds; }
@@ -29,7 +29,7 @@ public:
 	inline unsigned int PixelWidth() const { return mPixelWidth; }
 	inline unsigned int PixelHeight() const { return mPixelHeight; }
 
-	inline void PerspectiveBounds(DirectX::XMFLOAT4 f) { mPerspectiveBounds = f; mFieldOfView = 0; mTransformDirty = true; }
+	inline void PerspectiveBounds(const DirectX::XMFLOAT4& f) { mPerspectiveBounds = f; mFieldOfView = 0; mTransformDirty = true; }
 	inline void FieldOfView(float f) { mPerspectiveBounds = { 0,0,0,0 }; mFieldOfView = f; mTransformDirty = true; }
 	inline void Near(float n) { mNear = n; mTransformDirty = true; }
 	inline void Far(float f) { mFar = f; mTransformDirty = true; }
@@ -64,7 +64,7 @@ public:
 
 	JAE_API void CreateRenderBuffers();
 	JAE_API bool UpdateTransform() override;
-	JAE_API void Clear(std::shared_ptr<CommandList> commandList, DirectX::XMFLOAT4 color = { 0.0f, 0.0f, 0.0f, 1.f });
+	JAE_API void Clear(const std::shared_ptr<CommandList>& commandList, const DirectX::XMFLOAT4& color = { 0.0f, 0.0f, 0.0f, 1.f });
 
 private:
 	friend class CommandList;

@@ -2,22 +2,20 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <algorithm>
 
 #include "Common.hpp"
 #include "Asset.hpp"
 #include "Mesh.hpp"
 
-#ifndef max
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-#endif
-#ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#ifdef max
+#undef max
 #endif
 
 class Shader : public Asset {
 public:
-	JAE_API Shader(jwstring name);
-	JAE_API Shader(jwstring name, MemoryStream &ms);
+	JAE_API Shader(const jwstring& name);
+	JAE_API Shader(const jwstring& name, MemoryStream &ms);
 	JAE_API ~Shader();
 
 	// Serialize to a memorystream
@@ -27,16 +25,13 @@ public:
 	// Creates the root signature
 	JAE_API void Upload();
 
-	inline unsigned int RootParameterCount() const { return mRootParamCount; }
-
 	// Compile a shader stage from a file
-	JAE_API HRESULT CompileShaderStage(jwstring path, jstring entryPoint, SHADER_STAGE stage, jvector<jstring> &includePaths, jvector<jstring> &keywords);
+	JAE_API HRESULT CompileShaderStage(const jwstring& path, const jstring& entryPoint, SHADER_STAGE stage, const jvector<jstring> &includePaths, const jvector<jstring> &keywords);
 	// Compile a shader stage from memory
-	JAE_API HRESULT CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage, jvector<jstring> &keywords);
+	JAE_API HRESULT CompileShaderStage(const char* text, const char* entryPoint, SHADER_STAGE stage, const jvector<jstring> &keywords);
 
-	ID3D12RootSignature* GetRootSig() const { return mRootSignature.Get(); }
-	bool HasParameter(jstring name) const { return mParams.count(name); }
-	const ShaderParameter& GetParameter(jstring name) const { return mParams.at(name); }
+	bool HasParameter(const jstring& name) const { return mParams.count(name); }
+	const ShaderParameter& GetParameter(const jstring& name) const { return mParams.at(name); }
 
 	unsigned int GetParameterBufferCount() const { return (unsigned int)mCBufferParameters.size(); }
 	const ShaderParameterBuffer& GetParameterBuffer(unsigned int index) const { return mCBufferParameters[index]; }
@@ -47,13 +42,13 @@ public:
 
 	JAE_API jstring KeywordListToString(const jvector<jstring>& keywords) const;
 
-	void AddParameter(jstring name, ShaderParameter &param) {
+	void AddParameter(const jstring& name, ShaderParameter &param) {
 		mParams.emplace(name, param);
-		mRootParamCount = max(mRootParamCount, param.RootIndex() + 1);
+		mRootParamCount = std::max(mRootParamCount, param.RootIndex() + 1);
 	}
 	void AddParameterBuffer(unsigned int rootIndex, unsigned int size) {
 		mCBufferParameters.push_back(ShaderParameterBuffer(rootIndex, size));
-		mRootParamCount = max(mRootParamCount, (unsigned int)rootIndex + 1);
+		mRootParamCount = std::max(mRootParamCount, (unsigned int)rootIndex + 1);
 	}
 
 private:
@@ -63,14 +58,14 @@ private:
 	// Sets a PSO with this shader and the passed in state (called by CommandList)
 	JAE_API _WRL::ComPtr<ID3D12PipelineState> GetOrCreatePSO(const ShaderState &state);
 	// Sets the compute root signature and PSO on the GPU
-	JAE_API void SetCompute(_WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, const ShaderState &state);
+	JAE_API void SetCompute(const _WRL::ComPtr<ID3D12GraphicsCommandList2>& commandList, const ShaderState &state);
 
 	JAE_API _WRL::ComPtr<ID3D12PipelineState> CreatePSO(const ShaderState &state);
 	JAE_API void CreateComputePSO(const ShaderState &state);
 
 	std::unordered_set<jstring> mKeywords;
 	std::unordered_map<ShaderState, _WRL::ComPtr<ID3D12PipelineState>> mStates;
-	_WRL::ComPtr<ID3D12PipelineState> mComputePSO;
+	std::unordered_map<ShaderState, _WRL::ComPtr<ID3D12PipelineState>> mComputeStates;
 
 	bool mCreated = false;
 	_WRL::ComPtr<ID3D12RootSignature> mRootSignature;

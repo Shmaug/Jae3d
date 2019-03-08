@@ -140,6 +140,8 @@ void Lighting::CalculateScreenLights(shared_ptr<CommandList> commandList, shared
 
 	mLightBuffer->Write(&mLightData, sizeof(LightingBuffer), 0, frameIndex);
 
+	commandList->PushState();
+	commandList->ClearKeywords();
 	commandList->SetCompute(mLightCompute);
 	commandList->D3DCommandList()->SetComputeRootConstantBufferView(1, camera->CBuffer()->GetGPUAddress(frameIndex));
 	commandList->D3DCommandList()->SetComputeRootConstantBufferView(2, mLightBuffer->GetGPUAddress(frameIndex));
@@ -152,6 +154,7 @@ void Lighting::CalculateScreenLights(shared_ptr<CommandList> commandList, shared
 
 	commandList->SetGlobalCBuffer("LightBuffer", mLightBuffer);
 	commandList->SetGlobalTable("LightingTextures", mLightingTextureTable[frameIndex]);
+	commandList->PopState();
 }
 
 std::shared_ptr<Texture> Lighting::CalculateEnvironmentTexture() {

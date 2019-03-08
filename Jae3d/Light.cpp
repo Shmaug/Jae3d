@@ -2,7 +2,7 @@
 
 using namespace DirectX;
 
-Light::Light(jwstring name)
+Light::Light(const jwstring& name)
 	: Object(name), mColor({ 1.0f, 1.0f, 1.0f }), mShadows(false), mShadowStrength(1.0f), mIntensity(1.0f), mRange(5.0f), mSpotAngle(.2f), mMode(LIGHTMODE_POINT) {}
 Light::~Light() {}
 

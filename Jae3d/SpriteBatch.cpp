@@ -16,8 +16,9 @@ using namespace DirectX;
 SpriteBatch::~SpriteBatch() { Release(); }
 
 void SpriteBatch::Release() {
-	for (int i = 0; i < mContexts.size(); i++)
-		delete mContexts[i];
+	for (unsigned int i = 0; i < mContexts.size(); i++)
+		for (unsigned int j = 0; j < mContexts[i].size(); j++)
+			delete mContexts[i][j];
 	mContexts.free();
 }
 void SpriteBatch::SpriteContext::Release() {
@@ -39,7 +40,7 @@ void SpriteBatch::SpriteContext::Release() {
 	mLineVertexBuffer.Reset();
 	mLineIndexBuffer.Reset();
 }
-void SpriteBatch::SpriteContext::ResizeQuads(size_t length) {
+void SpriteBatch::SpriteContext::ResizeQuads(unsigned int length) {
 	if (mMappedQuadLength >= length) return;
 	auto device = Graphics::GetDevice();
 
@@ -87,7 +88,7 @@ void SpriteBatch::SpriteContext::ResizeQuads(size_t length) {
 
 	mMappedQuadLength = length;
 }
-void SpriteBatch::SpriteContext::ResizeLines(size_t length) {
+void SpriteBatch::SpriteContext::ResizeLines(unsigned int length) {
 	if (mMappedLineLength >= length) return;
 	auto device = Graphics::GetDevice();
 
@@ -139,16 +140,20 @@ void SpriteBatch::SpriteContext::Reset() {
 	mQuadOffset = 0;
 	mLineVertexOffset = 0;
 	mLineIndexOffset = 0;
+	mActive = false;
 }
 
-void SpriteBatch::DrawLines(jvector<DirectX::XMFLOAT3> vertices, jvector<DirectX::XMFLOAT4> colors) {
-	mLineDrawQueue.push_back({ vertices, colors });
+void SpriteBatch::DrawLines(const jvector<XMFLOAT3> &vertices, const jvector<XMFLOAT4> &colors) {
+	if (mLineDrawQueueCount >= mLineDrawQueue.size()) mLineDrawQueue.push_back({});
+	LineDraw &s = mLineDrawQueue[mLineDrawQueueCount++];
+	s.mColors = colors;
+	s.mVertices = vertices;
 }
 
-XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text) {
+XMFLOAT2 SpriteBatch::MeasureText(std::shared_ptr<Font> font, const float& scale, const jwstring& text) {
 	float w = (float)font->GetTexture()->Width();
 	float h = (float)font->GetTexture()->Height();
-	scale *= (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
+	float sc = scale * (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
 	XMFLOAT2 m(0, 0);
 	XMFLOAT2 p(0, 0);
 	FontGlyph g;
@@ -157,15 +162,15 @@ XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text) {
 		wchar_t cur = text[j];
 		if (cur == L'\n') {
 			p.x = 0;
-			p.y += scale * font->GetLineSpacing();
+			p.y += sc * font->GetLineSpacing();
 		} else {
 			if (!font->GetGlyph(cur, g) && !font->GetGlyph(L'?', g)) {
 				prev = cur;
 				continue;
 			}
 
-			p.x += scale * font->GetKerning(prev, cur);
-			p.x += scale * g.advance;
+			p.x += sc * font->GetKerning(prev, cur);
+			p.x += sc * g.advance;
 		}
 		m.x = fmax(m.x, p.x);
 		m.y = fmax(m.y, p.y);
@@ -174,10 +179,10 @@ XMFLOAT2 MeasureText(std::shared_ptr<Font> font, float scale, jwstring text) {
 	return m;
 }
 
-void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scale, XMFLOAT4 color, jwstring text) {
+void SpriteBatch::DrawText (std::shared_ptr<Font> font, const XMFLOAT2& pos, const float &scale, const XMFLOAT4& color, const jwstring& text) {
 	float w = (float)font->GetTexture()->Width();
 	float h = (float)font->GetTexture()->Height();
-	scale *= (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
+	float sc = scale * (float)Graphics::GetWindow()->GetLogPixelsX() / font->GetTextureDpi();
 	XMFLOAT2 p = pos;
 	wchar_t prev = L'\0';
 	FontGlyph g;
@@ -185,7 +190,7 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 		wchar_t cur = text[j];
 		if (cur == L'\n') {
 			p.x = pos.x;
-			p.y += scale * font->GetLineSpacing();
+			p.y += sc * font->GetLineSpacing();
 		} else {
 			Profiler::BeginSample(L"Find Glyph", true);
 			if (!font->GetGlyph(cur, g) && !font->GetGlyph(L'?', g)) {
@@ -196,30 +201,33 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 			Profiler::EndSample();
 
 			Profiler::BeginSample(L"Kerning", true);
-			p.x += scale * font->GetKerning(prev, cur);
+			p.x += sc * font->GetKerning(prev, cur);
 			Profiler::EndSample();
 
 			if (g.character != L' ') {
 				Profiler::BeginSample(L"Submit SpriteDraw", true);
-				mQuadDrawQueue.push_back(
-					SpriteDraw(font->GetTexture()->GetSRVDescriptorHeap(), font->GetTexture()->GetSRVGPUDescriptor(),
-						XMFLOAT4(
-						p.x + scale * g.ox,
-						p.y - scale * g.oy,
-						p.x + scale * (g.tw + g.ox),
-						p.y + scale * (g.th - g.oy)),
-						XMFLOAT4((float)g.tx0 / w, (float)g.ty0 / h, (float)(g.tx0 + g.tw) / w, (float)(g.ty0 + g.th) / h),
-						color)
-				);
+
+				if (mQuadDrawQueueCount >= mQuadDrawQueue.size()) mQuadDrawQueue.push_back({});
+				SpriteDraw &s = mQuadDrawQueue[mQuadDrawQueueCount++];
+				s.mColor = color;
+				s.mPixelRect = XMFLOAT4(
+					p.x + sc * g.ox,
+					p.y - sc * g.oy,
+					p.x + sc * (g.tw + g.ox),
+					p.y + sc * (g.th - g.oy));
+				s.mTextureRect = XMFLOAT4((float)g.tx0 / w, (float)g.ty0 / h, (float)(g.tx0 + g.tw) / w, (float)(g.ty0 + g.th) / h);
+				s.mTextureSRV = font->GetTexture()->GetSRVGPUDescriptor();
+				s.mTextureHeap = font->GetTexture()->GetSRVDescriptorHeap();
+
 				Profiler::EndSample();
 			}
 
-			p.x += scale * g.advance;
+			p.x += sc * g.advance;
 		}
 		prev = cur;
 	}
 }
-void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, XMFLOAT2 pos, float scale, XMFLOAT4 color, jwstring fmt, ...) {
+void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, const XMFLOAT2& pos, const float &scale, const XMFLOAT4& color, jwstring fmt, ...) {
 	wchar_t buf[1025];
 	va_list args;
 	va_start(args, fmt);
@@ -228,25 +236,45 @@ void SpriteBatch::DrawTextf(std::shared_ptr<Font> font, XMFLOAT2 pos, float scal
 	DrawText(font, pos, scale, color, jwstring(buf));
 }
 
-void SpriteBatch::DrawTexture(ComPtr<ID3D12DescriptorHeap> mTextureHeap, D3D12_GPU_DESCRIPTOR_HANDLE mTextureSRV, XMFLOAT4 rect, XMFLOAT4 color, XMFLOAT4 srcRect) {
-	mQuadDrawQueue.push_back(SpriteDraw(mTextureHeap, mTextureSRV, rect, srcRect, color));
+void SpriteBatch::DrawTexture(ComPtr<ID3D12DescriptorHeap> mTextureHeap, D3D12_GPU_DESCRIPTOR_HANDLE mTextureSRV, const XMFLOAT4& rect, const XMFLOAT4& color, const XMFLOAT4& srcRect) {
+	if (mQuadDrawQueueCount >= mQuadDrawQueue.size()) mQuadDrawQueue.push_back({});
+	SpriteDraw &s = mQuadDrawQueue[mQuadDrawQueueCount++];
+	s.mColor = color;
+	s.mPixelRect = rect;
+	s.mTextureRect = srcRect;
+	s.mTextureSRV = mTextureSRV;
+	s.mTextureHeap = mTextureHeap;
 }
-void SpriteBatch::DrawTexture(std::shared_ptr<Texture> texture, XMFLOAT4 rect, XMFLOAT4 color, XMFLOAT4 srcRect) {
-	mQuadDrawQueue.push_back(SpriteDraw(texture->GetSRVDescriptorHeap(), texture->GetSRVGPUDescriptor(), rect, srcRect, color));
+void SpriteBatch::DrawTexture(std::shared_ptr<Texture> texture, const XMFLOAT4& rect, const XMFLOAT4& color, const XMFLOAT4& srcRect) {
+	if (mQuadDrawQueueCount >= mQuadDrawQueue.size()) mQuadDrawQueue.push_back({});
+	SpriteDraw &s = mQuadDrawQueue[mQuadDrawQueueCount++];
+	s.mColor = color;
+	s.mPixelRect = rect;
+	s.mTextureRect = srcRect;
+	s.mTextureSRV = texture->GetSRVGPUDescriptor();
+	s.mTextureHeap = texture->GetSRVDescriptorHeap();
 }
 
 SpriteBatch::SpriteContext* SpriteBatch::GetContext(unsigned int frameIndex) {
 	if (frameIndex < mContexts.size()) {
-		mContexts[frameIndex]->Reset();
-		return mContexts[frameIndex];
+		unsigned int i = 0;
+		SpriteContext* ctx = nullptr;
+		do {
+			ctx = mContexts[frameIndex][i];
+			i++;
+		} while (ctx->mActive && i < mContexts[frameIndex].size());
+		if (i >= mContexts[frameIndex].size())
+			ctx = mContexts[frameIndex].push_back(new SpriteContext());
+		ctx->Reset();
+		return ctx;
 	}
 	// create contexts for each frame
 	while (mContexts.size() < frameIndex + 1)
-		mContexts.push_back(new SpriteBatch::SpriteContext());
-	return mContexts[frameIndex];
+		mContexts.push_back(jvector<SpriteContext*>()).push_back(new SpriteContext());
+	return mContexts[frameIndex][0];
 }
 
-void SpriteBatch::SpriteContext::AddQuad(XMFLOAT4 screenRect, XMFLOAT4 texRect, XMFLOAT4 color) {
+void SpriteBatch::SpriteContext::AddQuad(const XMFLOAT4& screenRect, const XMFLOAT4& texRect, const XMFLOAT4& color) {
 	unsigned int v = (unsigned int)mQuadOffset * 4;
 	unsigned int i = (unsigned int)mQuadOffset * 6;
 
@@ -303,7 +331,7 @@ void SpriteBatch::SpriteContext::AddQuad(XMFLOAT4 screenRect, XMFLOAT4 texRect, 
 
 	mQuadOffset++;
 }
-void SpriteBatch::SpriteContext::AddLines(LineDraw &lines) {
+void SpriteBatch::SpriteContext::AddLines(const LineDraw &lines) {
 	for (int i = 0; i < lines.mVertices.size(); i++) {
 		if (i > 0) {
 			mMappedLineIndices[mLineIndexOffset++] = mLineVertexOffset - 1;
@@ -322,12 +350,12 @@ void SpriteBatch::CreateShader() {
 	mColoredShader->Upload();
 }
 
-void SpriteBatch::SpriteContext::DrawQuadGroup(std::shared_ptr<CommandList> commandList, unsigned int startQuad, ComPtr<ID3D12DescriptorHeap> heap, D3D12_GPU_DESCRIPTOR_HANDLE tex) {
+void SpriteBatch::SpriteContext::DrawQuadGroup(std::shared_ptr<CommandList> commandList, unsigned int startQuad, ComPtr<ID3D12DescriptorHeap> heap, D3D12_GPU_DESCRIPTOR_HANDLE tex, const XMFLOAT4X4& mat) {
 	auto cmdList = commandList->D3DCommandList();
 
-	XMFLOAT4X4 m;
-	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)commandList->CurrentRenderTargetWidth(), (float)commandList->CurrentRenderTargetHeight(), 0, 0, 1.0f));
-	cmdList->SetGraphicsRoot32BitConstants(0, 16, &m, 0);
+	XMFLOAT4 c{ 1, 1, 1, 1 };
+	cmdList->SetGraphicsRoot32BitConstants(0, 16, &mat, 0);
+	cmdList->SetGraphicsRoot32BitConstants(0, 4, &c, 16);
 
 	ID3D12DescriptorHeap* heaps = { heap.Get() };
 	cmdList->SetDescriptorHeaps(1, &heaps);
@@ -338,10 +366,10 @@ void SpriteBatch::SpriteContext::DrawQuadGroup(std::shared_ptr<CommandList> comm
 	cmdList->IASetIndexBuffer(&mQuadIndexBufferView);
 	cmdList->DrawIndexedInstanced((mQuadOffset - startQuad) * 6, 1, startQuad * 6, 0, 0);
 }
-void SpriteBatch::SpriteContext::DrawLines(ComPtr<ID3D12GraphicsCommandList> cmdList, unsigned int startIndex) {
-	XMFLOAT4X4 m;
-	XMStoreFloat4x4(&m, XMMatrixOrthographicOffCenterLH(0, (float)Graphics::GetWindow()->GetWidth(), (float)Graphics::GetWindow()->GetHeight(), 0, 0, 1.0f));
-	cmdList->SetGraphicsRoot32BitConstants(0, 16, &m, 0);
+void SpriteBatch::SpriteContext::DrawLines(ComPtr<ID3D12GraphicsCommandList> cmdList, unsigned int startIndex, const XMFLOAT4X4 &mat) {
+	XMFLOAT4 c{ 1, 1, 1, 1 };
+	cmdList->SetGraphicsRoot32BitConstants(0, 16, &mat, 0);
+	cmdList->SetGraphicsRoot32BitConstants(0, 4, &c, 16);
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	cmdList->IASetVertexBuffers(0, 1, &mLineVertexBufferView);
@@ -349,29 +377,45 @@ void SpriteBatch::SpriteContext::DrawLines(ComPtr<ID3D12GraphicsCommandList> cmd
 	cmdList->DrawIndexedInstanced(mLineIndexOffset - startIndex, 1, startIndex, 0, 0);
 }
 
-void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
+void SpriteBatch::Reset(std::shared_ptr<CommandList> commandList) {
+	if (commandList->GetFrameIndex() < mContexts.size())
+		for (unsigned int j = 0; j < mContexts[commandList->GetFrameIndex()].size(); j++)
+			mContexts[commandList->GetFrameIndex()][j]->Reset();
+}
+
+void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList, std::shared_ptr<Shader> shaderOverride) {
+	SpriteContext* ctx = GetContext(commandList->GetFrameIndex());
+
+	XMFLOAT4X4 screenMVP;
+	XMStoreFloat4x4(&screenMVP, XMMatrixOrthographicOffCenterLH(0, (float)commandList->CurrentRenderTargetWidth(), (float)commandList->CurrentRenderTargetHeight(), 0, 0, 1.0f));
+
 	// Draw quads
-	size_t qsize = mQuadDrawQueue.size();
-	if (qsize > 0) {
-		SpriteContext* ctx = GetContext(commandList->GetFrameIndex());
-		ctx->ResizeQuads(qsize);
+	if (mQuadDrawQueueCount > 0) {
+		ctx->ResizeQuads(mQuadDrawQueueCount);
 
 		unsigned int curq = 0;
 		ComPtr<ID3D12DescriptorHeap> curHeap = nullptr;
 		D3D12_GPU_DESCRIPTOR_HANDLE curSRV = { 0 };
 
-		if (!mTexturedShader) CreateShader();
 		commandList->SetMaterial(nullptr);
-		commandList->SetShader(mTexturedShader);
+		if (!shaderOverride) {
+			if (!mTexturedShader) CreateShader();
+			commandList->SetShader(mTexturedShader);
+		} else {
+			commandList->SetShader(shaderOverride);
+		}
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
+		commandList->SetCullMode(D3D12_CULL_MODE_NONE);
 		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_TEXCOORD0 | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 
-		for (unsigned int i = 0; i < mQuadDrawQueue.size(); i++) {
-			SpriteDraw s = mQuadDrawQueue[i];
+		// bundle together consecutive draws with the same texture (heap/srv) into a single draw call
+		for (unsigned int i = 0; i < mQuadDrawQueueCount; i++) {
+			const SpriteDraw& s = mQuadDrawQueue[i];
 
 			if (curSRV.ptr != s.mTextureSRV.ptr) {
 				// Draw previous batch
-				if (curHeap && curSRV.ptr) ctx->DrawQuadGroup(commandList, curq, curHeap, curSRV);
+				if (curHeap && curSRV.ptr)
+					ctx->DrawQuadGroup(commandList, curq, curHeap, curSRV, screenMVP);
 				// Start new batch
 				curHeap = s.mTextureHeap;
 				curSRV = s.mTextureSRV;
@@ -381,30 +425,30 @@ void SpriteBatch::Flush(std::shared_ptr<CommandList> commandList){
 			ctx->AddQuad(s.mPixelRect, s.mTextureRect, s.mColor);
 		}
 
-		if (curHeap && curSRV.ptr) ctx->DrawQuadGroup(commandList, curq, curHeap, curSRV);
+		if (curHeap && curSRV.ptr) ctx->DrawQuadGroup(commandList, curq, curHeap, curSRV, screenMVP);
 
-		mQuadDrawQueue.clear();
+		mQuadDrawQueueCount = 0;
 	}
 
 	// Draw lines
-	size_t lsize = 0;
-	for (unsigned int i = 0; i < mLineDrawQueue.size(); i++) lsize += (mLineDrawQueue[i].mVertices.size() - 1) * 2;
+	unsigned int lsize = 0;
+	for (unsigned int i = 0; i < mLineDrawQueueCount; i++) lsize += ((unsigned int)mLineDrawQueue[i].mVertices.size() - 1) * 2;
 	if (lsize > 0) {
-		SpriteContext* ctx = GetContext(commandList->GetFrameIndex());
 		ctx->ResizeLines(lsize);
 
 		if (!mColoredShader) CreateShader();
 		commandList->SetMaterial(nullptr);
 		commandList->SetShader(mColoredShader);
 		commandList->SetBlendState(BLEND_STATE_ALPHA);
+		commandList->SetCullMode(D3D12_CULL_MODE_NONE);
 		commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_POSITION | MESH_SEMANTIC_COLOR0), D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
 		unsigned int curl = ctx->mLineIndexOffset;
-		for (unsigned int i = 0; i < mLineDrawQueue.size(); i++)
+		for (unsigned int i = 0; i < mLineDrawQueueCount; i++)
 			ctx->AddLines(mLineDrawQueue[i]);
 
-		ctx->DrawLines(commandList->D3DCommandList(), curl);
+		ctx->DrawLines(commandList->D3DCommandList(), curl, screenMVP);
 
-		mLineDrawQueue.clear();
+		mLineDrawQueueCount = 0;
 	}
 }

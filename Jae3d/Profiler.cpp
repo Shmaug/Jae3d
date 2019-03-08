@@ -14,7 +14,7 @@ ProfilerSample* currentSample = nullptr; // most recent sample created from the 
 const std::chrono::high_resolution_clock timer;
 auto start = timer.now();
 
-void Profiler::BeginSample(jwstring name, bool resume) {
+void Profiler::BeginSample(const jwstring& name, bool resume) {
 	if (resume) {
 		for (unsigned int i = 0; i < currentSample->children.size(); i++)
 			if (currentSample->children[i].name == name) {

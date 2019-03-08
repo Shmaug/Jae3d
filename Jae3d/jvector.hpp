@@ -52,8 +52,10 @@ public:
 				destruct(sz, mSize);
 				mSize = sz;
 			}
-		} else {
-			if (sz > mCapacity) reserve(next_pow2(sz));
+		} else if (sz > mSize) {
+			if (sz > mCapacity) reserve(sz);
+			for (size_t i = mSize; i < sz; i++)
+				new(&(reinterpret_cast<T*>(mData)[i])) T();
 			mSize = sz;
 		}
 	}
@@ -93,8 +95,7 @@ public:
 		if (index >= mSize) throw std::out_of_range("Index out of bounds!");
 		T* data = reinterpret_cast<T*>(mData);
 		data[index].~T();
-		for (size_t i = index; i < mSize - 1; i++)
-			new(&data[i]) T(data[i + 1]);
+		memcpy(data + index, data + index + 1, mSize - index - 1);
 		mSize--;
 	}
 
@@ -207,16 +208,11 @@ private:
 			memset(ndata, 0, cap * sizeof(T));
 
 			if (mData) {
-				T* ndt = reinterpret_cast<T*>(ndata);
-				T* mdt = reinterpret_cast<T*>(mData);
-				for (size_t i = 0; i < mSize; i++) {
-					if (i < (cap < sz ? cap : sz))
-						new(&(ndt[i])) T(mdt[i]);
-					mdt[i].~T();
-				}
-
+				memcpy(ndata, mData, sizeof(T) * (mSize < sz ? mSize : sz));
+				destruct(sz, mSize);
 				delete[] mData;
 			}
+
 			mData = ndata;
 			mCapacity = cap;
 		} else

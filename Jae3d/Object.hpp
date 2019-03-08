@@ -18,7 +18,7 @@ protected:
 	bool mTransformDirty = true;
 
 public:
-	JAE_API Object(jwstring name);
+	JAE_API Object(const jwstring& name);
 	JAE_API ~Object();
 
 	jwstring mName;

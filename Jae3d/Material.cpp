@@ -12,7 +12,7 @@ using namespace std;
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
-Material::Material(jwstring name, shared_ptr<Shader> shader)
+Material::Material(const jwstring& name, const shared_ptr<Shader>& shader)
 	: mName(name), mRenderQueue(1000), mZTest(true), mZWrite(true), mBlend(BLEND_STATE_DEFAULT), mCullMode(D3D12_CULL_MODE_BACK) {
 	SetShader(shader, true);
 }
@@ -21,7 +21,7 @@ Material::~Material() {
 	mParamValues.clear();
 }
 
-void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
+void Material::SetShader(const shared_ptr<Shader>& shader, bool reset) {
 	//OutputDebugf("MATERIAL %s: %s\n", mName.c_str(), shader->mName.c_str());
 
 	mShader = shader;
@@ -212,17 +212,17 @@ void Material::SetShader(shared_ptr<Shader> shader, bool reset) {
 	}
 }
 
-bool Material::IsKeywordEnabled(jstring keyword) {
+bool Material::IsKeywordEnabled(const char* keyword) {
 	for (unsigned int i = 0; i < mKeywords.size(); i++)
 		if (mKeywords[i] == keyword)
 			return true;
 	return false;
 }
-void Material::EnableKeyword(jstring keyword) {
+void Material::EnableKeyword(const char* keyword) {
 	if (IsKeywordEnabled(keyword)) return;
 	mKeywords.push_back(keyword);
 }
-void Material::DisableKeyword(jstring keyword) {
+void Material::DisableKeyword(const char* keyword) {
 	for (unsigned int i = 0; i < mKeywords.size(); i++)
 		if (mKeywords[i] == keyword) {
 			mKeywords.remove(i);
@@ -230,87 +230,101 @@ void Material::DisableKeyword(jstring keyword) {
 		}
 }
 
-void Material::SetFloat(jstring param, float v, unsigned int frameIndex) {
+void Material::SetFloat (const char* param, const float& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetFloat2(jstring param, XMFLOAT2 v, unsigned int frameIndex) {
+void Material::SetFloat2(const char* param, const XMFLOAT2& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat2(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetFloat3(jstring param, XMFLOAT3 v, unsigned int frameIndex) {
+void Material::SetFloat3(const char* param, const XMFLOAT3& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat3(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetFloat4(jstring param, XMFLOAT4 v, unsigned int frameIndex) {
+void Material::SetFloat4(const char* param, const XMFLOAT4& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat4(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
 
-void Material::SetInt(jstring param, int v, unsigned int frameIndex) {
+void Material::SetInt (const char* param, const int& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetInt2(jstring param, XMINT2 v, unsigned int frameIndex) {
+void Material::SetInt2(const char* param, const XMINT2& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt2(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetInt3(jstring param, XMINT3 v, unsigned int frameIndex) {
+void Material::SetInt3(const char* param, const XMINT3& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt3(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetInt4(jstring param, XMINT4 v, unsigned int frameIndex) {
+void Material::SetInt4(const char* param, const XMINT4& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteInt4(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
 
-void Material::SetUInt(jstring param, unsigned int v, unsigned int frameIndex) {
+void Material::SetUInt (const char* param, const unsigned int& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetUInt2(jstring param, XMUINT2 v, unsigned int frameIndex) {
+void Material::SetUInt2(const char* param, const XMUINT2& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt2(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetUInt3(jstring param, XMUINT3 v, unsigned int frameIndex) {
+void Material::SetUInt3(const char* param, const XMUINT3& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt3(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetUInt4(jstring param, XMUINT4 v, unsigned int frameIndex) {
+void Material::SetUInt4(const char* param, const XMUINT4& v, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(v);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteUInt4(v, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
 
-void Material::SetColor3(jstring param, XMFLOAT3 col, unsigned int frameIndex) {
+void Material::SetColor3(const char* param, const XMFLOAT3& col, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(col);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat3(col, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
-void Material::SetColor4(jstring param, XMFLOAT4 col, unsigned int frameIndex) {
+void Material::SetColor4(const char* param, const XMFLOAT4& col, unsigned int frameIndex) {
+	if (!mShader || !mParamValues.count(param)) return;
 	MaterialValue& mv = mParamValues.at(param);
 	mv.set(col);
 	mParamCbuffers[mv.cbufferIndex].cbuffer->WriteFloat4(col, mShader->GetParameter(param).CBufferOffset(), frameIndex);
 }
 
-void Material::SetTexture(jstring param, shared_ptr<Texture> tex, unsigned int frameIndex) {
+void Material::SetTexture(const char* param, const shared_ptr<Texture>& tex, unsigned int frameIndex) {
 	mParamValues[param].set(tex);
 }
-void Material::SetCBuffer(jstring param, shared_ptr<ConstantBuffer> cbuf, unsigned int frameIndex) {
+void Material::SetCBuffer(const char* param, const shared_ptr<ConstantBuffer>& cbuf, unsigned int frameIndex) {
 	mParamValues[param].set(cbuf);
 }
-void Material::SetDescriptorTable(jstring param, shared_ptr<DescriptorTable> tbl, unsigned int frameIndex) {
+void Material::SetDescriptorTable(const char* param, const shared_ptr<DescriptorTable>& tbl, unsigned int frameIndex) {
 	mParamValues[param].set(tbl);
 }
 
@@ -343,13 +357,13 @@ void Material::SetActive(CommandList* commandList) {
 		case SHADER_PARAM_TYPE_SRV:
 		{
 			if (it.second.textureValue)
-				commandList->SetRootDescriptorTable(sp.RootIndex(), it.second.textureValue->GetSRVDescriptorHeap().Get(), it.second.textureValue->GetSRVGPUDescriptor());
+				commandList->SetGraphicsRootDescriptorTable(sp.RootIndex(), it.second.textureValue->GetSRVDescriptorHeap().Get(), it.second.textureValue->GetSRVGPUDescriptor());
 			break;
 		}
 		case SHADER_PARAM_TYPE_TABLE:
 		{
 			if (it.second.tableValue && it.second.tableValue->Size() > 0)
-				commandList->SetRootDescriptorTable(sp.RootIndex(), it.second.tableValue->D3DHeap().Get(), it.second.tableValue->GpuDescriptor());
+				commandList->SetGraphicsRootDescriptorTable(sp.RootIndex(), it.second.tableValue->D3DHeap().Get(), it.second.tableValue->GpuDescriptor());
 			break;
 		}
 		}

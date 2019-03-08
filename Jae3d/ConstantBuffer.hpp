@@ -14,28 +14,28 @@ public:
 	jwstring mName;
 
 	JAE_API ConstantBuffer();
-	JAE_API ConstantBuffer(size_t size, jwstring name, unsigned int count);
+	JAE_API ConstantBuffer(size_t size, const jwstring& name, unsigned int count);
 	JAE_API ~ConstantBuffer();
 
 	JAE_API void Write(const void* ptr, size_t size, unsigned int pos, unsigned int frameIndex);
 
-	JAE_API void WriteFloat(float &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteFloat2(DirectX::XMFLOAT2 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteFloat3(DirectX::XMFLOAT3 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteFloat4(DirectX::XMFLOAT4 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteFloat (const float &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteFloat2(const DirectX::XMFLOAT2 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteFloat3(const DirectX::XMFLOAT3 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteFloat4(const DirectX::XMFLOAT4 &v, unsigned int pos, unsigned int frameIndex);
 
-	JAE_API void WriteFloat4x4(DirectX::XMFLOAT4X4 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteFloat3x3(DirectX::XMFLOAT3X3 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteFloat4x4(const DirectX::XMFLOAT4X4 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteFloat3x3(const DirectX::XMFLOAT3X3 &v, unsigned int pos, unsigned int frameIndex);
 
-	JAE_API void WriteInt(int &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteInt2(DirectX::XMINT2 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteInt3(DirectX::XMINT3 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteInt4(DirectX::XMINT4 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteInt (const int &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteInt2(const DirectX::XMINT2 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteInt3(const DirectX::XMINT3 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteInt4(const DirectX::XMINT4 &v, unsigned int pos, unsigned int frameIndex);
 
-	JAE_API void WriteUInt(unsigned int &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteUInt2(DirectX::XMUINT2 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteUInt3(DirectX::XMUINT3 &v, unsigned int pos, unsigned int frameIndex);
-	JAE_API void WriteUInt4(DirectX::XMUINT4 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteUInt (const unsigned int &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteUInt2(const DirectX::XMUINT2 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteUInt3(const DirectX::XMUINT3 &v, unsigned int pos, unsigned int frameIndex);
+	JAE_API void WriteUInt4(const DirectX::XMUINT4 &v, unsigned int pos, unsigned int frameIndex);
 
 	JAE_API D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(unsigned int frameIndex) const;
 

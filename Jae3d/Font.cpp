@@ -7,8 +7,8 @@
 
 using namespace DirectX;
 
-Font::Font(jwstring name) : Asset(name) {}
-Font::Font(jwstring name, MemoryStream &ms) : Asset(name, ms) {
+Font::Font(const jwstring& name) : Asset(name) {}
+Font::Font(const jwstring& name, MemoryStream &ms) : Asset(name, ms) {
 	mTexture = std::shared_ptr<Texture>(new Texture(name, ms));
 	mTexDpi = ms.Read<uint32_t>();
 	mSize = ms.Read<uint32_t>();
@@ -46,7 +46,7 @@ Font::Font(jwstring name, MemoryStream &ms) : Asset(name, ms) {
 	}
 }
 
-Font::Font(jwstring name,
+Font::Font(const jwstring& name,
 	unsigned int size,
 	unsigned int height,
 	unsigned int ascender,

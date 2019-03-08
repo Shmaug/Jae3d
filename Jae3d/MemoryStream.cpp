@@ -15,12 +15,12 @@ MemoryStream::~MemoryStream() {
 	if (mBuffer) delete[] mBuffer;
 }
 
-void MemoryStream::WriteStringA(jstring str) {
+void MemoryStream::WriteStringA(const jstring& str) {
 	Write((uint32_t)str.length());
 	if (str.length() > 0)
 		Write(str.c_str(), str.length());
 }
-void MemoryStream::WriteString(jwstring str) {
+void MemoryStream::WriteString(const jwstring& str) {
 	Write((uint32_t)str.length());
 	if (str.length() > 0)
 		Write(reinterpret_cast<const char*>(str.c_str()), str.length() * sizeof(wchar_t));

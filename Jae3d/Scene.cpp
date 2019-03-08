@@ -21,7 +21,7 @@ Scene::~Scene() {
 	mLights.free();
 }
 
-void Scene::DebugDrawBox(shared_ptr<CommandList> commandList, const BoundingOrientedBox &box, const XMMATRIX &vp) {
+void Scene::DebugDrawBox(const shared_ptr<CommandList>& commandList, const BoundingOrientedBox &box, const XMMATRIX &vp) {
 	if (!mDebugCube) {
 		mDebugCube = std::shared_ptr<Mesh>(new Mesh(L"Cube"));
 		mDebugCube->VertexCount(8);
@@ -51,18 +51,19 @@ void Scene::DebugDrawBox(shared_ptr<CommandList> commandList, const BoundingOrie
 	commandList->DrawMesh(*mDebugCube);
 }
 
-void Scene::DrawSkybox(shared_ptr<CommandList> commandList) {
+void Scene::DrawSkybox(const shared_ptr<CommandList>& commandList) {
 	if (!mSkybox) return;
 	if (!mSkyCube) {
 		mSkyCube = shared_ptr<Mesh>(new Mesh(L"Sky Cube"));
 		mSkyCube->LoadCube(1.0f);
 		mSkyCube->UploadStatic();
 	}
-
+	commandList->PushState();
 	commandList->SetMaterial(mSkybox);
 	commandList->DrawMesh(*mSkyCube);
+	commandList->PopState();
 }
-void Scene::Draw(shared_ptr<CommandList> commandList, shared_ptr<Camera> camera, shared_ptr<Material> materialOverride) {
+void Scene::Draw(const shared_ptr<CommandList>& commandList, const shared_ptr<Camera>& camera, const shared_ptr<Material>& materialOverride) {
 	static jvector<Renderer::RenderJob*> renderQueue;
 
 	const BoundingFrustum &cullFrustum = camera->Frustum();
@@ -88,7 +89,7 @@ void Scene::Draw(shared_ptr<CommandList> commandList, shared_ptr<Camera> camera,
 	}
 	Profiler::EndSample();
 }
-void Scene::DebugDraw(shared_ptr<CommandList> commandList, shared_ptr<Camera> camera) {
+void Scene::DebugDraw(const shared_ptr<CommandList>& commandList, const shared_ptr<Camera>& camera) {
 	if (!mDebugShader) mDebugShader = AssetDatabase::GetAsset<Shader>(L"ColoredRoot");
 
 	const BoundingFrustum &cullFrustum = camera->Frustum();
@@ -124,19 +125,24 @@ void Scene::CollectLights(const BoundingFrustum &frustum, jvector<Light*> &light
 			lights.push_back(mLights[i]);
 }
 
-void Scene::IntersectPoint(DirectX::XMVECTOR point, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const DirectX::XMVECTOR& point, jvector<std::shared_ptr<Object>>& result) const {
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Contains(point))
 			result.push_back(mObjects[i]);
 }
-void Scene::IntersectPoint(DirectX::XMFLOAT3 point, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const DirectX::XMFLOAT3& point, jvector<std::shared_ptr<Object>>& result) const {
 	XMVECTOR pt = XMLoadFloat3(&point);
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Contains(pt))
 			result.push_back(mObjects[i]);
 }
-void Scene::IntersectBounds(DirectX::BoundingOrientedBox bounds, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const DirectX::BoundingOrientedBox& bounds, jvector<std::shared_ptr<Object>>& result) const {
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Intersects(bounds))
+			result.push_back(mObjects[i]);
+}
+void Scene::Intersect(const DirectX::BoundingSphere& sphere, jvector<std::shared_ptr<Object>>& result) const {
+	for (int i = 0; i < mObjects.size(); i++)
+		if (mObjects[i]->Bounds().Intersects(sphere))
 			result.push_back(mObjects[i]);
 }

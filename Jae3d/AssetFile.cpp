@@ -100,7 +100,7 @@ void AssetFile::Write_V1(ostream &os, jvector<Asset*> assets, bool compress) {
 	}
 }
 
-jvector<Asset*> AssetFile::Read(jwstring file) {
+jvector<Asset*> AssetFile::Read(const jwstring& file) {
 	jwstring fullpath = GetFullPathW(file);
 
 	ifstream is;
@@ -141,7 +141,7 @@ jvector<Asset*> AssetFile::Read(jwstring file) {
 
 	return jvector<Asset*>();
 }
-void AssetFile::Write(jwstring file, jvector<Asset*> assets, bool compress, uint64_t version) {
+void AssetFile::Write(const jwstring& file, jvector<Asset*> assets, bool compress, uint64_t version) {
 	ofstream os;
 	os.open(file.c_str(), ios::out | ios::binary);
 	if (!os.is_open()) {

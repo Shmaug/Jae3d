@@ -1,7 +1,7 @@
 #include "Animation.hpp"
 
-Animation::Animation(jwstring name) : Asset(name) {}
-Animation::Animation(jwstring name, MemoryStream &ms) : Asset(name, ms) {
+Animation::Animation(const jwstring& name) : Asset(name) {}
+Animation::Animation(const jwstring& name, MemoryStream &ms) : Asset(name, ms) {
 	
 }
 Animation::~Animation() {}

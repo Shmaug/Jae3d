@@ -12,8 +12,8 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace std;
 
-Mesh::Mesh(jwstring name) : Asset(name), mDataUploaded(false) {}
-Mesh::Mesh(jwstring name, MemoryStream &ms) : Asset(name, ms), mDataUploaded(false) {
+Mesh::Mesh(const jwstring& name) : Asset(name), mDataUploaded(false) {}
+Mesh::Mesh(const jwstring& name, MemoryStream &ms) : Asset(name, ms), mDataUploaded(false) {
 	mSemantics = (MESH_SEMANTIC)ms.Read<uint32_t>();
 	VertexCount(ms.Read<uint32_t>());
 
@@ -191,7 +191,7 @@ void Mesh::VertexCount(unsigned int size, bool shrink) {
 	if (HasSemantic(MESH_SEMANTIC_TEXCOORD2)) mTexcoord2.resize(size, shrink);
 	if (HasSemantic(MESH_SEMANTIC_TEXCOORD3)) mTexcoord3.resize(size, shrink);
 }
-unsigned int Mesh::AddVertex(XMFLOAT3 &v) {
+unsigned int Mesh::AddVertex(const XMFLOAT3 &v) {
 	mVertices.push_back(v);
 	if (HasSemantic(MESH_SEMANTIC_NORMAL)) mNormals.push_back(DirectX::XMFLOAT3());
 	if (HasSemantic(MESH_SEMANTIC_TANGENT)) mTangents.push_back(DirectX::XMFLOAT3());
@@ -208,7 +208,7 @@ unsigned int Mesh::AddVertex(XMFLOAT3 &v) {
 	return (unsigned int)mVertices.size() - 1;
 }
 
-void Mesh::AddIndices(unsigned int count, unsigned int* indices, unsigned int submesh) {
+void Mesh::AddIndices(unsigned int count, const unsigned int* indices, unsigned int submesh) {
 	while (submesh >= mSubmeshes.size())
 		mSubmeshes.push_back({});
 
@@ -612,5 +612,6 @@ void Mesh::UploadStatic() {
 
 void Mesh::ReleaseGpu() {
 	mVertexBuffer.Reset();
+	mIndexBuffer.Reset();
 	mDataUploaded = false;
 }

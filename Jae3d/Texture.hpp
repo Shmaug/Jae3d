@@ -11,14 +11,14 @@ public:
 		return HighBit + 1;
 	}
 
-	JAE_API Texture(jwstring name, unsigned int width, unsigned int height, DXGI_FORMAT format, unsigned int mipLevels = 1);
-	JAE_API Texture(jwstring name, unsigned int width, unsigned int height, unsigned int depth, DXGI_FORMAT format, unsigned int mipLevels = 1);
-	JAE_API Texture(jwstring name,
+	JAE_API Texture(const jwstring& name, unsigned int width, unsigned int height, DXGI_FORMAT format, unsigned int mipLevels = 1);
+	JAE_API Texture(const jwstring& name, unsigned int width, unsigned int height, unsigned int depth, DXGI_FORMAT format, unsigned int mipLevels = 1);
+	JAE_API Texture(const jwstring& name,
 		unsigned int width, unsigned int height, unsigned int depth,
 		D3D12_RESOURCE_DIMENSION dimension, unsigned int arraySize,
 		DXGI_FORMAT format, unsigned int mipLevels, const void* data, size_t dataSize, bool isDDS);
 
-	JAE_API Texture(jwstring name, MemoryStream &ms);
+	JAE_API Texture(const jwstring& name, MemoryStream &ms);
 	JAE_API ~Texture();
 
 	JAE_API void WriteData(MemoryStream &ms) override;

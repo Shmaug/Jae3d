@@ -272,7 +272,7 @@ void MaterialValue::set(DirectX::XMUINT4 val) {
 	cbufferValue.reset();
 	tableValue.reset();
 }
-void MaterialValue::set(std::shared_ptr<Texture> val) {
+void MaterialValue::set(const std::shared_ptr<Texture>& val) {
 	floatValue = 0;
 	float2Value = { 0,0 };
 	float3Value = { 0,0,0 };
@@ -292,7 +292,7 @@ void MaterialValue::set(std::shared_ptr<Texture> val) {
 	cbufferValue.reset();
 	tableValue.reset();
 }
-void MaterialValue::set(std::shared_ptr<ConstantBuffer> val) {
+void MaterialValue::set(const std::shared_ptr<ConstantBuffer>& val) {
 	floatValue = 0;
 	float2Value = { 0,0 };
 	float3Value = { 0,0,0 };
@@ -312,7 +312,7 @@ void MaterialValue::set(std::shared_ptr<ConstantBuffer> val) {
 	cbufferValue = val;
 	tableValue.reset();
 }
-void MaterialValue::set(std::shared_ptr<DescriptorTable> val) {
+void MaterialValue::set(const std::shared_ptr<DescriptorTable>& val) {
 	floatValue = 0;
 	float2Value = { 0,0 };
 	float3Value = { 0,0,0 };

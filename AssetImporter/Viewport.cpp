@@ -174,6 +174,7 @@ void Viewport::DoFrame() {
 			float h = (float)Graphics::GetWindow()->GetHeight();
 
 			auto sb = Graphics::GetSpriteBatch();
+
 			sb->DrawText(static_pointer_cast<Font>(shownAsset.asset), XMFLOAT2(0, h * .3f), 1.0f, {1,1,1,1}, L"the quick brown fox jumped\nover the lazy brown dog.");
 			sb->Flush(commandList);
 		}

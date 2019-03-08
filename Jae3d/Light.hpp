@@ -12,7 +12,7 @@ public:
 		LIGHTMODE_POINT,
 	};
 
-	JAE_API Light(jwstring name);
+	JAE_API Light(const jwstring& name);
 	JAE_API ~Light();
 
 	DirectX::XMFLOAT3 mColor;

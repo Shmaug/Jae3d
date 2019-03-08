@@ -16,7 +16,7 @@ DWORD WINAPI LoadAssetFile(LPVOID param) {
 
 	return 0;
 }
-AssetDatabase::LoadAssetOperation* AssetDatabase::LoadAssetsAsync(jwstring assetFile) {
+AssetDatabase::LoadAssetOperation* AssetDatabase::LoadAssetsAsync(const jwstring& assetFile) {
 	AssetDatabase::LoadAssetOperation* operation = new AssetDatabase::LoadAssetOperation();
 	operation->mDone = false;
 	operation->mProgress = 0;
@@ -30,7 +30,7 @@ void AssetDatabase::FinishLoadAssetsAsync(AssetDatabase::LoadAssetOperation* ope
 	delete operation;
 }
 
-void AssetDatabase::LoadAssets(jwstring assetFile) {
+void AssetDatabase::LoadAssets(const jwstring& assetFile) {
 	jvector<Asset*> a = AssetFile::Read(assetFile);
 	for (int i = 0; i < a.size(); i++) {
 		if (a[i]) {
@@ -43,6 +43,6 @@ void AssetDatabase::UnloadAssets() {
 	assets.clear();
 }
 
-std::shared_ptr<Asset> AssetDatabase::GetAsset(jwstring name) {
+std::shared_ptr<Asset> AssetDatabase::GetAsset(const jwstring& name) {
 	return assets.at(name.lower());
 }

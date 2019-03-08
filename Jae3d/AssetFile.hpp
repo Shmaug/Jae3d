@@ -11,8 +11,8 @@ class MemoryStream;
 
 class AssetFile {
 public:
-	JAE_API static jvector<Asset*> Read(jwstring file);
-	JAE_API static void Write(jwstring file, jvector<Asset*> assets, bool compress, uint64_t version = (uint64_t)0001);
+	JAE_API static jvector<Asset*> Read(const jwstring& file);
+	JAE_API static void Write(const jwstring& file, jvector<Asset*> assets, bool compress, uint64_t version = (uint64_t)0001);
 
 private:
 	JAE_API static jvector<Asset*> AssetFile::Read_V1(std::istream &fs);
