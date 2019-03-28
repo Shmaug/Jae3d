@@ -42,18 +42,18 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 		return nullptr;
 	}
 
-	//FT_CharMap found = nullptr;
-	//for (auto i = 0; i < face->num_charmaps; i++) {
-	//	const auto charmap = face->charmaps[i];
-	//	if ((charmap->platform_id == 3 && charmap->encoding_id == 1) /* Windows Unicode */
-	//		|| (charmap->platform_id == 3 && charmap->encoding_id == 0) /* Windows Symbol */
-	//		|| (charmap->platform_id == 2 && charmap->encoding_id == 1) /* ISO Unicode */
-	//		|| (charmap->platform_id == 0)) { /* Apple Unicode */
-	//		found = charmap;
-	//		break;
-	//	}
-	//}
-	//if (found) FT_Set_Charmap(face, found);
+	FT_CharMap found = nullptr;
+	for (auto i = 0; i < face->num_charmaps; i++) {
+		const auto charmap = face->charmaps[i];
+		if ((charmap->platform_id == 3 && charmap->encoding_id == 1) /* Windows Unicode */
+			|| (charmap->platform_id == 3 && charmap->encoding_id == 0) /* Windows Symbol */
+			|| (charmap->platform_id == 2 && charmap->encoding_id == 1) /* ISO Unicode */
+			|| (charmap->platform_id == 0)) { /* Apple Unicode */
+			found = charmap;
+			break;
+		}
+	}
+	if (found) FT_Set_Charmap(face, found);
 
 	unsigned int ascent;
 	unsigned int descent;
@@ -97,7 +97,7 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 
 	DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	unsigned int textureWidth = 1024;
-	unsigned int textureHeight = 1024;
+	unsigned int textureHeight = 32;
 	unsigned int cx = 1;
 	unsigned int cy = 1;
 	unsigned int maxHeight = 0;
@@ -107,10 +107,12 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 	jvector<FT_UInt> indices;
 	jvector<GlyphBitmap> bitmaps;
 
-	FT_UInt gindex;
-	FT_ULong code = FT_Get_First_Char(face, &gindex);
-	while (gindex != 0) {
+	const jwstring characters = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()`~-_=+\\|]}[{;:'\"/?.>,< ";
+
+	for (unsigned int i = 0; i < characters.length(); i++) {
+		FT_UInt gindex = FT_Get_Char_Index(face, (FT_ULong)characters[i]);
 		err = FT_Load_Glyph(face, gindex, FT_LOAD_DEFAULT);
+
 		if (err) {
 			cerr << L"Failed to load glyph!\n";
 			FT_Done_Face(face);
@@ -137,21 +139,22 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 		bmp.buffer = new uint8_t[bmp.width * bmp.height];
 		memcpy(bmp.buffer, src.buffer, bmp.width * bmp.height);
 
-		bmp.tx = cx;
-		bmp.ty = cy;
-		cx += bmp.width + 1;
-		maxHeight = max(maxHeight, bmp.height + 1);
-
-		if (cy + maxHeight > textureHeight)
-			textureHeight += 64;
-		if (cx > textureWidth) {
+		if (cx + bmp.width + 1 >= textureWidth) {
 			cx = 1;
-			cy += maxHeight;
+			cy += maxHeight + 1;
 			maxHeight = 0;
 		}
 
+		bmp.tx = cx;
+		bmp.ty = cy;
+		cx += bmp.width + 1;
+		maxHeight = max(maxHeight, bmp.height);
+
+		while (cy + maxHeight >= textureHeight)
+			textureHeight *= 2;
+
 		FontGlyph g;
-		g.character = (wchar_t)code;
+		g.character = characters[i];
 		g.advance = FT_CEIL(metrics.horiAdvance);
 		g.ox = FT_FLOOR(metrics.horiBearingX);
 		g.oy = FT_FLOOR(metrics.horiBearingY);
@@ -163,8 +166,6 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 		indices.push_back(gindex);
 		glyphs.push_back(g);
 		bitmaps.push_back(bmp);
-
-		code = FT_Get_Next_Char(face, code, &gindex);
 	}
 
 	if (FT_HAS_KERNING(face)) {
@@ -189,11 +190,10 @@ Font* ImportFont(jwstring path, AssetMetadata &meta) {
 		for (unsigned int y = 0; y < bitmaps[i].height; y++) {
 			for (unsigned int x = 0; x < bitmaps[i].width; x++) {
 				unsigned int ti = ((x + bitmaps[i].tx) + (y + bitmaps[i].ty) * textureWidth) * 4;
-				uint8_t c = bitmaps[i].buffer[x + y * bitmaps[i].width];
 				texture[ti++] = 0xFF;
 				texture[ti++] = 0xFF;
 				texture[ti++] = 0xFF;
-				texture[ti++] = c;
+				texture[ti++] = bitmaps[i].buffer[x + y * bitmaps[i].width];
 			}
 		}
 	}

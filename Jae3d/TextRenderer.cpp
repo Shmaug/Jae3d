@@ -57,7 +57,7 @@ void TextRenderer::Build(TextMesh& m) {
 			p.x = 0;
 			p.y += mFont->GetLineSpacing();
 		} else {
-			if (!mFont->GetGlyph(cur, g) && !mFont->GetGlyph(L'?', g)) {
+			if (!mFont->GetGlyph(cur, g)) {
 				prev = cur;
 				continue;
 			}

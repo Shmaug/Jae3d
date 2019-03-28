@@ -79,13 +79,6 @@ bool Font::GetGlyph(const wchar_t c, FontGlyph &g) const {
 	return false;
 }
 
-int Font::GetKerning(const wchar_t from, const wchar_t to) const {
-	uint32_t key = (unsigned int)to | ((unsigned int)from << 16);
-	if (mKerning.count(key))
-		return mKerning.at(key);
-	return 0;
-}
-
 void Font::WriteData(MemoryStream &ms) {
 	mTexture->WriteData(ms);
 	ms.Write((uint32_t)mTexDpi);
@@ -114,7 +107,9 @@ void Font::WriteData(MemoryStream &ms) {
 		ms.Seek(pos);
 		ms.Write((uint32_t)i);
 		ms.Seek(posc);
-	}
+		printf("  %d characters\n", i);
+	}else
+		printf("  0 characters\n");
 
 	pos = ms.Tell();
 	ms.Write((uint32_t)0);
@@ -129,5 +124,7 @@ void Font::WriteData(MemoryStream &ms) {
 		ms.Seek(pos);
 		ms.Write((uint32_t)i);
 		ms.Seek(posc);
-	}
+		printf("  %d kernings\n", i);
+	} else
+		printf("  0 kernings\n");
 }

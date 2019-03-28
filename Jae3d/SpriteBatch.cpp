@@ -193,7 +193,7 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, const XMFLOAT2& pos, con
 			p.y += sc * font->GetLineSpacing();
 		} else {
 			Profiler::BeginSample(L"Find Glyph", true);
-			if (!font->GetGlyph(cur, g) && !font->GetGlyph(L'?', g)) {
+			if (!font->GetGlyph(cur, g)) {
 				prev = cur;
 				Profiler::EndSample();
 				continue;

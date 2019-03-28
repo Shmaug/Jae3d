@@ -26,7 +26,10 @@ public:
 
 	inline std::shared_ptr<Texture> GetTexture() const { return mTexture; };
 
-	JAE_API int GetKerning(const wchar_t from, const wchar_t to) const;
+	inline int GetKerning(const wchar_t from, const wchar_t to) const {
+		auto& it = mKerning.find((uint32_t)((unsigned int)to | ((unsigned int)from << 16)));
+		return (it == mKerning.end()) ? 0 : (*it).second;
+	};
 	JAE_API bool GetGlyph(const wchar_t c, FontGlyph& g) const;
 
 	inline unsigned int GetSize() const { return mSize; };
@@ -44,7 +47,6 @@ private:
 	unsigned int mLineSpace;
 	unsigned int mTexDpi;
 
-	// TODO: something more memory efficient?
 	jvector<FontGlyph> mGlyphs;
 	jvector<unsigned int> mGlyphIndices;
 	std::unordered_map<uint32_t, int> mKerning;
