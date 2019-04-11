@@ -206,7 +206,7 @@ void TestGame::InitializeScene() {
 	auto text = mScene->AddObject<TextRenderer>(L"Text");
 	text->Font(mArialFont);
 	text->Material(fontMaterial);
-	text->Text(L"TEXT0123456789\nasdkjhjsadfjh, fuck..");
+	text->Text(L"TEXT0123456789\nasdkjhjsadfjh, text..");
 	text->LocalPosition(0, 1, 1);
 
 	auto rifle = mScene->AddObject<MeshRenderer>(L"Rifle");

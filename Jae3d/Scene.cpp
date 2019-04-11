@@ -24,6 +24,7 @@ Scene::~Scene() {
 void Scene::DebugDrawBox(const shared_ptr<CommandList>& commandList, const BoundingOrientedBox &box, const XMMATRIX &vp) {
 	if (!mDebugCube) {
 		mDebugCube = std::shared_ptr<Mesh>(new Mesh(L"Cube"));
+		mDebugCube->Topology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 		mDebugCube->VertexCount(8);
 		auto verts = mDebugCube->GetVertices();
 		unsigned int i = 0;
