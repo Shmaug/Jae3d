@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "Common.hpp"
 #include "jvector.hpp"
 
@@ -12,8 +14,10 @@ public:
 
 	// Set shader and synchronize parameters
 	JAE_API void SetShader(const std::shared_ptr<Shader>& shader, bool resetParameters = false);
+	inline std::shared_ptr<Shader> GetShader() const { return mShader; }
 
 	JAE_API bool IsKeywordEnabled(const char* keyword);
+	JAE_API const jvector<jstring>& GetKeywords() const { return mKeywords; }
 	JAE_API void EnableKeyword(const char* keyword);
 	JAE_API void DisableKeyword(const char* keyword);
 
@@ -50,6 +54,8 @@ public:
 	inline void ZTest(bool x) { mZTest = x; }
 	inline D3D12_RENDER_TARGET_BLEND_DESC Blend() const { return mBlend; }
 	inline void Blend(D3D12_RENDER_TARGET_BLEND_DESC x) { mBlend = x; }
+
+	bool Equals(const Material& m, unsigned int frameIndex) const;
 
 private:
 	jvector<jstring> mKeywords;

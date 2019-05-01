@@ -121,8 +121,16 @@ public:
 	JAE_API jwstring operator +(const wchar_t* rhs);
 	JAE_API jwstring operator +(const jwstring &rhs);
 
-	JAE_API friend jwstring operator +(const wchar_t lhs, const jwstring &rhs);
-	JAE_API friend jwstring operator +(const wchar_t* lhs, const jwstring &rhs);
+	JAE_API friend jwstring operator +(const wchar_t lhs, const jwstring& rhs);
+	JAE_API friend jwstring operator +(const wchar_t* lhs, const jwstring& rhs);
+
+	JAE_API friend jwstring operator +(const jwstring& lhs, const wchar_t rhs);
+	JAE_API friend jwstring operator +(const jwstring& lhs, const wchar_t* rhs);
+
+	JAE_API friend jwstring operator +(int lhs, const jwstring& rhs);
+	JAE_API friend jwstring operator +(const jwstring& lhs, int rhs);
+	JAE_API friend jwstring operator +(unsigned int lhs, const jwstring& rhs);
+	JAE_API friend jwstring operator +(const jwstring& lhs, unsigned int rhs);
 
 	friend bool operator >(jwstring &lhs, jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) > 0; }
 	friend bool operator <(jwstring &lhs, jwstring &rhs) { return wcscmp(lhs.c_str(), rhs.c_str()) < 0; }

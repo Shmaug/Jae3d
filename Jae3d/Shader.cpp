@@ -69,22 +69,30 @@ public:
 	}
 };
 
-jstring Shader::KeywordListToString(const jvector<jstring>& keywords) const {
-	jvector<jstring> tmp;
-	unsigned int s = 0;
-	for (unsigned int i = 0; i < keywords.size(); i++)
-		if (!keywords[i].empty() && mKeywords.count(i)) {
-			tmp.push_back(keywords[i]);
-			s += (unsigned int)keywords[i].length();
-		}
-	if (tmp.size() == 0) return "";
+jstring Shader::KeywordListToString(const jvector<jstring>& keywords, bool sorted) const {
+	if (sorted) {
+		jstring str = "";
+		for (unsigned int i = 0; i < keywords.size(); i++)
+			if (!keywords[i].empty() && mKeywords.count(keywords[i]))
+				str += keywords[i] + " ";
+		return str;
+	} else {
+		jvector<jstring> tmp;
+		unsigned int s = 0;
+		for (unsigned int i = 0; i < keywords.size(); i++)
+			if (!keywords[i].empty() && mKeywords.count(keywords[i])) {
+				tmp.push_back(keywords[i]);
+				s += (unsigned int)keywords[i].length();
+			}
+		if (tmp.size() == 0) return "";
 
-	std::sort(tmp.data(), tmp.data() + tmp.size(), [](const jstring& lhs, const jstring& rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; });
+		std::sort(tmp.data(), tmp.data() + tmp.size(), [](const jstring & lhs, const jstring & rhs) { return strcmp(lhs.c_str(), rhs.c_str()) < 0; });
 
-	jstring str(s);
-	for (unsigned int i = 0; i < tmp.size(); i++)
-		str += tmp[i] + " ";
-	return str;
+		jstring str(s);
+		for (unsigned int i = 0; i < tmp.size(); i++)
+			str += tmp[i] + " ";
+		return str;
+	}
 }
 
 Shader::Shader(const jwstring& name) : Asset(name) {}
@@ -170,7 +178,7 @@ void Shader::SetCompute(const ComPtr<ID3D12GraphicsCommandList2>& commandList, c
 }
 
 ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
-	jstring keywords = KeywordListToString(state.keywords);
+	jstring keywords = KeywordListToString(state.keywords(), true);
 	ComPtr<ID3DBlob>* blobs = mBlobs.at(keywords);
 
 	if (!blobs[SHADER_STAGE_VERTEX] && !blobs[SHADER_STAGE_HULL] &&
@@ -181,46 +189,46 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
 
 	UINT inputElementCount = 0;
 	inputElementCount++; // position
-	if (state.input & MESH_SEMANTIC_NORMAL) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_TANGENT) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_BINORMAL) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_COLOR0) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_COLOR1) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_BLENDINDICES) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_BLENDWEIGHT) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_TEXCOORD0) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_TEXCOORD1) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_TEXCOORD2) inputElementCount++;
-	if (state.input & MESH_SEMANTIC_TEXCOORD3) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_NORMAL) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_TANGENT) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_BINORMAL) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_COLOR0) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_COLOR1) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_BLENDINDICES) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_BLENDWEIGHT) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_TEXCOORD0) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_TEXCOORD1) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_TEXCOORD2) inputElementCount++;
+	if (state.input() & MESH_SEMANTIC_TEXCOORD3) inputElementCount++;
 
 	D3D12_INPUT_ELEMENT_DESC* inputElements = new D3D12_INPUT_ELEMENT_DESC[inputElementCount];
 	int i = 0;
 	inputElements[i++] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_NORMAL)
+	if (state.input() & MESH_SEMANTIC_NORMAL)
 		inputElements[i++] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_TANGENT)
+	if (state.input() & MESH_SEMANTIC_TANGENT)
 		inputElements[i++] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_BINORMAL)
+	if (state.input() & MESH_SEMANTIC_BINORMAL)
 		inputElements[i++] = { "BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_COLOR0)
+	if (state.input() & MESH_SEMANTIC_COLOR0)
 		inputElements[i++] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_COLOR1)
+	if (state.input() & MESH_SEMANTIC_COLOR1)
 		inputElements[i++] = { "COLOR", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_BLENDINDICES)
+	if (state.input() & MESH_SEMANTIC_BLENDINDICES)
 		inputElements[i++] = { "BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_BLENDWEIGHT)
+	if (state.input() & MESH_SEMANTIC_BLENDWEIGHT)
 		inputElements[i++] = { "BLENDWEIGHT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_TEXCOORD0)
+	if (state.input() & MESH_SEMANTIC_TEXCOORD0)
 		inputElements[i++] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_TEXCOORD1)
+	if (state.input() & MESH_SEMANTIC_TEXCOORD1)
 		inputElements[i++] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_TEXCOORD2)
+	if (state.input() & MESH_SEMANTIC_TEXCOORD2)
 		inputElements[i++] = { "TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	if (state.input & MESH_SEMANTIC_TEXCOORD3)
+	if (state.input() & MESH_SEMANTIC_TEXCOORD3)
 		inputElements[i++] = { "TEXCOORD", 3, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	DXGI_SAMPLE_DESC sampDesc = {};
-	sampDesc.Count = state.msaaSamples;
+	sampDesc.Count = state.msaaSamples();
 	sampDesc.Quality = 0;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoState = {};
@@ -232,24 +240,24 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
 	if (blobs[SHADER_STAGE_GEOMETRY])	psoState.GS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_GEOMETRY].Get());
 	if (blobs[SHADER_STAGE_PIXEL])		psoState.PS = CD3DX12_SHADER_BYTECODE(blobs[SHADER_STAGE_PIXEL].Get());
 	psoState.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	if (state.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE || state.fillMode == D3D12_FILL_MODE_WIREFRAME)
+	if (state.topology() == D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE || state.fillMode() == D3D12_FILL_MODE_WIREFRAME)
 		psoState.RasterizerState.AntialiasedLineEnable = TRUE;
-	psoState.RasterizerState.FillMode = state.fillMode;
-	psoState.RasterizerState.CullMode = state.cullMode;
+	psoState.RasterizerState.FillMode = state.fillMode();
+	psoState.RasterizerState.CullMode = state.cullMode();
 	psoState.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoState.BlendState.RenderTarget[0] = state.blendState;
+	psoState.BlendState.RenderTarget[0] = state.blendState();
 	psoState.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	if (!state.ztest && !state.zwrite)
+	if (!state.ztest() && !state.zwrite())
 		psoState.DepthStencilState.DepthEnable = false;
 	else {
-		psoState.DepthStencilState.DepthWriteMask = state.zwrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-		psoState.DepthStencilState.DepthFunc = state.ztest ? D3D12_COMPARISON_FUNC_LESS_EQUAL : D3D12_COMPARISON_FUNC_ALWAYS;
+		psoState.DepthStencilState.DepthWriteMask = state.zwrite() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		psoState.DepthStencilState.DepthFunc = state.ztest() ? D3D12_COMPARISON_FUNC_LESS_EQUAL : D3D12_COMPARISON_FUNC_ALWAYS;
 	}
 	psoState.SampleMask = UINT_MAX;
-	psoState.PrimitiveTopologyType = state.topology;
+	psoState.PrimitiveTopologyType = state.topology();
 	psoState.NumRenderTargets = 1;
-	psoState.RTVFormats[0] = state.renderFormat;
-	psoState.DSVFormat = state.depthFormat;
+	psoState.RTVFormats[0] = state.renderFormat();
+	psoState.DSVFormat = state.depthFormat();
 	psoState.SampleDesc = sampDesc;
 
 	ComPtr<ID3D12PipelineState> pso;
@@ -259,7 +267,7 @@ ComPtr<ID3D12PipelineState> Shader::CreatePSO(const ShaderState &state) {
 	return pso;
 }
 void Shader::CreateComputePSO(const ShaderState &state) {
-	jstring keywords = KeywordListToString(state.keywords);
+	jstring keywords = KeywordListToString(state.keywords(), true);
 	ComPtr<ID3DBlob> blob = mBlobs.at(keywords)[SHADER_STAGE_COMPUTE];
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};

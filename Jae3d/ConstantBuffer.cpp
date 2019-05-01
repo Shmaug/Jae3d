@@ -13,7 +13,8 @@ ConstantBuffer::ConstantBuffer(size_t size, const jwstring& name, unsigned int c
 
 	ComPtr<ID3D12Device> device = Graphics::GetDevice();
 
-	size_t bufSize = AlignUp(size, 256);
+	mSize = size;
+	mMappedSize = AlignUp(size, 256);
 
 	mCBuffers = new ComPtr<ID3D12Resource>[mCBufferCount];
 	mMappedCBuffers = new UINT8*[mCBufferCount];
@@ -22,7 +23,7 @@ ConstantBuffer::ConstantBuffer(size_t size, const jwstring& name, unsigned int c
 		ThrowIfFailed(device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(bufSize),
+			&CD3DX12_RESOURCE_DESC::Buffer(mMappedSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&mCBuffers[i])));
@@ -31,7 +32,7 @@ ConstantBuffer::ConstantBuffer(size_t size, const jwstring& name, unsigned int c
 
 		CD3DX12_RANGE readRange(0, 0);
 		ThrowIfFailed(mCBuffers[i]->Map(0, &readRange, reinterpret_cast<void**>(&mMappedCBuffers[i])));
-		ZeroMemory(mMappedCBuffers[i], bufSize);
+		ZeroMemory(mMappedCBuffers[i], mMappedSize);
 	}
 }
 ConstantBuffer::~ConstantBuffer() {
@@ -95,6 +96,10 @@ void ConstantBuffer::WriteUInt3(const XMUINT3 &v, unsigned int pos, unsigned int
 }
 void ConstantBuffer::WriteUInt4(const XMUINT4 &v, unsigned int pos, unsigned int frameIndex) {
 	Write(&v, sizeof(XMUINT4), pos, frameIndex);
+}
+
+bool ConstantBuffer::Equals(const ConstantBuffer& cb, unsigned int frameIndex) const {
+	return memcmp(mMappedCBuffers[frameIndex], cb.mMappedCBuffers[frameIndex], mSize) == 0;
 }
 
 D3D12_GPU_VIRTUAL_ADDRESS ConstantBuffer::GetGPUAddress(unsigned int frameIndex) const {

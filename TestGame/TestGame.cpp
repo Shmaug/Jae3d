@@ -29,7 +29,7 @@ using namespace std;
 
 #define F2D(x) (int)x, (int)(abs(x - (int)x)*1000)
 
-int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
+int CALLBACK wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR lpCmdLine, _In_ int nCmdShow) {
 	HWND hWnd = JaeCreateWindow(L"Jae3d Test", 1600, 900, 3, Graphics::CheckTearingSupport());
 	Graphics::GetWindow()->SetVSync(false);
 	
@@ -149,6 +149,8 @@ void TestGame::InitializeScene() {
 	shared_ptr<Material> skyboxMaterial = shared_ptr<Material>(new Material(L"Skybox", skybox));
 	shared_ptr<Material> fontMaterial = shared_ptr<Material>(new Material(L"Font", texturedcore));
 	fontMaterial->RenderQueue(5000);
+	fontMaterial->CullMode(D3D12_CULL_MODE_NONE);
+	fontMaterial->Blend(BLEND_STATE_ALPHA);
 
 	shared_ptr<DescriptorTable> barrelTable = shared_ptr<DescriptorTable>(new DescriptorTable(3));
 	barrelTable->SetSRV(0, barrelTexture);
@@ -206,8 +208,9 @@ void TestGame::InitializeScene() {
 	auto text = mScene->AddObject<TextRenderer>(L"Text");
 	text->Font(mArialFont);
 	text->Material(fontMaterial);
-	text->Text(L"TEXT0123456789\nasdkjhjsadfjh, text..");
+	text->Text(L"TEXT0123456789\nasdkjhjsadfjh, text..\n f-a-b-c-d");
 	text->LocalPosition(0, 1, 1);
+	text->mBatchGroup = L"Text";
 
 	auto rifle = mScene->AddObject<MeshRenderer>(L"Rifle");
 	rifle->Parent(mCamera);
@@ -222,12 +225,14 @@ void TestGame::InitializeScene() {
 	cube->SetMaterial(defaultMaterial);
 	cube->LocalPosition(0, -.1f, 0);
 	cube->LocalScale(50.0f, .1f, 50.0f);
+	cube->mBatchGroup = L"Default";
 
 	auto dragon = mScene->AddObject<MeshRenderer>(L"Dragon");
 	dragon->SetMesh(dragonMesh);
 	dragon->SetMaterial(defaultMaterial);
 	dragon->LocalPosition(-2, 0, 0);
 	dragon->LocalScale(2, 2, 2);
+	dragon->mBatchGroup = L"Default";
 
 	auto a7e = mScene->AddObject<MeshRenderer>(L"A7E Corsair II");
 	a7e->SetMesh(a7eMesh);
@@ -248,12 +253,14 @@ void TestGame::InitializeScene() {
 	a7eTankLeft->SetMesh(a7eTankMesh);
 	a7eTankLeft->SetMaterial(a7eTankMaterial);
 	a7eTankLeft->LocalPosition(-1.08257f, -0.20482f, -0.30395f);
+	a7eTankLeft->mBatchGroup = L"Tank";
 
 	auto a7eTankRight = mScene->AddObject<MeshRenderer>(L"A7E Drop Tank");
 	a7eTankRight->Parent(a7e);
 	a7eTankRight->SetMesh(a7eTankMesh);
 	a7eTankRight->SetMaterial(a7eTankMaterial);
 	a7eTankRight->LocalPosition(1.08257f, -0.20482f, -0.30395f);
+	a7eTankRight->mBatchGroup = L"Tank";
 
 	auto barrel = mScene->AddObject<MeshRenderer>(L"Barrel");
 	barrel->SetMesh(barrelMesh);
@@ -492,8 +499,8 @@ void TestGame::DoFrame(){
 		mfps = frameCounter / elapsedSeconds;
 		frameCounter = 0;
 		elapsedSeconds = 0.0;
-		ZeroMemory(mPerfBuffer, sizeof(wchar_t) * 4096);
-		Profiler::PrintLastFrame(mPerfBuffer, 4096);
+		ZeroMemory(mPerfBuffer, sizeof(wchar_t) * 8192);
+		Profiler::PrintLastFrame(mPerfBuffer, 8192);
 	}
 
 	elapsedSeconds2 += delta;

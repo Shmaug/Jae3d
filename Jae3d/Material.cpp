@@ -328,6 +328,69 @@ void Material::SetDescriptorTable(const char* param, const shared_ptr<Descriptor
 	mParamValues[param].set(tbl);
 }
 
+bool Material::Equals(const Material& m, unsigned int frameIndex) const {
+	if (mShader != m.mShader) return false;
+
+	if (mCullMode != m.mCullMode) return false;
+	if (mBlend != m.mBlend) return false;
+	if (mZWrite != m.mZWrite) return false;
+	if (mZTest != m.mZTest) return false;
+
+	if (mShader->KeywordListToString(mKeywords) != m.mShader->KeywordListToString(m.mKeywords)) return false;
+
+	for (int i = 0; i < mParamCbufferCount; i++)
+		mParamCbuffers[i].cbuffer->Equals(*m.mParamCbuffers[i].cbuffer, frameIndex);
+
+	// find values assigned to each root index
+
+	unordered_map<unsigned int, pair<MaterialValue, ShaderParameter>> v1;
+	unordered_map<unsigned int, pair<MaterialValue, ShaderParameter>> v2;
+	unsigned int r = 0;
+
+	for (const auto& it : mParamValues) {
+		if (!mShader->HasParameter(it.first)) continue;
+		const ShaderParameter& sp = mShader->GetParameter(it.first);
+		v1[sp.RootIndex()] = make_pair(it.second, sp);
+		r = max(r, sp.RootIndex());
+	}
+
+	for (const auto& it : m.mParamValues) {
+		if (!mShader->HasParameter(it.first)) continue;
+		const ShaderParameter& sp = mShader->GetParameter(it.first);
+		v2[sp.RootIndex()] = make_pair(it.second, sp);
+		r = max(r, sp.RootIndex());
+	}
+
+	for (unsigned int i = 0; i <= r; i++) {
+		unsigned int c1 = (unsigned int)v1.count(i);
+		unsigned int c2 = (unsigned int)v2.count(i);
+		if (c1 != c2) return false; // materials dont have the same parameters set
+
+		auto p1 = v1.at(i);
+		auto p2 = v2.at(i);
+
+		switch (p1.second.Type()) {
+		case SHADER_PARAM_TYPE_CBUFFER:
+		{
+			if (!(p1.first.cbufferValue && p2.first.cbufferValue && p1.first.cbufferValue->Equals(*p2.first.cbufferValue, frameIndex))) return false;
+			break;
+		}
+		case SHADER_PARAM_TYPE_SRV:
+		{
+			if (!(p1.first.textureValue && p2.first.textureValue && p1.first.textureValue == p2.first.textureValue)) return false;
+			break;
+		}
+		case SHADER_PARAM_TYPE_TABLE:
+		{
+			if (!(p1.first.tableValue && p2.first.tableValue && p1.first.tableValue == p2.first.tableValue)) return false;
+			break;
+		}
+		}
+	}
+
+	return true;
+}
+
 void Material::SetActive(CommandList* commandList) {
 	assert(mShader);
 

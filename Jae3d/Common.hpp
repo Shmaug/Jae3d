@@ -14,6 +14,7 @@
 
 #include <variant>
 #include <memory>
+#include <algorithm>
 
 class Asset;
 class Mesh;
@@ -74,6 +75,23 @@ class Material;
 	D3D12_LOGIC_OP_NOOP,			\
 	D3D12_COLOR_WRITE_ENABLE_ALL	\
 }
+
+inline bool operator ==(const D3D12_RENDER_TARGET_BLEND_DESC& a, const D3D12_RENDER_TARGET_BLEND_DESC& b) {
+	return
+		a.BlendEnable == b.BlendEnable &&
+		(!a.BlendEnable || (
+			a.BlendOp == b.BlendOp &&
+			a.BlendOpAlpha == b.BlendOpAlpha &&
+			a.DestBlend == b.DestBlend &&
+			a.DestBlendAlpha == b.DestBlendAlpha &&
+			a.LogicOpEnable == b.LogicOpEnable &&
+			(!a.LogicOpEnable || a.LogicOp == b.LogicOp) &&
+			a.RenderTargetWriteMask == b.RenderTargetWriteMask &&
+			a.SrcBlend == b.SrcBlend &&
+			a.SrcBlendAlpha == b.SrcBlendAlpha
+			));
+}
+inline bool operator !=(const D3D12_RENDER_TARGET_BLEND_DESC & a, const D3D12_RENDER_TARGET_BLEND_DESC & b) { return !(a == b); }
 
 enum ASSET_TYPE : uint32_t {
 	ASSET_TYPE_UNSPECIFIED	= 0,
@@ -223,7 +241,7 @@ public:
 			DirectX::XMUINT4 uint4Value;
 		};
 
-		ShaderValue() {}
+		ShaderValue() : floatValue(0), floatRange(DirectX::XMFLOAT2(0, 0)) {}
 		ShaderValue(float v) : floatValue(v), floatRange(DirectX::XMFLOAT2(0, 0)) {}
 		~ShaderValue() {}
 
@@ -233,7 +251,7 @@ public:
 		}
 	};
 
-	ShaderParameter() : type(SHADER_PARAM_TYPE_FLOAT), rootIndex(0), cbufferOffset(-1) {}
+	ShaderParameter() : type(SHADER_PARAM_TYPE_FLOAT), rootIndex(0), cbufferOffset(-1), tableSize(0) {}
 
 	ShaderParameter(SHADER_PARAM_TYPE type, unsigned int rootIndex, unsigned int cbufferOffset, const ShaderValue& value)
 		: type(type), rootIndex(rootIndex), tableSize(-1), cbufferOffset(cbufferOffset), defaultValue(value) {}
@@ -373,7 +391,7 @@ struct FontGlyph {
 	unsigned int tw;
 	unsigned int th;
 
-	FontGlyph() : character(L'\0') {};
+	FontGlyph() : character(L'\0'), advance(0), ox(0), oy(0), tx0(0), ty0(0), tw(0), th(0) {};
 	~FontGlyph() {};
 };
 struct FontKerning {
@@ -383,87 +401,136 @@ struct FontKerning {
 };
 
 struct ShaderState {
-	MESH_SEMANTIC input;
-	D3D12_RENDER_TARGET_BLEND_DESC blendState;
-	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
-	D3D12_FILL_MODE fillMode;
-	D3D12_CULL_MODE cullMode;
-	bool ztest;
-	bool zwrite;
-	DXGI_FORMAT depthFormat;
-	DXGI_FORMAT renderFormat;
-	unsigned int msaaSamples;
-	jvector<jstring> keywords;
+private:
+	friend struct std::hash<ShaderState>;
 
+	MESH_SEMANTIC mInput;
+	D3D12_RENDER_TARGET_BLEND_DESC mBlendState;
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE mTopology;
+	D3D12_FILL_MODE mFillMode;
+	D3D12_CULL_MODE mCullMode;
+	bool mZTest;
+	bool mZWrite;
+	DXGI_FORMAT mDepthFormat;
+	DXGI_FORMAT mRenderFormat;
+	unsigned int mMsaaSamples;
+	jvector<jstring> mKeywords;
+
+	size_t mHash;
+
+public:
 	ShaderState() :
-		input(MESH_SEMANTIC_POSITION),
-		blendState(BLEND_STATE_DEFAULT),
-		topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE),
-		ztest(true), zwrite(true),
-		fillMode(D3D12_FILL_MODE_SOLID),
-		cullMode(D3D12_CULL_MODE_BACK),
-		depthFormat(DXGI_FORMAT_D32_FLOAT),
-		renderFormat(DXGI_FORMAT_R8G8B8A8_UNORM),
-		msaaSamples(1),
-		keywords(jvector<jstring>()) {}
+		mInput(MESH_SEMANTIC_POSITION),
+		mBlendState(BLEND_STATE_DEFAULT),
+		mTopology(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE),
+		mZTest(true), mZWrite(true),
+		mFillMode(D3D12_FILL_MODE_SOLID),
+		mCullMode(D3D12_CULL_MODE_BACK),
+		mDepthFormat(DXGI_FORMAT_D32_FLOAT),
+		mRenderFormat(DXGI_FORMAT_R8G8B8A8_UNORM),
+		mMsaaSamples(1),
+		mKeywords(jvector<jstring>()) {
+		mHash = (size_t)-1;
+	}
 
-	ShaderState(const ShaderState &s) :
-		input(s.input),
-		blendState(s.blendState),
-		topology(s.topology),
-		ztest(s.ztest), zwrite(s.zwrite),
-		fillMode(s.fillMode),
-		cullMode(s.cullMode),
-		depthFormat(s.depthFormat),
-		renderFormat(s.renderFormat),
-		msaaSamples(s.msaaSamples),
-		keywords(s.keywords) {}
+	ShaderState(const ShaderState& s) :
+		mInput(s.mInput),
+		mBlendState(s.mBlendState),
+		mTopology(s.mTopology),
+		mZTest(s.mZTest), mZWrite(s.mZWrite),
+		mFillMode(s.mFillMode),
+		mCullMode(s.mCullMode),
+		mDepthFormat(s.mDepthFormat),
+		mRenderFormat(s.mRenderFormat),
+		mMsaaSamples(s.mMsaaSamples),
+		mKeywords(s.mKeywords),
+		mHash(s.mHash) {}
 	~ShaderState() {}
 
-	ShaderState& operator =(const ShaderState &rhs) {
-		input = rhs.input;
-		blendState = rhs.blendState;
-		topology = rhs.topology;
-		cullMode = rhs.cullMode;
-		ztest = rhs.ztest;
-		zwrite = rhs.zwrite;
-		fillMode = rhs.fillMode;
-		cullMode = rhs.cullMode;
-		depthFormat = rhs.depthFormat;
-		renderFormat = rhs.renderFormat;
-		msaaSamples = rhs.msaaSamples;
-		keywords = rhs.keywords;
+	inline ShaderState& operator =(const ShaderState& rhs) {
+		mInput = rhs.mInput;
+		mBlendState = rhs.mBlendState;
+		mTopology = rhs.mTopology;
+		mFillMode = rhs.mFillMode;
+		mCullMode = rhs.mCullMode;
+		mZTest = rhs.mZTest;
+		mZWrite = rhs.mZWrite;
+		mDepthFormat = rhs.mDepthFormat;
+		mRenderFormat = rhs.mRenderFormat;
+		mMsaaSamples = rhs.mMsaaSamples;
+		mKeywords = rhs.mKeywords;
+		mHash = rhs.mHash;
 		return *this;
 	}
-	bool operator ==(const ShaderState &rhs) const {
-		bool s = input == rhs.input &&
-			topology == rhs.topology &&
-			ztest == rhs.ztest &&
-			zwrite == rhs.zwrite &&
-			fillMode == rhs.fillMode &&
-			cullMode == rhs.cullMode &&
-			blendState.BlendEnable == rhs.blendState.BlendEnable &&
-			blendState.BlendOp == rhs.blendState.BlendOp &&
-			blendState.BlendOpAlpha == rhs.blendState.BlendOpAlpha &&
-			blendState.DestBlend == rhs.blendState.DestBlend &&
-			blendState.DestBlendAlpha == rhs.blendState.DestBlendAlpha &&
-			blendState.LogicOp == rhs.blendState.LogicOp &&
-			blendState.LogicOpEnable == rhs.blendState.LogicOpEnable &&
-			blendState.RenderTargetWriteMask == rhs.blendState.RenderTargetWriteMask &&
-			blendState.SrcBlend == rhs.blendState.SrcBlend &&
-			blendState.SrcBlendAlpha == rhs.blendState.SrcBlendAlpha &&
-			depthFormat == rhs.depthFormat &&
-			renderFormat == rhs.renderFormat &&
-			msaaSamples == rhs.msaaSamples;
-		if (!s) return false;
+	inline bool operator ==(const ShaderState& rhs) const {
+		if (!(mInput == rhs.mInput &&
+			mBlendState == rhs.mBlendState &&
+			mTopology == rhs.mTopology &&
+			mFillMode == rhs.mFillMode &&
+			mCullMode == rhs.mCullMode &&
+			mZTest == rhs.mZTest &&
+			mZWrite == rhs.mZWrite &&
+			mDepthFormat == rhs.mDepthFormat &&
+			mRenderFormat == rhs.mRenderFormat &&
+			mMsaaSamples == rhs.mMsaaSamples)) return false;
 
-		if (keywords.size() != rhs.keywords.size()) return false;
-		for (unsigned int i = 0; i < rhs.keywords.size(); i++)
-			if (keywords[i] != rhs.keywords[i])
+		if (mKeywords.size() != rhs.mKeywords.size()) return false;
+		for (unsigned int i = 0; i < rhs.mKeywords.size(); i++)
+			if (mKeywords[i] != rhs.mKeywords[i])
 				return false;
 		return true;
 	}
 
+	inline void input(MESH_SEMANTIC x) { mHash = (size_t)-1; mInput = x; }
+	inline void blendState(const D3D12_RENDER_TARGET_BLEND_DESC& x) { mHash = (size_t)-1; mBlendState = x; }
+	inline void topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE x) { mHash = (size_t)-1; mTopology = x; }
+	inline void fillMode(const D3D12_FILL_MODE& x) { mHash = (size_t)-1; mFillMode = x; }
+	inline void cullMode(const D3D12_CULL_MODE& x) { mHash = (size_t)-1; mCullMode = x; }
+	inline void ztest(bool x) { mHash = (size_t)-1;  mZTest = x; }
+	inline void zwrite(bool x) { mHash = (size_t)-1;  mZWrite = x; }
+	inline void depthFormat(DXGI_FORMAT x) { mHash = (size_t)-1;  mDepthFormat = x; }
+	inline void renderFormat(DXGI_FORMAT x) { mHash = (size_t)-1; mRenderFormat = x; }
+	inline void msaaSamples(unsigned int x) { mHash = (size_t)-1; mMsaaSamples = x; }
+	inline void addkeyword(const jstring& x) {
+		mHash = (size_t)-1;
+		mKeywords.push_back(x);
+		std::sort(mKeywords.data(), mKeywords.data() + mKeywords.size());
+	}
+	inline void rmvkeyword(const jstring& x) {
+		mHash = (size_t)-1;
+		for (unsigned int i = 0; i < mKeywords.size(); i++)
+			if (mKeywords[i] == x) {
+				mKeywords.remove(i);
+				return;
+			}
+	}
+	inline bool haskeyword(const jstring& x) {
+		for (unsigned int i = 0; i < mKeywords.size(); i++)
+			if (mKeywords[i] == x)
+				return true;
+		return false;
+	}
+	inline void setkeywords(const jvector<jstring>& x) {
+		mHash = (size_t)-1;
+		mKeywords = x;
+		std::sort(mKeywords.data(), mKeywords.data() + mKeywords.size());
+	}
+	inline void clearkeywords() {
+		mHash = (size_t)-1;
+		mKeywords.clear();
+	}
+
+	inline MESH_SEMANTIC input() const { return mInput; }
+	inline D3D12_RENDER_TARGET_BLEND_DESC blendState() const { return mBlendState; }
+	inline D3D12_PRIMITIVE_TOPOLOGY_TYPE topology() const { return mTopology; }
+	inline D3D12_FILL_MODE fillMode() const { return mFillMode; }
+	inline D3D12_CULL_MODE cullMode() const { return mCullMode; }
+	inline bool ztest() const { return mZTest; }
+	inline bool zwrite() const { return mZWrite; }
+	inline DXGI_FORMAT depthFormat() const { return mDepthFormat; }
+	inline DXGI_FORMAT renderFormat() const { return mRenderFormat; }
+	inline unsigned int msaaSamples() const { return mMsaaSamples; }
+	inline const jvector<jstring>& keywords() const { return mKeywords; }
 };
 
 template <class T>
@@ -476,28 +543,30 @@ namespace std {
 	template<>
 	struct hash<ShaderState> {
 		std::size_t operator()(const ShaderState &s) const {
+			if (s.mHash != (size_t)-1) return s.mHash;
 			std::size_t h = 0;
-			hash_combine(h, s.input);
-			hash_combine(h, s.topology);
-			hash_combine(h, s.ztest);
-			hash_combine(h, s.zwrite);
-			hash_combine(h, s.fillMode);
-			hash_combine(h, s.cullMode);
-			hash_combine(h, s.blendState.BlendEnable);
-			hash_combine(h, s.blendState.BlendOp);
-			hash_combine(h, s.blendState.BlendOpAlpha);
-			hash_combine(h, s.blendState.DestBlend);
-			hash_combine(h, s.blendState.DestBlendAlpha);
-			hash_combine(h, s.blendState.LogicOp);
-			hash_combine(h, s.blendState.LogicOpEnable);
-			hash_combine(h, s.blendState.RenderTargetWriteMask);
-			hash_combine(h, s.blendState.SrcBlend);
-			hash_combine(h, s.blendState.SrcBlendAlpha);
-			hash_combine(h, s.depthFormat);
-			hash_combine(h, s.renderFormat);
-			hash_combine(h, s.msaaSamples);
-			for (unsigned int i = 0; i < s.keywords.size(); i++)
-				hash_combine(h, s.keywords[i]);
+			hash_combine(h, s.mInput);
+			hash_combine(h, s.mTopology);
+			hash_combine(h, s.mZTest);
+			hash_combine(h, s.mZWrite);
+			hash_combine(h, s.mFillMode);
+			hash_combine(h, s.mCullMode);
+			hash_combine(h, s.mBlendState.BlendEnable);
+			hash_combine(h, s.mBlendState.BlendOp);
+			hash_combine(h, s.mBlendState.BlendOpAlpha);
+			hash_combine(h, s.mBlendState.DestBlend);
+			hash_combine(h, s.mBlendState.DestBlendAlpha);
+			hash_combine(h, s.mBlendState.LogicOp);
+			hash_combine(h, s.mBlendState.LogicOpEnable);
+			hash_combine(h, s.mBlendState.RenderTargetWriteMask);
+			hash_combine(h, s.mBlendState.SrcBlend);
+			hash_combine(h, s.mBlendState.SrcBlendAlpha);
+			hash_combine(h, s.mDepthFormat);
+			hash_combine(h, s.mRenderFormat);
+			hash_combine(h, s.mMsaaSamples);
+			for (unsigned int i = 0; i < s.mKeywords.size(); i++)
+				hash_combine(h, s.mKeywords[i]);
+			const_cast<ShaderState*>(&s)->mHash = h;
 			return h;
 		}
 	};

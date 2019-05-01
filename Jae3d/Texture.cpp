@@ -265,7 +265,7 @@ void Texture::Upload(D3D12_RESOURCE_FLAGS flags, bool makeHeaps) {
 	if (mIsDDS) {
 		if (mDataSize == 0 || !mData) return;
 
-		HRESULT hr = FAILED(LoadDDSTextureFromMemory(device.Get(), reinterpret_cast<const uint8_t*>(mData), mDataSize, mTexture.ReleaseAndGetAddressOf(), subresources));
+		HRESULT hr = LoadDDSTextureFromMemory(device.Get(), reinterpret_cast<const uint8_t*>(mData), mDataSize, mTexture.ReleaseAndGetAddressOf(), subresources);
 
 		if (FAILED(hr)) {
 			_com_error e(hr);

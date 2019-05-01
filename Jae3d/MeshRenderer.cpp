@@ -6,6 +6,7 @@
 #include "Material.hpp"
 #include "ConstantBuffer.hpp"
 #include "Profiler.hpp"
+#include "Shader.hpp"
 
 using namespace Microsoft::WRL;
 using namespace std;
@@ -36,13 +37,35 @@ void MeshRenderer::SetMesh(const shared_ptr<Mesh>& mesh) {
 	}
 }
 
-bool MeshRenderer::SubmeshRenderJob::LessThan(RenderJob* b) {
-	if (RenderJob::LessThan(b)) return true;
-	return false;
-	SubmeshRenderJob* j = dynamic_cast<SubmeshRenderJob*>(b);
-	if (!j) return true;
-	return j->mMaterial->mName < mMaterial->mName;
+MeshRenderer::SubmeshRenderJob::SubmeshRenderJob(unsigned int queue, const jwstring& batch, const shared_ptr<Mesh>& mesh, unsigned int submesh, const shared_ptr<Material>& mat, const shared_ptr<ConstantBuffer>& buf, const XMFLOAT4X4& o2w)
+	: RenderJob(queue), mMesh(mesh), mSubmesh(submesh), mMaterial(mat), mObjectBuffer(buf), mObjectToWorld(o2w) {
+	mName = L"MeshRenderer (" + mMaterial->mName + L", " + mMaterial->GetShader()->mName + L')';
+	if (!batch.empty())
+		mBatchGroup = L"MeshRenderer " + batch;
 }
+
+Renderer::RenderJob* MeshRenderer::SubmeshRenderJob::Batch(RenderJob* other, const shared_ptr<CommandList>& commandList) {
+	// compare material parameters
+	SubmeshRenderJob* j = dynamic_cast<SubmeshRenderJob*>(other);
+	if (!j) return nullptr;
+
+	// TODO
+	//shared_ptr<Mesh> mesh = shared_ptr<Mesh>(new Mesh(L"Batch Mesh"));
+	//shared_ptr<ConstantBuffer> cbuf = shared_ptr<ConstantBuffer>(new ConstantBuffer(sizeof(XMFLOAT4) * 2, L"Batch CB", 3));
+	
+	//XMFLOAT4X4 identity(
+	//	1,0,0,0,
+	//	0,1,0,0,
+	//	0,0,1,0,
+	//	0,0,0,1 );
+	
+	//cbuf->WriteFloat4x4(identity, 0, commandList->GetFrameIndex());
+	//cbuf->WriteFloat4x4(identity, sizeof(XMFLOAT4X4), commandList->GetFrameIndex());
+	
+	//return new SubmeshRenderJob(mRenderQueue, mBatchGroup, mesh, 0, mMaterial, cbuf, identity);
+	return nullptr;
+}
+
 void MeshRenderer::SubmeshRenderJob::Execute(const shared_ptr<CommandList>& commandList, const std::shared_ptr<Material>& materialOverride){
 	if (materialOverride) mMaterial = materialOverride;
 	mMaterial->SetCBuffer("ObjectBuffer", mObjectBuffer, commandList->GetFrameIndex());
@@ -59,6 +82,6 @@ void MeshRenderer::GatherRenderJobs(const shared_ptr<CommandList>& commandList, 
 
 	for (unsigned int i = 0; i < mMesh->SubmeshCount(); i++) {
 		if (!mMaterials[i]) continue;
-		list.push_back(new SubmeshRenderJob(mMaterials[i]->RenderQueue(), mMesh, i, mMaterials[i], mCBuffer));
+		list.push_back(new SubmeshRenderJob(mMaterials[i]->RenderQueue(), mBatchGroup, mMesh, i, mMaterials[i], mCBuffer, ObjectToWorld()));
 	}
 }

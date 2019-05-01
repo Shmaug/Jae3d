@@ -69,7 +69,7 @@ void Scene::Draw(const shared_ptr<CommandList>& commandList, const shared_ptr<Ca
 
 	const BoundingFrustum &cullFrustum = camera->Frustum();
 
-	Profiler::BeginSample(L"Gather Renderer Jobs");
+	Profiler::BeginSample(L"Gather Render Jobs");
 	renderQueue.clear();
 	for (int i = 0; i < mRenderers.size(); i++) {
 		if (!mRenderers[i]->Visible() || !mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
@@ -77,15 +77,30 @@ void Scene::Draw(const shared_ptr<CommandList>& commandList, const shared_ptr<Ca
 	}
 	Profiler::EndSample();
 
-	Profiler::BeginSample(L"Sort Renderers");
+	Profiler::BeginSample(L"Sort Render Jobs");
 	std::sort(renderQueue.data(), renderQueue.data() + renderQueue.size(), [](Renderer::RenderJob*& a, Renderer::RenderJob*& b) {
 		return a->LessThan(b);
 	});
 	Profiler::EndSample();
 
-	Profiler::BeginSample(L"Execute Renderer Jobs");
+	Profiler::BeginSample(L"Batch Render Jobs");
+	for (size_t i = 1; i < renderQueue.size(); i++) {
+		if (renderQueue[i]->mBatchGroup.empty() || renderQueue[i - 1]->mBatchGroup.empty()) continue;
+		if (Renderer::RenderJob* b = renderQueue[i - 1]->Batch(renderQueue[i], commandList)) {
+			delete renderQueue[i - 1];
+			delete renderQueue[i];
+			renderQueue[i - 1] = nullptr;
+			renderQueue[i] = b;
+		}
+	}
+	Profiler::EndSample();
+
+	Profiler::BeginSample(L"Execute Render Jobs");
 	for (int i = 0; i < renderQueue.size(); i++) {
+		if (!renderQueue[i]) continue;
+		Profiler::BeginSample(renderQueue[i]->mRenderQueue + jwstring(L": ") + renderQueue[i]->mName);
 		renderQueue[i]->Execute(commandList, materialOverride);
+		Profiler::EndSample();
 		delete renderQueue[i];
 	}
 	Profiler::EndSample();
@@ -120,29 +135,29 @@ void Scene::DebugDraw(const shared_ptr<CommandList>& commandList, const shared_p
 	commandList->PopState();
 }
 
-void Scene::CollectLights(const BoundingFrustum &frustum, jvector<Light*> &lights) {
+void Scene::CollectLights(const BoundingFrustum &frustum, jvector<Light*>& lights) {
 	for (int i = 0; i < mLights.size(); i++)
 		if (mLights[i]->mMode == Light::LIGHTMODE_DIRECTIONAL || mLights[i]->Bounds().Intersects(frustum))
 			lights.push_back(mLights[i]);
 }
 
-void Scene::Intersect(const DirectX::XMVECTOR& point, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const XMVECTOR& point, jvector<std::shared_ptr<Object>>& result) const {
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Contains(point))
 			result.push_back(mObjects[i]);
 }
-void Scene::Intersect(const DirectX::XMFLOAT3& point, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const XMFLOAT3& point, jvector<std::shared_ptr<Object>>& result) const {
 	XMVECTOR pt = XMLoadFloat3(&point);
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Contains(pt))
 			result.push_back(mObjects[i]);
 }
-void Scene::Intersect(const DirectX::BoundingOrientedBox& bounds, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const BoundingOrientedBox& bounds, jvector<std::shared_ptr<Object>>& result) const {
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Intersects(bounds))
 			result.push_back(mObjects[i]);
 }
-void Scene::Intersect(const DirectX::BoundingSphere& sphere, jvector<std::shared_ptr<Object>>& result) const {
+void Scene::Intersect(const BoundingSphere& sphere, jvector<std::shared_ptr<Object>>& result) const {
 	for (int i = 0; i < mObjects.size(); i++)
 		if (mObjects[i]->Bounds().Intersects(sphere))
 			result.push_back(mObjects[i]);

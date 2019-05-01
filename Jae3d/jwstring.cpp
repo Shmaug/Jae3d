@@ -215,3 +215,25 @@ jwstring operator +(const wchar_t* lhs, const jwstring &rhs) {
 	wcscpy_s(s.mCStr + l, s.mCapacity - l, rhs.mCStr);
 	return s;
 }
+
+jwstring operator +(int lhs, const jwstring& rhs) {
+	wchar_t str[32];
+	swprintf_s(str, 32, L"%d", lhs);
+	return str + rhs;
+}
+jwstring operator +(const jwstring& lhs, int rhs) {
+	wchar_t str[32];
+	swprintf_s(str, 32, L"%d", rhs);
+	return jwstring(lhs) + jwstring(str);
+}
+
+jwstring operator +(unsigned int lhs, const jwstring& rhs) {
+	wchar_t str[32];
+	swprintf_s(str, 32, L"%u", lhs);
+	return str + rhs;
+}
+jwstring operator +(const jwstring& lhs, unsigned int rhs) {
+	wchar_t str[32];
+	swprintf_s(str, 32, L"%u", rhs);
+	return jwstring(lhs) + jwstring(str);
+}

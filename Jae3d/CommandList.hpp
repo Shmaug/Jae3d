@@ -11,9 +11,6 @@ public:
 	JAE_API CommandList(const _WRL::ComPtr<ID3D12Device2>& device, D3D12_COMMAND_LIST_TYPE type, const _WRL::ComPtr<ID3D12CommandAllocator>& allocator);
 	JAE_API ~CommandList();
 
-	// Frame index for double/triple-buffering. Between 0 and Graphics::BufferCount()-1
-	unsigned int GetFrameIndex() const { return mFrameIndex; }
-
 	JAE_API void Reset(const _WRL::ComPtr<ID3D12CommandAllocator>& allocator, unsigned int frameIndex);
 
 	JAE_API void TransitionResource(const _WRL::ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
@@ -29,9 +26,6 @@ public:
 	// Sets the camera's constant buffer in the "CameraBuffer" material parameter
 	// Sets the camera's render/depth buffers as active
 	JAE_API void SetCamera(const std::shared_ptr<Camera>& camera, D3D12_VIEWPORT& vp);
-
-	inline unsigned int CurrentRenderTargetWidth() const { return mRTWidth; }
-	inline unsigned int CurrentRenderTargetHeight() const { return mRTHeight; }
 
 	JAE_API bool IsKeywordEnabled(const char* keyword);
 	JAE_API void EnableKeyword(const char* keyword);
@@ -61,13 +55,29 @@ public:
 	JAE_API void SetGraphicsRootDescriptorTable(unsigned int index, ID3D12DescriptorHeap* heap, D3D12_GPU_DESCRIPTOR_HANDLE table);
 	JAE_API void SetComputeRootDescriptorTable(unsigned int index, ID3D12DescriptorHeap* heap, D3D12_GPU_DESCRIPTOR_HANDLE table);
 
-	JAE_API void SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend);
-	JAE_API void DepthWriteEnabled(bool depthWrite);
-	JAE_API void DepthTestEnabled(bool depthTest);
-	bool DepthWriteEnabled() { return mState.zwrite; };
-	bool DepthTestEnabled() const { return mState.ztest; };
-	JAE_API void SetFillMode(D3D12_FILL_MODE fillMode);
-	JAE_API void SetCullMode(D3D12_CULL_MODE cullMode);
+	inline void DepthWriteEnabled(bool depthWrite) {
+		mState.zwrite(depthWrite);
+	}
+	inline bool DepthWriteEnabled() { return mState.zwrite(); };
+	inline void DepthTestEnabled(bool depthTest) {
+		mState.ztest(depthTest);
+	}
+	inline bool DepthTestEnabled() const { return mState.ztest(); };
+	inline void SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend) {
+		mState.blendState(blend);
+	}
+	inline void SetFillMode(D3D12_FILL_MODE fillMode) {
+		mState.fillMode(fillMode);
+	}
+	inline void SetCullMode(D3D12_CULL_MODE cullMode) {
+		mState.cullMode(cullMode);
+	}
+
+	// Frame index for double/triple-buffering. Between 0 and Graphics::BufferCount()-1
+	inline unsigned int GetFrameIndex() const { return mFrameIndex; }
+
+	inline unsigned int CurrentRenderTargetWidth() const { return mRTWidth; }
+	inline unsigned int CurrentRenderTargetHeight() const { return mRTHeight; }
 
 	// Draws a submesh with the active shader. Same as calling DrawUserMesh() with the mesh's input and topology, and then calling mesh->Draw(submesh)
 	JAE_API void DrawMesh(const Mesh &mesh, unsigned int submesh = 0);

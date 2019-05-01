@@ -54,9 +54,9 @@ double Profiler::LastFrameTime() {
 
 void PrintSample(wchar_t *buffer, int size, int &c, ProfilerSample *s, int tabLevel) {
 	for (int i = 0; i < tabLevel; i++)
-		c += swprintf_s(buffer + c, size - c, L"  ");
+		c += swprintf_s(buffer + c, (size_t)(size - c), L"  ");
 
-	c += swprintf_s(buffer + c, size - c, L"%s: %.2fms\n", s->name.c_str(), s->time * 1000);
+	c += swprintf_s(buffer + c, (size_t)(size - c), L"%s: %.2fms\n", s->name.c_str(), s->time * 1000);
 	for (int i = 0; i < s->children.size(); i++)
 		PrintSample(buffer, size, c, &s->children[i], tabLevel + 1);
 }

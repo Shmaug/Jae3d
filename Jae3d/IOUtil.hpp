@@ -75,9 +75,9 @@ ReadStreamFunc(int32_t)
 ReadStreamFunc(int64_t)
 template<>
 inline jwstring ReadStream<jwstring>(std::istream &stream) {
-	uint32_t sz = ReadStream<uint32_t>(stream);
-	wchar_t* s = new wchar_t[sz + 1];
-	stream.read(const_cast<char*>(reinterpret_cast<const char*>(s)), (sz + 1) * sizeof(wchar_t));
+	size_t sz = (size_t)ReadStream<uint32_t>(stream);
+	wchar_t* s = new wchar_t[sz + (size_t)1];
+	stream.read(const_cast<char*>(reinterpret_cast<const char*>(s)), (sz + (size_t)1) * sizeof(wchar_t));
 	return jwstring(s, sz);
 }
 

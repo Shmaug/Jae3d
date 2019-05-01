@@ -29,7 +29,7 @@ private:
 	std::shared_ptr<Camera> mCamera;
 	std::shared_ptr<Font> mArialFont;
 
-	wchar_t mPerfBuffer[4096];
+	wchar_t mPerfBuffer[8192];
 
 	float mFrameTimes[128];
 	unsigned int mFrameTimeIndex;

@@ -40,12 +40,14 @@ public:
 	std::unordered_map<jstring, ShaderParameter>::const_iterator ParameterBegin() { return mParams.begin(); }
 	std::unordered_map<jstring, ShaderParameter>::const_iterator ParameterEnd() { return mParams.end(); }
 
-	JAE_API jstring KeywordListToString(const jvector<jstring>& keywords) const;
+	JAE_API jstring KeywordListToString(const jvector<jstring>& keywords, bool sorted = false) const;
 
+	// Shouldn't be called at runtime (used by AssetImporter)
 	void AddParameter(const jstring& name, ShaderParameter &param) {
 		mParams.emplace(name, param);
 		mRootParamCount = std::max(mRootParamCount, param.RootIndex() + 1);
 	}
+	// Shouldn't be called at runtime (used by AssetImporter)
 	void AddParameterBuffer(unsigned int rootIndex, unsigned int size) {
 		mCBufferParameters.push_back(ShaderParameterBuffer(rootIndex, size));
 		mRootParamCount = std::max(mRootParamCount, (unsigned int)rootIndex + 1);

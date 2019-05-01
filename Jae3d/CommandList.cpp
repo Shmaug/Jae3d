@@ -118,7 +118,7 @@ void CommandList::SetMaterial(const shared_ptr<Material>& material) {
 		}
 		material->SetActive(this);
 	} else
-		mState.keywords.clear();
+		mState.clearkeywords();
 }
 void CommandList::SetCamera(const shared_ptr<Camera>& camera) {
 	SetCamera(camera, CD3DX12_VIEWPORT(0.f, 0.f, (float)camera->mPixelWidth, (float)camera->mPixelHeight));
@@ -134,9 +134,9 @@ void CommandList::SetCamera(const shared_ptr<Camera>& camera, D3D12_VIEWPORT& vp
 
 		camera->WriteCBuffer(mFrameIndex);
 		SetGlobalCBuffer("CameraBuffer", camera->mCBuffer);
-		mState.msaaSamples = camera->mSampleCount;
-		mState.depthFormat = camera->mDepthFormat;
-		mState.renderFormat = camera->mRenderFormat;
+		mState.msaaSamples(camera->mSampleCount);
+		mState.depthFormat(camera->mDepthFormat);
+		mState.renderFormat(camera->mRenderFormat);
 	}
 }
 
@@ -165,27 +165,19 @@ void CommandList::SetComputeRootDescriptorTable(unsigned int index, ID3D12Descri
 }
 
 bool CommandList::IsKeywordEnabled(const char* keyword) {
-	for (unsigned int i = 0; i < mState.keywords.size(); i++)
-		if (mState.keywords[i] == keyword)
-			return true;
-	return false;
+	return mState.haskeyword(keyword);
 }
 void CommandList::EnableKeyword(const char* keyword) {
-	if (IsKeywordEnabled(keyword)) return;
-	mState.keywords.push_back(keyword);
+	mState.addkeyword(keyword);
 }
 void CommandList::DisableKeyword(const char* keyword) {
-	for (unsigned int i = 0; i < mState.keywords.size(); i++)
-		if (mState.keywords[i] == keyword) {
-			mState.keywords.remove(i);
-			break;
-		}
+	mState.rmvkeyword(keyword);
 }
-void CommandList::SetKeywords(const jvector<jstring> &keywords) {
-	mState.keywords = keywords;
+void CommandList::SetKeywords(const jvector<jstring>& keywords) {
+	mState.setkeywords(keywords);
 }
 void CommandList::ClearKeywords() {
-	mState.keywords.clear();
+	mState.clearkeywords();
 }
 
 void CommandList::SetGlobalFloat (const jstring& param, const float& val) {
@@ -308,7 +300,7 @@ void CommandList::SetGlobalInt4(const jstring& param, const XMINT4& val) {
 		mGlobals.emplace(param, p);
 	}
 }
-void CommandList::SetGlobalUInt(const jstring& param, const unsigned int& val) {
+void CommandList::SetGlobalUInt (const jstring& param, const unsigned int& val) {
 	if (mGlobals.count(param)) {
 		GlobalParam& p = mGlobals.at(param);
 		p.type = SHADER_PARAM_TYPE_UINT;
@@ -393,26 +385,10 @@ void CommandList::SetGlobalCBuffer(const jstring& param, const shared_ptr<Consta
 	}
 }
 
-void CommandList::SetBlendState(D3D12_RENDER_TARGET_BLEND_DESC blend) {
-	mState.blendState = blend;
-}
-void CommandList::DepthWriteEnabled(bool depthWrite) {
-	mState.zwrite = depthWrite;
-}
-void CommandList::DepthTestEnabled(bool depthTest) {
-	mState.ztest = depthTest;
-}
-void CommandList::SetFillMode(D3D12_FILL_MODE fillMode) {
-	mState.fillMode = fillMode;
-}
-void CommandList::SetCullMode(D3D12_CULL_MODE cullMode) {
-	mState.cullMode = cullMode;
-}
-
 void CommandList::DrawUserMesh(MESH_SEMANTIC input, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology) {
 	assert(mActiveShader);
-	mState.input = input;
-	mState.topology = topology;
+	mState.input(input);
+	mState.topology(topology);
 	auto pso = mActiveShader->GetOrCreatePSO(mState);
 	if (pso != mActivePSO) {
 		mActivePSO = pso;

@@ -37,12 +37,16 @@ public:
 	JAE_API void WriteUInt3(const DirectX::XMUINT3 &v, unsigned int pos, unsigned int frameIndex);
 	JAE_API void WriteUInt4(const DirectX::XMUINT4 &v, unsigned int pos, unsigned int frameIndex);
 
+	JAE_API bool Equals(const ConstantBuffer& cb, unsigned int frameIndex) const;
+
 	JAE_API D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(unsigned int frameIndex) const;
 
 	ConstantBuffer& operator =(ConstantBuffer& rhs) = delete;
 
 private:
 	unsigned int mCBufferCount;
+	size_t mSize;
+	size_t mMappedSize;
 	_WRL::ComPtr<ID3D12Resource>* mCBuffers;
 	UINT8** mMappedCBuffers;
 };

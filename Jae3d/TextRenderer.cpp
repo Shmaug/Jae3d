@@ -6,6 +6,7 @@
 #include "Material.hpp"
 #include "Font.hpp"
 #include "Material.hpp"
+#include "Shader.hpp"
 
 using namespace std;
 using namespace DirectX;
@@ -156,19 +157,27 @@ BoundingOrientedBox TextRenderer::Bounds() {
 	return BoundingOrientedBox(mcenter, XMFLOAT3(mbounds.x * scale.x, mbounds.y * scale.y, mbounds.z * scale.z), WorldRotation());
 }
 
-bool TextRenderer::TextRenderJob::LessThan(RenderJob* b) {
-	if (RenderJob::LessThan(b)) return true;
-	return false;
-	TextRenderJob* t = dynamic_cast<TextRenderJob*>(b);
-	if (!t) return false;
-	return t->mMaterial->mName < mMaterial->mName;
+TextRenderer::TextRenderJob::TextRenderJob(unsigned int queue, const jwstring& batch, const TextMesh& mesh, const shared_ptr<::Material>& mat, const shared_ptr<ConstantBuffer>& buf)
+	: RenderJob(queue), mSubmesh(0), mMesh(mesh), mMaterial(mat), mObjectBuffer(buf) {
+	mName = L"TextRenderer (" + mMaterial->mName + L", " + mMaterial->GetShader()->mName + L')';
+	if (!batch.empty())
+		mBatchGroup = L"TextRenderer " + batch;
 }
+
+Renderer::RenderJob* TextRenderer::TextRenderJob::Batch(RenderJob* other, const shared_ptr<CommandList>& commandList) {
+	// compare material parameters
+	TextRenderJob* j = dynamic_cast<TextRenderJob*>(other);
+	if (!j) return nullptr;
+
+
+
+	return nullptr;
+}
+
 void TextRenderer::TextRenderJob::Execute(const shared_ptr<CommandList>& commandList, const std::shared_ptr<::Material>& materialOverride) {
 	if (materialOverride) mMaterial = materialOverride;
 	mMaterial->SetCBuffer("ObjectBuffer", mObjectBuffer, commandList->GetFrameIndex());
 	commandList->SetMaterial(mMaterial);
-	commandList->SetBlendState(BLEND_STATE_ALPHA);
-	commandList->SetCullMode(D3D12_CULL_MODE_NONE);
 	commandList->DrawUserMesh((MESH_SEMANTIC)(MESH_SEMANTIC_NORMAL | MESH_SEMANTIC_TANGENT | MESH_SEMANTIC_BINORMAL | MESH_SEMANTIC_TEXCOORD0));
 	commandList->Draw(mMesh.mVertexBufferView, mMesh.mIndexBufferView, D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mMesh.mQuadCount * 6, 0, 0);
 }
@@ -193,5 +202,5 @@ void TextRenderer::GatherRenderJobs(const shared_ptr<CommandList>& commandList, 
 
 	if (!m.mMappedLength) return;
 
-	list.push_back(new TextRenderJob(mMaterial->RenderQueue(), m, mMaterial, mCBuffer));
+	list.push_back(new TextRenderJob(mMaterial->RenderQueue(), mBatchGroup, m, mMaterial, mCBuffer));
 }

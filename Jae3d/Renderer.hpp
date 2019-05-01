@@ -14,14 +14,16 @@ public:
 	// Render jobs are sorted according to LessThan() and executed
 	class RenderJob {
 	public:
-		unsigned int RenderQueue;
+		unsigned int mRenderQueue;
+		jwstring mName;
+		jwstring mBatchGroup;
 
-		RenderJob(unsigned int queue) : RenderQueue(queue) {}
+		RenderJob(unsigned int queue) : mRenderQueue(queue), mName(L"RenderJob"), mBatchGroup(L"") {}
 
+		virtual RenderJob* Batch(RenderJob* other, const std::shared_ptr<CommandList>& commandList) { return nullptr; };
 		virtual void Execute(const std::shared_ptr<CommandList>& commandList, const std::shared_ptr<Material>& materialOverride) {};
-
-		virtual bool LessThan(RenderJob* b) {
-			return RenderQueue < b->RenderQueue;
+		virtual bool LessThan(const RenderJob* b) const {
+			return mRenderQueue < b->mRenderQueue || (mRenderQueue == b->mRenderQueue && mBatchGroup < b->mBatchGroup);
 		}
 	};
 

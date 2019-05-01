@@ -37,7 +37,7 @@ private:
 		DirectX::XMFLOAT4 mTextureRect;
 		DirectX::XMFLOAT4 mColor;
 
-		SpriteDraw() : mTextureHeap(nullptr), mPixelRect({ 0,0,0,0 }), mTextureRect({ 0,0,0,0 }), mColor({ 1,1,1,1 }) {}
+		SpriteDraw() : mTextureHeap(nullptr), mPixelRect({ 0,0,0,0 }), mTextureRect({ 0,0,0,0 }), mColor({ 1,1,1,1 }), mTextureSRV({}) {}
 		SpriteDraw(_WRL::ComPtr<ID3D12DescriptorHeap> srvHeap, D3D12_GPU_DESCRIPTOR_HANDLE srv, DirectX::XMFLOAT4 rect, DirectX::XMFLOAT4 tRect, DirectX::XMFLOAT4 color)
 			: mTextureHeap(srvHeap), mTextureSRV(srv), mPixelRect(rect), mTextureRect(tRect), mColor(color) {}
 		SpriteDraw(const SpriteDraw &t)
@@ -96,7 +96,8 @@ private:
 
 		SpriteContext()
 			: mActive(false), mMappedQuadVertices(nullptr), mMappedQuadIndices(nullptr), mMappedQuadLength(0), mQuadOffset(0),
-			mMappedLineVertices(nullptr), mMappedLineIndices(nullptr), mMappedLineLength(0), mLineVertexOffset(0), mLineIndexOffset(0) {};
+			mMappedLineVertices(nullptr), mMappedLineIndices(nullptr), mMappedLineLength(0), mLineVertexOffset(0), mLineIndexOffset(0),
+			mQuadVertexBufferView({}), mQuadIndexBufferView({}), mLineIndexBufferView({}), mLineVertexBufferView({}), mFrameIndex(0) {};
 		~SpriteContext() { Release(); }
 
 		JAE_API void ResizeQuads(unsigned int length);
