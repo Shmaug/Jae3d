@@ -28,7 +28,7 @@ void MemoryStream::WriteString(const jwstring& str) {
 jstring MemoryStream::ReadStringA() {
 	uint32_t sz = Read<uint32_t>();
 	if (sz > 0) {
-		if (mCurrent + sz > mSize) throw std::out_of_range("Read out of bounds!");
+		if (mCurrent + sz > mSize) throw std::exception("Read out of bounds!");
 		jstring str(mBuffer + mCurrent, sz);
 		mCurrent += sz;
 		return str;
@@ -38,7 +38,7 @@ jstring MemoryStream::ReadStringA() {
 jwstring MemoryStream::ReadString() {
 	uint32_t sz = Read<uint32_t>();
 	if (sz > 0) {
-		if (mCurrent + sz * sizeof(wchar_t) > mSize) throw std::out_of_range("Read out of bounds!");
+		if (mCurrent + sz * sizeof(wchar_t) > mSize) throw std::exception("Read out of bounds!");
 		jwstring str(reinterpret_cast<wchar_t*>(mBuffer + mCurrent), sz);
 		mCurrent += sz * sizeof(wchar_t);
 		return str;
@@ -48,14 +48,14 @@ jwstring MemoryStream::ReadString() {
 
 void MemoryStream::Write(const char* ptr, size_t sz) {
 	if (mCurrent + sz > mSize) {
-		if (!mExpand) throw std::out_of_range("Write out of bounds!");
+		if (!mExpand) throw std::exception("Write out of bounds!");
 		Fit(mCurrent + sz);
 	}
 	memcpy(mBuffer + mCurrent, ptr, sz);
 	mCurrent += sz;
 }
 void MemoryStream::Read(char* ptr, size_t sz) {
-	if (mCurrent + sz > mSize) throw std::out_of_range("Read out of bounds!");
+	if (mCurrent + sz > mSize) throw std::exception("Read out of bounds!");
 	memcpy(ptr, mBuffer + mCurrent, sz);
 	mCurrent += sz;
 }

@@ -16,6 +16,10 @@
 #include <DirectXMath.h>
 #include "d3dx12.hpp"
 
+#ifdef _DEBUG
+#include <dxgidebug.h>
+#endif
+
 class CommandQueue;
 class CommandList;
 class Game;
@@ -35,12 +39,13 @@ class SpriteBatch;
 class Graphics {
 public:
 	JAE_API static std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
-	static bool IsInitialized() { return mInitialized; }
-	static _WRL::ComPtr<ID3D12Device2> GetDevice() { return mDevice; }
+	static inline bool IsInitialized() { return mInitialized; }
+	static inline _WRL::ComPtr<ID3D12Device2> GetDevice() { return mDevice; }
 	JAE_API static std::shared_ptr<Window> GetWindow();
 	JAE_API static std::shared_ptr<SpriteBatch> GetSpriteBatch();
 
-	JAE_API static void Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing);
+	JAE_API static void Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing,
+		int nCategories = 0, D3D12_MESSAGE_CATEGORY* suppressCategories = nullptr, int nMessageIDs = 0, D3D12_MESSAGE_ID* suppressMessageIDs = nullptr);
 	JAE_API static void Destroy();
 	JAE_API static bool FrameReady();
 
@@ -55,7 +60,15 @@ public:
 	
 	JAE_API static void UploadData(std::shared_ptr<CommandList> commandList, ID3D12Resource** dst, ID3D12Resource** intermediate, size_t count, size_t stride, const void* data);
 
+#ifdef _DEBUG
+	static inline _WRL::ComPtr<IDXGIDebug1> GetDebugInterface() { return mDebugInterface; }
+#endif
+
 private:
+#ifdef _DEBUG
+	static _WRL::ComPtr<IDXGIDebug1> mDebugInterface;
+#endif
+
 	// Set to true once the DX12 objects have been initialized.
 	JAE_API static bool mInitialized;
 	JAE_API static std::shared_ptr<SpriteBatch> mSpriteBatch;
@@ -70,5 +83,5 @@ private:
 	JAE_API static _WRL::ComPtr<ID3D12Device2> mDevice;
 
 	JAE_API static _WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
-	JAE_API static _WRL::ComPtr<ID3D12Device2> CreateDevice();
+	JAE_API static _WRL::ComPtr<ID3D12Device2> CreateDevice(int nCategories, D3D12_MESSAGE_CATEGORY* suppressCategories, int nMessageIDs, D3D12_MESSAGE_ID* suppressMessageIDs);
 };

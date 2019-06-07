@@ -30,7 +30,16 @@ using namespace std;
 #define F2D(x) (int)x, (int)(abs(x - (int)x)*1000)
 
 int CALLBACK wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR lpCmdLine, _In_ int nCmdShow) {
-	HWND hWnd = JaeCreateWindow(L"Jae3d Test", 1600, 900, 3, Graphics::CheckTearingSupport());
+	// Suppress individual messages by their ID
+	D3D12_MESSAGE_ID denyIds[] = {
+		D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
+		D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
+		D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
+	};
+
+	HWND hWnd = JaeCreateWindow(L"Jae3d Test", 1600, 900, 3, Graphics::CheckTearingSupport(),
+		0, nullptr,
+		_countof(denyIds), denyIds);
 	Graphics::GetWindow()->SetVSync(false);
 	
 	TestGame* game = new TestGame();

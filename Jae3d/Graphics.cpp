@@ -12,11 +12,6 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace std;
 
-#ifdef _DEBUG
-#include <dxgidebug.h>
-ComPtr<IDXGIDebug1> dxgiDebugInterface;
-#endif
-
 #pragma region static variable initialization
 bool Graphics::mInitialized = false;
 std::shared_ptr<SpriteBatch> Graphics::mSpriteBatch;
@@ -30,10 +25,13 @@ shared_ptr<CommandQueue> Graphics::mCopyCommandQueue;
 
 // DirectX 12 Objects
 ComPtr<ID3D12Device2> Graphics::mDevice;
+#ifdef _DEBUG
+ComPtr<IDXGIDebug1> Graphics::mDebugInterface;
+#endif
 #pragma endregion
 
 #pragma region resource creation
-ComPtr<ID3D12Device2> Graphics::CreateDevice() {
+ComPtr<ID3D12Device2> Graphics::CreateDevice(int nCategories, D3D12_MESSAGE_CATEGORY* suppressCategories, int nMessageIDs, D3D12_MESSAGE_ID* suppressMessageIDs) {
 	ComPtr<IDXGIAdapter4> adapter = GetAdapter(false);
 
 	ComPtr<ID3D12Device2> d3d12Device2;
@@ -55,28 +53,23 @@ ComPtr<ID3D12Device2> Graphics::CreateDevice() {
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 
-		// Suppress whole categories of messages
-		//D3D12_MESSAGE_CATEGORY Categories[] = {};
-
 		// Suppress messages based on their severity level
 		D3D12_MESSAGE_SEVERITY Severities[] = {
 			D3D12_MESSAGE_SEVERITY_INFO
 		};
 
-		// Suppress individual messages by their ID
-		D3D12_MESSAGE_ID DenyIds[] = {
-			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
-			D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
-			D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
-		};
 
 		D3D12_INFO_QUEUE_FILTER NewFilter = {};
-		//NewFilter.DenyList.NumCategories = _countof(Categories);
-		//NewFilter.DenyList.pCategoryList = Categories;
 		NewFilter.DenyList.NumSeverities = _countof(Severities);
 		NewFilter.DenyList.pSeverityList = Severities;
-		NewFilter.DenyList.NumIDs = _countof(DenyIds);
-		NewFilter.DenyList.pIDList = DenyIds;
+		if (nCategories) {
+			NewFilter.DenyList.NumCategories = nCategories;
+			NewFilter.DenyList.pCategoryList = suppressCategories;
+		}
+		if (nMessageIDs) {
+			NewFilter.DenyList.NumIDs = nMessageIDs;
+			NewFilter.DenyList.pIDList = suppressMessageIDs;
+		}
 
 		ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
 	}
@@ -180,7 +173,7 @@ UINT Graphics::DescriptorIncrement(D3D12_DESCRIPTOR_HEAP_TYPE type) {
 
 #pragma region runtime
 
-void Graphics::Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing) {
+void Graphics::Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing, int nCategories, D3D12_MESSAGE_CATEGORY* suppressCategories, int nMessageIDs, D3D12_MESSAGE_ID* suppressMessageIDs) {
 #ifdef _DEBUG
 	// Always enable the debug layer before doing anything DX12 related
 	// so all possible errors generated while creating DX12 objects
@@ -189,10 +182,10 @@ void Graphics::Initialize(HWND hWnd, unsigned int bufferCount, bool allowTearing
 	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
 	debugInterface->EnableDebugLayer();
 	
-	DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebugInterface));
+	DXGIGetDebugInterface1(0, IID_PPV_ARGS(&mDebugInterface));
 #endif
 
-	mDevice = CreateDevice();
+	mDevice = CreateDevice(nCategories, suppressCategories, nMessageIDs, suppressMessageIDs);
 
 	mDirectCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_DIRECT));
 	mComputeCommandQueue = shared_ptr<CommandQueue>(new CommandQueue(mDevice, D3D12_COMMAND_LIST_TYPE_COMPUTE));
