@@ -192,20 +192,20 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, const XMFLOAT2& pos, con
 			p.x = pos.x;
 			p.y += sc * font->GetLineSpacing();
 		} else {
-			Profiler::BeginSample(L"Find Glyph", true);
+			PROFILER_BEGIN_RESUME(L"Find Glyph");
 			if (!font->GetGlyph(cur, g)) {
 				prev = cur;
 				Profiler::EndSample();
 				continue;
 			}
-			Profiler::EndSample();
+			PROFILER_END();
 
-			Profiler::BeginSample(L"Kerning", true);
+			PROFILER_BEGIN_RESUME(L"Kerning");
 			p.x += sc * font->GetKerning(prev, cur);
-			Profiler::EndSample();
+			PROFILER_END();
 
 			if (g.character != L' ') {
-				Profiler::BeginSample(L"Submit SpriteDraw", true);
+				PROFILER_BEGIN_RESUME(L"Submit SpriteDraw");
 
 				if (mQuadDrawQueueCount >= mQuadDrawQueue.size()) mQuadDrawQueue.push_back({});
 				SpriteDraw &s = mQuadDrawQueue[mQuadDrawQueueCount++];
@@ -219,7 +219,7 @@ void SpriteBatch::DrawText (std::shared_ptr<Font> font, const XMFLOAT2& pos, con
 				s.mTextureSRV = font->GetTexture()->GetSRVGPUDescriptor();
 				s.mTextureHeap = font->GetTexture()->GetSRVDescriptorHeap();
 
-				Profiler::EndSample();
+				PROFILER_END();
 			}
 
 			p.x += sc * g.advance;

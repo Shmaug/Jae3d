@@ -69,21 +69,21 @@ void Scene::Draw(const shared_ptr<CommandList>& commandList, const shared_ptr<Ca
 
 	const BoundingFrustum &cullFrustum = camera->Frustum();
 
-	Profiler::BeginSample(L"Gather Render Jobs");
+	PROFILER_BEGIN(L"Gather Render Jobs");
 	renderQueue.clear();
 	for (int i = 0; i < mRenderers.size(); i++) {
 		if (!mRenderers[i]->Visible() || !mRenderers[i]->Bounds().Intersects(cullFrustum)) continue;
 		mRenderers[i]->GatherRenderJobs(commandList, camera, renderQueue);
 	}
-	Profiler::EndSample();
+	PROFILER_END();
 
-	Profiler::BeginSample(L"Sort Render Jobs");
+	PROFILER_BEGIN(L"Sort Render Jobs");
 	std::sort(renderQueue.data(), renderQueue.data() + renderQueue.size(), [](Renderer::RenderJob*& a, Renderer::RenderJob*& b) {
 		return a->LessThan(b);
 	});
-	Profiler::EndSample();
+	PROFILER_END();
 
-	Profiler::BeginSample(L"Batch Render Jobs");
+	PROFILER_BEGIN(L"Batch Render Jobs");
 	for (size_t i = 1; i < renderQueue.size(); i++) {
 		if (renderQueue[i]->mBatchGroup.empty() || renderQueue[i - 1]->mBatchGroup.empty()) continue;
 		if (Renderer::RenderJob* b = renderQueue[i - 1]->Batch(renderQueue[i], commandList)) {
@@ -93,17 +93,17 @@ void Scene::Draw(const shared_ptr<CommandList>& commandList, const shared_ptr<Ca
 			renderQueue[i] = b;
 		}
 	}
-	Profiler::EndSample();
+	PROFILER_END();
 
-	Profiler::BeginSample(L"Execute Render Jobs");
+	PROFILER_BEGIN(L"Execute Render Jobs");
 	for (int i = 0; i < renderQueue.size(); i++) {
 		if (!renderQueue[i]) continue;
-		Profiler::BeginSample(renderQueue[i]->mRenderQueue + jwstring(L": ") + renderQueue[i]->mName);
+		PROFILER_BEGIN(renderQueue[i]->mRenderQueue + jwstring(L": ") + renderQueue[i]->mName);
 		renderQueue[i]->Execute(commandList, materialOverride);
-		Profiler::EndSample();
+		PROFILER_END();
 		delete renderQueue[i];
 	}
-	Profiler::EndSample();
+	PROFILER_END();
 }
 void Scene::DebugDraw(const shared_ptr<CommandList>& commandList, const shared_ptr<Camera>& camera) {
 	if (!mDebugShader) mDebugShader = AssetDatabase::GetAsset<Shader>(L"ColoredRoot");

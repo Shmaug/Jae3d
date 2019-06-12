@@ -4,6 +4,18 @@
 
 using namespace Profiler;
 
+class ProfilerSample {
+public:
+	jvector<ProfilerSample> children;
+	ProfilerSample* parent;
+	jwstring name;
+	double time;
+	double startTime;
+
+	ProfilerSample() : name(L""), parent(nullptr), time(0), startTime(0) {}
+	ProfilerSample(const jwstring& name, double startTime) : name(name), parent(nullptr), time(0), startTime(startTime) {}
+};
+
 int frameCount = 256;
 ProfilerSample frames[256];
 unsigned long curFrame = 0;

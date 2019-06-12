@@ -390,9 +390,9 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 	sb->Reset(commandList);
 
 	if (!mLoading) {
-		Profiler::BeginSample(L"Calculate Tiled Lighting");
+		PROFILER_BEGIN(L"Calculate Tiled Lighting");
 		mLighting->CalculateScreenLights(commandList, mCamera, mScene);
-		Profiler::EndSample();
+		PROFILER_END();
 
 		commandList->SetCamera(mCamera);
 		mCamera->Clear(commandList);
@@ -404,14 +404,14 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 
 		if (mWireframe) commandList->SetFillMode(D3D12_FILL_MODE_WIREFRAME);
 
-		Profiler::BeginSample(L"Draw Scene");
+		PROFILER_BEGIN(L"Draw Scene");
 		mScene->Draw(commandList, mCamera);
 
-		Profiler::EndSample();
+		PROFILER_END();
 
-		Profiler::BeginSample(L"Draw Scene Debug");
+		PROFILER_BEGIN(L"Draw Scene Debug");
 		if (mDebugDraw) mScene->DebugDraw(commandList, mCamera);
-		Profiler::EndSample();
+		PROFILER_END();
 	} else {
 		commandList->SetCamera(mCamera);
 		mCamera->Clear(commandList);
@@ -422,14 +422,15 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 #pragma region performance overlay
 	sb->DrawTextf(mArialFont, XMFLOAT2(5.0f, (float)mArialFont->GetAscender() * .4f), .4f, { 1,1,1,1 }, L"FPS: %d.%d", F2D(mfps));
 	if (mPerfOverlay) {
-		Profiler::BeginSample(L"Performance Overlay");
-		Profiler::BeginSample(L"Text");
+		PROFILER_BEGIN(L"Performance Overlay");
+
+		PROFILER_BEGIN(L"Text");
 		commandList->SetFillMode(D3D12_FILL_MODE_SOLID);
 		sb->DrawTextf(mArialFont, XMFLOAT2(10.0f, (float)mArialFont->GetAscender()), .5f, { 1,1,1,1 }, mPerfBuffer);
 		sb->DrawTextf(mArialFont, XMFLOAT2(500.0f, (float)mArialFont->GetAscender() * .5f), .5f, { 1,1,1,1 }, L"%d Triangles", commandList->mTrianglesDrawn);
-		Profiler::EndSample();
+		PROFILER_END();
 
-		Profiler::BeginSample(L"Frame Graph");
+		PROFILER_BEGIN(L"Frame Graph");
 		jvector<XMFLOAT3> verts;
 		jvector<XMFLOAT4> colors;
 		for (int i = 1; i < 128; i++) {
@@ -445,13 +446,13 @@ void TestGame::Render(shared_ptr<CommandList> commandList) {
 		sb->DrawLines(verts, colors);
 		Profiler::EndSample();
 
-		Profiler::EndSample();
+		PROFILER_END();
 	}
 #pragma endregion
 
-	Profiler::BeginSample(L"Flush SpriteBatch");
+	PROFILER_BEGIN(L"Flush SpriteBatch");
 	sb->Flush(commandList);
-	Profiler::EndSample();
+	PROFILER_END();
 }
 
 void TestGame::DoFrame(){
@@ -465,16 +466,16 @@ void TestGame::DoFrame(){
 	Profiler::FrameStart();
 
 #pragma region update
-	Profiler::BeginSample(L"Update");
+	PROFILER_BEGIN(L"Update");
 	auto t1 = clock.now();
 	double delta = (t1 - t0).count() * 1e-9;
 	t0 = t1;
 	Update((t1 - start).count() * 1e-9, delta);
-	Profiler::EndSample();
+	PROFILER_END();
 #pragma endregion
 
 #pragma region render/present
-	Profiler::BeginSample(L"Render");
+	PROFILER_BEGIN(L"Render");
 	auto commandQueue = Graphics::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList(Graphics::CurrentFrameIndex());
 	auto d3dCommandList = commandList->D3DCommandList();
@@ -482,9 +483,9 @@ void TestGame::DoFrame(){
 
 	window->PrepareRender(commandList);
 	Render(commandList);
-	Profiler::EndSample();
+	PROFILER_END();
 
-	Profiler::BeginSample(L"Present");
+	PROFILER_BEGIN(L"Present");
 
 	ID3D12Resource* camrt = mCamera->RenderBuffer().Get();
 	ID3D12Resource* winrt = window->RenderBuffer().Get();
@@ -495,7 +496,7 @@ void TestGame::DoFrame(){
 	commandList->TransitionResource(winrt, D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	window->Present(commandList, commandQueue);
-	Profiler::EndSample();
+	PROFILER_END();
 #pragma endregion
 
 	Input::FrameEnd();

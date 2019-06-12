@@ -4,19 +4,19 @@
 #include "jstring.hpp"
 #include "jvector.hpp"
 
+#define NOPROFILER
+
+#ifdef NOPROFILER
+#define PROFILER_BEGIN(name)
+#define PROFILER_BEGIN_RESUME(name)
+#define PROFILER_END()
+#else
+#define PROFILER_BEGIN(name) Profiler::BeginSample(name)
+#define PROFILER_BEGIN_RESUME(name) Profiler::BeginSample(name, true)
+#define PROFILER_END() Profiler::EndSample()
+#endif
+
 namespace Profiler {
-	class ProfilerSample {
-	public:
-		jvector<ProfilerSample> children;
-		ProfilerSample *parent;
-		jwstring name;
-		double time;
-		double startTime;
-
-		ProfilerSample() : name(L""), parent(nullptr), time(0), startTime(0) {}
-		ProfilerSample(const jwstring& name, double startTime) : name(name), parent(nullptr), time(0), startTime(startTime) {}
-	};
-
 	JAE_API void BeginSample(const jwstring& name, bool resume = false);
 	JAE_API void EndSample();
 	JAE_API void FrameStart();
